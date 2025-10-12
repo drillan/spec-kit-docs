@@ -62,6 +62,12 @@ def main():
         help="Regenerate all documentation (disable incremental mode)",
     )
 
+    parser.add_argument(
+        "--no-build",
+        action="store_true",
+        help="Skip HTML build (only generate Markdown files)",
+    )
+
     args = parser.parse_args()
 
     try:
@@ -163,14 +169,53 @@ def main():
             for file in sorted(features_dir.rglob("*.md")):
                 print(f"  - {file.relative_to(docs_dir)}")
 
-        # Step 7: Show next steps
-        print("\n次のステップ:")
-        if tool == "sphinx":
-            print("  1. cd docs && make html でHTMLをビルド")
-            print("  2. docs/_build/html/index.html をブラウザで開く")
+        # Step 7: Build HTML (unless --no-build)
+        if not args.no_build:
+            print(f"\n✓ HTMLをビルド中...")
+            try:
+                build_result = generator.build_docs()
+                print(build_result.get_summary())
+
+                if build_result.success:
+                    print(f"\n✓ HTMLビルドが完了しました")
+                    print(f"  出力ディレクトリ: {build_result.output_dir}")
+
+                    # Show next steps
+                    print("\n次のステップ:")
+                    if tool == "sphinx":
+                        print(f"  ブラウザで {build_result.output_dir}/index.html を開く")
+                    else:
+                        print(f"  ブラウザで {build_result.output_dir}/index.html を開く")
+                        print(f"  または 'cd docs && mkdocs serve' でライブプレビュー")
+                else:
+                    print(f"\n⚠️  HTMLビルド中にエラーが発生しました")
+                    if build_result.errors:
+                        print("\nエラー:")
+                        for error in build_result.errors[:5]:  # Show first 5 errors
+                            print(f"  - {error}")
+                    if build_result.warnings:
+                        print("\n警告:")
+                        for warning in build_result.warnings[:5]:  # Show first 5 warnings
+                            print(f"  - {warning}")
+
+            except Exception as e:
+                print(f"\n⚠️  HTMLビルド中にエラーが発生しました: {e}")
+                print("\n次のステップ:")
+                if tool == "sphinx":
+                    print("  手動でビルド: cd docs && make html")
+                else:
+                    print("  手動でビルド: cd docs && mkdocs build")
+
         else:
-            print("  1. cd docs && mkdocs serve でプレビュー")
-            print("  2. ブラウザで http://127.0.0.1:8000 を開く")
+            # Show next steps when --no-build is used
+            print("\n次のステップ:")
+            if tool == "sphinx":
+                print("  1. cd docs && make html でHTMLをビルド")
+                print("  2. docs/_build/html/index.html をブラウザで開く")
+            else:
+                print("  1. cd docs && mkdocs build でHTMLをビルド")
+                print("  2. docs/site/index.html をブラウザで開く")
+                print("  または 'cd docs && mkdocs serve' でライブプレビュー")
 
         return 0
 

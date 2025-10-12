@@ -107,11 +107,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement SphinxGenerator.build_docs() method in src/speckit_docs/generators/sphinx.py: Execute `subprocess.run(["make", "html"])` in docs/ directory, capture output, parse warnings/errors, return BuildResult (FR-018)
-- [ ] T036 [US3] Implement MkDocsGenerator.build_docs() method in src/speckit_docs/generators/mkdocs.py: Execute `subprocess.run(["mkdocs", "build"])` in docs/ directory, capture output, return BuildResult (FR-019)
-- [ ] T037 [US3] Add build execution logic to doc_update.py: If --no-build flag absent, call Generator.build_docs() after update_docs(), display BuildResult.get_summary() (cli-interface.md Execution Flow Step 5)
-- [ ] T038 [US3] Implement performance tracking in BuildResult: Record build_time using time.time(), track file_count by counting generated HTML files (SC-001, SC-006)
-- [ ] T039 [US3] Add success message output in doc_update.py: Display checkmarks, file counts, build time, next steps (cli-interface.md Output Success)
+- [X] T035 [US3] Implement SphinxGenerator.build_docs() method in src/speckit_docs/generators/sphinx.py: Execute `subprocess.run(["make", "html"])` in docs/ directory, capture output, parse warnings/errors, return BuildResult (FR-018)
+- [X] T036 [US3] Implement MkDocsGenerator.build_docs() method in src/speckit_docs/generators/mkdocs.py: Execute `subprocess.run(["mkdocs", "build"])` in docs/ directory, capture output, return BuildResult (FR-019)
+- [X] T037 [US3] Add build execution logic to doc_update.py: If --no-build flag absent, call Generator.build_docs() after update_docs(), display BuildResult.get_summary() (cli-interface.md Execution Flow Step 5)
+- [X] T038 [US3] Implement performance tracking in BuildResult: Record build_time using time.time(), track file_count by counting generated HTML files (SC-001, SC-006)
+- [X] T039 [US3] Add success message output in doc_update.py: Display checkmarks, file counts, build time, next steps (cli-interface.md Output Success)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work - Complete `/speckit.doc-init` → `/speckit.doc-update` workflow produces browsable HTML documentation (MVP COMPLETE!)
 
