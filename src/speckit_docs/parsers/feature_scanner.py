@@ -43,7 +43,7 @@ class Feature:
 
 
 class FeatureScanner:
-    """Scanner for discovering spec-kit features in .specify/specs/ or specs/."""
+    """Scanner for discovering spec-kit features in specs/."""
 
     FEATURE_DIR_PATTERN = re.compile(r"^(\d{3})-(.+)$")
 
@@ -61,26 +61,17 @@ class FeatureScanner:
             project_root = Path.cwd()
 
         self.project_root = project_root
+        self.specs_dir = project_root / "specs"
 
-        # Try .specify/specs/ first (spec-kit standard), fallback to specs/
-        specify_specs = project_root / ".specify" / "specs"
-        root_specs = project_root / "specs"
-
-        if specify_specs.exists():
-            self.specs_dir = specify_specs
-        elif root_specs.exists():
-            self.specs_dir = root_specs
-        else:
+        if not self.specs_dir.exists():
             raise ProjectValidationError(
-                ".specify/specs/ または specs/ ディレクトリが見つかりません。",
+                "specs/ ディレクトリが見つかりません。",
                 "'specify init' を実行してspec-kitプロジェクトを初期化してください。",
             )
 
     def scan(self, require_spec: bool = True) -> List[Feature]:
         """
         Scan specs directory for features.
-
-        Scans .specify/specs/ (preferred) or specs/ (fallback) for feature directories.
 
         Args:
             require_spec: If True, only include features with spec.md (FR-001)
@@ -93,7 +84,7 @@ class FeatureScanner:
         """
         features = []
 
-        # Iterate through directories in .specify/specs/
+        # Iterate through directories in specs/
         for item in self.specs_dir.iterdir():
             if not item.is_dir():
                 continue
