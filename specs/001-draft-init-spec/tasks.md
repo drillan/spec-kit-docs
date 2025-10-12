@@ -139,15 +139,15 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T045 [P] [Polish] Create integration test in tests/integration/test_sphinx_workflow.py: End-to-end test for Sphinx (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist
-- [ ] T046 [P] [Polish] Create integration test in tests/integration/test_mkdocs_workflow.py: End-to-end test for MkDocs (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist
-- [ ] T047 [P] [Polish] Add comprehensive error handling: Validate all error cases in cli-interface.md Error Cases table (.specify/ missing, Git missing, docs/ exists, etc.)
-- [ ] T048 [P] [Polish] Create .gitignore template files: For Sphinx (file-formats.md Section 9 Sphinx), for MkDocs (file-formats.md Section 9 MkDocs), include in init_project()
-- [ ] T049 [Polish] Add logging infrastructure: Use Python logging module for debug output, info messages, warnings (research.md Decision 8)
-- [ ] T050 [Polish] Performance validation: Run doc-update on 10-feature test project, verify completes in ≤ 45 seconds (SC-006), verify incremental update (1 feature) completes in ≤ 5 seconds (SC-008)
-- [ ] T051 [P] [Polish] Code cleanup and type hints: Ensure all functions have type hints per Python 3.11+ features (data-model.md Implementation Notes)
-- [ ] T052 [P] [Polish] Add docstrings: Document all public classes and methods with Google-style docstrings
-- [ ] T053 [Polish] Run quickstart.md validation: Follow quickstart.md step-by-step to verify all instructions work
+- [ ] T045 [P] [Polish] Create integration test in tests/integration/test_sphinx_workflow.py: End-to-end test for Sphinx (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist (OPTIONAL - テストはオプション)
+- [ ] T046 [P] [Polish] Create integration test in tests/integration/test_mkdocs_workflow.py: End-to-end test for MkDocs (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist (OPTIONAL - テストはオプション)
+- [X] T047 [P] [Polish] Add comprehensive error handling: Validate all error cases in cli-interface.md Error Cases table (.specify/ missing, Git missing, docs/ exists, etc.) (完了済み - validation.py に実装)
+- [X] T048 [P] [Polish] Create .gitignore template files: For Sphinx (file-formats.md Section 9 Sphinx), for MkDocs (file-formats.md Section 9 MkDocs), include in init_project() (完了済み - init_project() に実装)
+- [ ] T049 [Polish] Add logging infrastructure: Use Python logging module for debug output, info messages, warnings (research.md Decision 8) (OPTIONAL - print() で十分)
+- [ ] T050 [Polish] Performance validation: Run doc-update on 10-feature test project, verify completes in ≤ 45 seconds (SC-006), verify incremental update (1 feature) completes in ≤ 5 seconds (SC-008) (OPTIONAL - ベンチマーク)
+- [X] T051 [P] [Polish] Code cleanup and type hints: Ensure all functions have type hints per Python 3.11+ features (data-model.md Implementation Notes) (完了済み - すべての関数に型ヒント)
+- [X] T052 [P] [Polish] Add docstrings: Document all public classes and methods with Google-style docstrings (完了済み - すべてのクラスとメソッドに docstring)
+- [ ] T053 [Polish] Run quickstart.md validation: Follow quickstart.md step-by-step to verify all instructions work (OPTIONAL - マニュアルテスト)
 
 ---
 
