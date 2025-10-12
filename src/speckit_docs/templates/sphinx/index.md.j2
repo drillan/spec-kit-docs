@@ -1,0 +1,49 @@
+# {{ project_name }} ドキュメント
+
+{{ description | default("このプロジェクトは、spec-kitを使用して開発されています。") }}
+
+## 機能一覧
+
+```{toctree}
+:maxdepth: 2
+:caption: Features
+
+{% for feature in features -%}
+{{ feature.file_name }}
+{% endfor -%}
+```
+{% if structure_type == "COMPREHENSIVE" %}
+
+## ガイド
+
+```{toctree}
+:maxdepth: 1
+:caption: Guides
+
+guides/getting-started
+guides/configuration
+```
+
+## API リファレンス
+
+```{toctree}
+:maxdepth: 1
+:caption: API
+
+api/reference
+```
+
+## アーキテクチャ
+
+```{toctree}
+:maxdepth: 1
+:caption: Architecture
+
+architecture/overview
+```
+{% endif %}
+
+## インデックス
+
+* {ref}`genindex`
+* {ref}`search`

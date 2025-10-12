@@ -1,0 +1,17 @@
+# {{ project_name }}
+
+{{ description | default("A spec-kit project") }}
+
+## 機能一覧
+
+{% for feature in features -%}
+- [{{ feature.title }}]({% if structure_type == "FLAT" %}{{ feature.file_name }}{% else %}features/{{ feature.file_name }}{% endif %})
+{% endfor %}
+
+## はじめに
+
+このドキュメントは、spec-kitプロジェクトから自動生成されています。
+{% if structure_type == "COMPREHENSIVE" %}
+
+詳細は、[Getting Started](guides/getting-started.md) を参照してください。
+{%- endif %}
