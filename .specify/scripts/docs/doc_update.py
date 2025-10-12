@@ -57,9 +57,9 @@ def main():
     )
 
     parser.add_argument(
-        "--no-incremental",
+        "--full",
         action="store_true",
-        help="Regenerate all documentation (disable incremental mode)",
+        help="Regenerate all documentation (bypass incremental mode)",
     )
 
     parser.add_argument(
@@ -92,21 +92,51 @@ def main():
         tool = detect_documentation_tool(docs_dir)
         print(f"✓ {tool.capitalize()}プロジェクトを検出しました")
 
-        # Step 4: Scan features
-        print("✓ 機能をスキャン中...")
-        scanner = FeatureScanner()
-        features = scanner.scan(require_spec=True)
-        feature_count = len(features)
+        # Step 4: Scan features (incremental or full)
+        if args.full:
+            # Full regeneration mode
+            print("✓ 機能をスキャン中 (フル再生成モード)...")
+            scanner = FeatureScanner()
+            features = scanner.scan(require_spec=True)
+            feature_count = len(features)
+            mode_message = "すべての機能を再生成します"
+        else:
+            # Incremental mode - detect changes
+            print("✓ 変更された機能を検出中 (インクリメンタルモード)...")
+            from speckit_docs.utils.git import ChangeDetector
+
+            try:
+                detector = ChangeDetector()
+                features = detector.get_changed_features()
+                feature_count = len(features)
+
+                if feature_count == 0:
+                    print("\n✓ 変更が検出されませんでした。")
+                    print("\nドキュメントは既に最新です。")
+                    print("\n💡 すべての機能を再生成するには --full フラグを使用してください:")
+                    print("   /speckit.doc-update --full")
+                    return 0
+
+                mode_message = f"{feature_count}つの変更された機能を更新します"
+
+            except Exception as e:
+                # Fallback to full scan if git detection fails
+                print(f"⚠️  警告: Git差分検出に失敗しました: {e}")
+                print("✓ フォールバック: すべての機能をスキャン中...")
+                scanner = FeatureScanner()
+                features = scanner.scan(require_spec=True)
+                feature_count = len(features)
+                mode_message = "すべての機能を再生成します"
 
         if feature_count == 0:
             print("⚠️  警告: spec.md ファイルを持つ機能が見つかりませんでした。")
             print("\n次のステップ:")
-            print("  1. specs/ ディレクトリに機能を作成")
+            print("  1. .specify/specs/ ディレクトリに機能を作成")
             print("  2. 各機能に spec.md を作成")
             print("  3. /speckit.doc-update を再実行")
             return 0
 
-        print(f"✓ {feature_count}つの機能を発見しました")
+        print(f"✓ {feature_count}つの機能を発見しました ({mode_message})")
 
         # Step 5: Create generator and update docs
         print(f"\n✓ ドキュメントを更新中...")
@@ -156,9 +186,8 @@ def main():
 
             generator = MkDocsGenerator(config)
 
-        # Update documentation
-        incremental = not args.no_incremental
-        generator.update_docs(features, incremental=incremental)
+        # Update documentation (always incremental=True since we already filtered features)
+        generator.update_docs(features, incremental=True)
 
         print(f"✓ ドキュメントを更新しました")
 

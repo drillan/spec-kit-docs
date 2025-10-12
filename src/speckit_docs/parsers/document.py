@@ -1,5 +1,6 @@
 """Document representation for parsed Markdown files."""
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -15,6 +16,30 @@ class Document:
     title: str  # Document title (from first H1 or filename)
     sections: List[Section]  # Top-level sections
     metadata: Dict[str, any] = field(default_factory=dict)  # YAML frontmatter
+
+    @property
+    def last_modified(self) -> float:
+        """
+        Get the last modification time of the source file.
+
+        Returns:
+            Unix timestamp of last modification
+        """
+        if self.file_path.exists():
+            return os.path.getmtime(self.file_path)
+        return 0.0
+
+    def is_changed(self, since: float) -> bool:
+        """
+        Check if document has been modified since a given timestamp.
+
+        Args:
+            since: Unix timestamp to compare against
+
+        Returns:
+            True if document was modified after the given timestamp
+        """
+        return self.last_modified > since
 
     @staticmethod
     def parse(file_path: Path, parser: Optional[MarkdownParser] = None) -> "Document":

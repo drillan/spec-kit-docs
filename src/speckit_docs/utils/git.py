@@ -152,3 +152,69 @@ def get_changed_features(repo_path: Optional[Path] = None) -> List[Path]:
     feature_dirs = [spec_file.parent for spec_file in spec_files]
 
     return feature_dirs
+
+
+class ChangeDetector:
+    """Detect changed features in spec-kit project using Git diff."""
+
+    def __init__(self, repo_path: Optional[Path] = None):
+        """
+        Initialize change detector.
+
+        Args:
+            repo_path: Path to repository root (defaults to current directory)
+
+        Raises:
+            GitValidationError: If GitPython is not installed or repo is invalid
+        """
+        self.git_repo = GitRepository(repo_path)
+
+    def get_changed_features(self, base_ref: str = "HEAD~1", target_ref: str = "HEAD"):
+        """
+        Get list of features with changed spec.md files.
+
+        Args:
+            base_ref: Base reference (default: HEAD~1)
+            target_ref: Target reference (default: HEAD)
+
+        Returns:
+            List of Feature objects for changed features
+        """
+        from ..parsers.feature_scanner import Feature, FeatureScanner
+
+        # Get all features first
+        scanner = FeatureScanner()
+        all_features = scanner.scan(require_spec=False)
+
+        # Get changed spec files
+        changed_files = self.git_repo.get_changed_files(
+            base_ref=base_ref, target_ref=target_ref, path_filter=".specify/specs/"
+        )
+
+        # Filter for spec.md files
+        changed_spec_files = [f for f in changed_files if f.name == "spec.md"]
+
+        # Match changed spec files to features
+        changed_features = []
+        for spec_file in changed_spec_files:
+            # Find the feature that contains this spec file
+            for feature in all_features:
+                if feature.spec_file and feature.spec_file.resolve() == spec_file.resolve():
+                    changed_features.append(feature)
+                    break
+
+        return changed_features
+
+    def has_changes(self, base_ref: str = "HEAD~1", target_ref: str = "HEAD") -> bool:
+        """
+        Check if there are any changed spec.md files.
+
+        Args:
+            base_ref: Base reference (default: HEAD~1)
+            target_ref: Target reference (default: HEAD)
+
+        Returns:
+            True if there are changed spec files, False otherwise
+        """
+        changed_features = self.get_changed_features(base_ref, target_ref)
+        return len(changed_features) > 0

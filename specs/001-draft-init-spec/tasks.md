@@ -125,11 +125,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T040 [US4] Implement ChangeDetector class in src/speckit_docs/utils/git.py (data-model.md Entity 9): get_changed_features() using `git diff --name-only HEAD~1 HEAD`, filter .specify/specs/ changes, return changed Feature[] (FR-010, research.md Decision 2)
-- [ ] T041 [US4] Integrate ChangeDetector into doc_update.py: If --full flag absent, use ChangeDetector.get_changed_features() instead of all features, display "X features changed" message (cli-interface.md Execution Flow Step 3)
-- [ ] T042 [US4] Add "no changes" handling in doc_update.py: If ChangeDetector returns empty list, display "変更が検出されませんでした" and exit (cli-interface.md Output "No Changes")
-- [ ] T043 [US4] Implement --full flag handling in doc_update.py: When --full is set, bypass ChangeDetector and regenerate all features (cli-interface.md Output "Full Regeneration")
-- [ ] T044 [US4] Add performance optimization: Document.is_changed(since) method to check file modification time, skip unchanged files within incremental update (data-model.md Entity 2)
+- [X] T040 [US4] Implement ChangeDetector class in src/speckit_docs/utils/git.py (data-model.md Entity 9): get_changed_features() using `git diff --name-only HEAD~1 HEAD`, filter .specify/specs/ changes, return changed Feature[] (FR-010, research.md Decision 2)
+- [X] T041 [US4] Integrate ChangeDetector into doc_update.py: If --full flag absent, use ChangeDetector.get_changed_features() instead of all features, display "X features changed" message (cli-interface.md Execution Flow Step 3)
+- [X] T042 [US4] Add "no changes" handling in doc_update.py: If ChangeDetector returns empty list, display "変更が検出されませんでした" and exit (cli-interface.md Output "No Changes")
+- [X] T043 [US4] Implement --full flag handling in doc_update.py: When --full is set, bypass ChangeDetector and regenerate all features (cli-interface.md Output "Full Regeneration")
+- [X] T044 [US4] Add performance optimization: Document.is_changed(since) method to check file modification time, skip unchanged files within incremental update (data-model.md Entity 2)
 
 **Checkpoint**: At this point, incremental updates work efficiently - Only changed features are regenerated, saving time on large projects
 
