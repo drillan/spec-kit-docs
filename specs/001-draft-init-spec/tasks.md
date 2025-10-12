@@ -61,15 +61,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Create GeneratorConfig dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 5): tool, project_name, author, version, language, theme, extensions, plugins, custom_settings, to_sphinx_conf(), to_mkdocs_yaml()
-- [ ] T016 [P] [US1] Create DocumentStructure class in src/speckit_docs/parsers/__init__.py (data-model.md Entity 4): type (FLAT/COMPREHENSIVE), root_dir, directories, index_file, determine_structure(feature_count), get_feature_path(feature_name)
-- [ ] T017 [US1] Implement interactive prompts module in src/speckit_docs/utils/prompts.py (cli-interface.md Interactive Prompts): prompt_tool_selection(), prompt_project_name(), prompt_author(), prompt_version(), prompt_language() with defaults
-- [ ] T018 [US1] Implement SphinxGenerator class in src/speckit_docs/generators/sphinx.py (data-model.md Entity 7): init_project() renders Jinja2 templates to docs/, handles myst-parser configuration (FR-005a)
-- [ ] T019 [US1] Implement MkDocsGenerator class in src/speckit_docs/generators/mkdocs.py (data-model.md Entity 8): init_project() renders Jinja2 templates to docs/
-- [ ] T020 [US1] Implement doc_init.py CLI script in .specify/scripts/docs/doc_init.py (cli-interface.md Python API): argparse setup with --type, --no-interaction flags, call to prompts module, Generator.init_project(), error handling with SpecKitDocsError
-- [ ] T021 [US1] Create Claude Code command definition in .claude/commands/doc-init.md: Execute `uv run python .specify/scripts/docs/doc_init.py {{ARGS}}` (cli-interface.md Command Mapping)
-- [ ] T022 [US1] Add project validation logic in src/speckit_docs/utils/validation.py: validate_speckit_project() checks .specify/ directory, validate_git_repo() checks git init (cli-interface.md Execution Flow Step 1)
-- [ ] T023 [US1] Implement feature scanning logic: Use FeatureScanner to discover features, determine DocumentStructure based on feature_count <= 5 (FLAT) or >= 6 (COMPREHENSIVE) (cli-interface.md Execution Flow Steps 3-4, research.md Decision 4)
+- [X] T015 [P] [US1] Create GeneratorConfig dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 5): tool, project_name, author, version, language, theme, extensions, plugins, custom_settings, to_sphinx_conf(), to_mkdocs_yaml()
+- [X] T016 [P] [US1] Create DocumentStructure class in src/speckit_docs/parsers/__init__.py (data-model.md Entity 4): type (FLAT/COMPREHENSIVE), root_dir, directories, index_file, determine_structure(feature_count), get_feature_path(feature_name)
+- [X] T017 [US1] Implement interactive prompts module in src/speckit_docs/utils/prompts.py (cli-interface.md Interactive Prompts): prompt_tool_selection(), prompt_project_name(), prompt_author(), prompt_version(), prompt_language() with defaults
+- [X] T018 [US1] Implement SphinxGenerator class in src/speckit_docs/generators/sphinx.py (data-model.md Entity 7): init_project() renders Jinja2 templates to docs/, handles myst-parser configuration (FR-005a)
+- [X] T019 [US1] Implement MkDocsGenerator class in src/speckit_docs/generators/mkdocs.py (data-model.md Entity 8): init_project() renders Jinja2 templates to docs/
+- [X] T020 [US1] Implement doc_init.py CLI script in .specify/scripts/docs/doc_init.py (cli-interface.md Python API): argparse setup with --type, --no-interaction flags, call to prompts module, Generator.init_project(), error handling with SpecKitDocsError
+- [X] T021 [US1] Create Claude Code command definition in .claude/commands/doc-init.md: Execute `uv run python .specify/scripts/docs/doc_init.py {{ARGS}}` (cli-interface.md Command Mapping)
+- [X] T022 [US1] Add project validation logic in src/speckit_docs/utils/validation.py: validate_speckit_project() checks .specify/ directory, validate_git_repo() checks git init (cli-interface.md Execution Flow Step 1)
+- [X] T023 [US1] Implement feature scanning logic: Use FeatureScanner to discover features, determine DocumentStructure based on feature_count <= 5 (FLAT) or >= 6 (COMPREHENSIVE) (cli-interface.md Execution Flow Steps 3-4, research.md Decision 4)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - `/speckit.doc-init` can initialize Sphinx or MkDocs projects
 
