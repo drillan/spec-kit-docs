@@ -38,11 +38,11 @@
 
 - [X] T006 [P] [Foundation] Create Jinja2 template files for Sphinx: `src/speckit_docs/templates/sphinx/conf.py.j2` (file-formats.md Section 1), `src/speckit_docs/templates/sphinx/index.md.j2` (file-formats.md Section 2), `src/speckit_docs/templates/sphinx/Makefile.j2` (file-formats.md Section 3), `src/speckit_docs/templates/sphinx/make.bat.j2` (file-formats.md Section 4)
 - [X] T007 [P] [Foundation] Create Jinja2 template files for MkDocs: `src/speckit_docs/templates/mkdocs/mkdocs.yml.j2` (file-formats.md Section 5), `src/speckit_docs/templates/mkdocs/index.md.j2` (file-formats.md Section 6)
-- [ ] T008 [Foundation] Implement MarkdownParser class in src/speckit_docs/parsers/markdown_parser.py using markdown-it-py (data-model.md Entity 10, research.md Decision 5): parse(), extract_headings(), extract_code_blocks(), extract_metadata()
-- [ ] T009 [P] [Foundation] Implement FeatureScanner class in src/speckit_docs/parsers/feature_scanner.py (data-model.md Entity 1): scan .specify/specs/ directories, detect spec.md presence (FR-001), return Feature[] list
-- [ ] T010 [Foundation] Implement BaseGenerator abstract class in src/speckit_docs/generators/base.py (data-model.md Entity 6, research.md Decision 3): init_project(), update_docs(), build_docs(), validate_project()
-- [ ] T011 [P] [Foundation] Implement custom error classes in src/speckit_docs/utils/validation.py: SpecKitDocsError(message, suggestion) (data-model.md Entity 12, research.md Decision 8)
-- [ ] T012 [P] [Foundation] Implement Git integration utilities in src/speckit_docs/utils/git.py: GitRepository wrapper, git diff functions (data-model.md Entity 9, research.md Decision 2)
+- [X] T008 [Foundation] Implement MarkdownParser class in src/speckit_docs/parsers/markdown_parser.py using markdown-it-py (data-model.md Entity 10, research.md Decision 5): parse(), extract_headings(), extract_code_blocks(), extract_metadata()
+- [X] T009 [P] [Foundation] Implement FeatureScanner class in src/speckit_docs/parsers/feature_scanner.py (data-model.md Entity 1): scan .specify/specs/ directories, detect spec.md presence (FR-001), return Feature[] list
+- [X] T010 [Foundation] Implement BaseGenerator abstract class in src/speckit_docs/generators/base.py (data-model.md Entity 6, research.md Decision 3): init_project(), update_docs(), build_docs(), validate_project()
+- [X] T011 [P] [Foundation] Implement custom error classes in src/speckit_docs/utils/validation.py: SpecKitDocsError(message, suggestion) (data-model.md Entity 12, research.md Decision 8)
+- [X] T012 [P] [Foundation] Implement Git integration utilities in src/speckit_docs/utils/git.py: GitRepository wrapper, git diff functions (data-model.md Entity 9, research.md Decision 2)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
