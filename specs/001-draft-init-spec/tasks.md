@@ -83,17 +83,17 @@
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Create Document dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 2): file_path, type (SPEC/PLAN/TASKS), content, sections, last_modified, git_status, parse(), extract_metadata(), is_changed()
-- [ ] T025 [P] [US2] Create Section dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 3): title, level, content, line_start, line_end, subsections, to_sphinx_md(), to_mkdocs_md(), extract_code_blocks()
-- [ ] T026 [US2] Implement Document.parse() method using MarkdownParser: Parse spec.md into Section tree, extract metadata (FR-002, FR-012)
-- [ ] T027 [US2] Implement Section.to_sphinx_md() method: Convert Section to MyST Markdown format with proper directive syntax (FR-008, FR-013)
-- [ ] T028 [US2] Implement Section.to_mkdocs_md() method: Convert Section to MkDocs Markdown, convert MyST admonitions to MkDocs format (` ```{note}` → `!!! note`) (FR-008, FR-014, file-formats.md Section 8)
-- [ ] T029 [US2] Implement SphinxGenerator.update_docs() method in src/speckit_docs/generators/sphinx.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_sphinx_md(), update index.md toctree (FR-013)
-- [ ] T030 [US2] Implement MkDocsGenerator.update_docs() method in src/speckit_docs/generators/mkdocs.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_mkdocs_md(), update mkdocs.yml nav (FR-014)
-- [ ] T031 [US2] Implement file naming logic in Generator: Strip feature number from directory name (001-user-auth → user-auth.md) (FR-013, file-formats.md Section 7)
-- [ ] T032 [US2] Implement doc_update.py CLI script in .specify/scripts/docs/doc_update.py (cli-interface.md Python API): argparse setup with --full, --no-build flags, detect Sphinx/MkDocs by conf.py/mkdocs.yml presence, call Generator.update_docs()
-- [ ] T033 [US2] Create Claude Code command definition in .claude/commands/doc-update.md: Execute `uv run python .specify/scripts/docs/doc_update.py {{ARGS}}` (cli-interface.md Command Mapping)
-- [ ] T034 [US2] Add BuildResult dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 11): success, output_dir, warnings, errors, build_time, file_count, is_valid(), get_summary()
+- [X] T024 [P] [US2] Create Document dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 2): file_path, type (SPEC/PLAN/TASKS), content, sections, last_modified, git_status, parse(), extract_metadata(), is_changed()
+- [X] T025 [P] [US2] Create Section dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 3): title, level, content, line_start, line_end, subsections, to_sphinx_md(), to_mkdocs_md(), extract_code_blocks()
+- [X] T026 [US2] Implement Document.parse() method using MarkdownParser: Parse spec.md into Section tree, extract metadata (FR-002, FR-012)
+- [X] T027 [US2] Implement Section.to_sphinx_md() method: Convert Section to MyST Markdown format with proper directive syntax (FR-008, FR-013)
+- [X] T028 [US2] Implement Section.to_mkdocs_md() method: Convert Section to MkDocs Markdown, convert MyST admonitions to MkDocs format (` ```{note}` → `!!! note`) (FR-008, FR-014, file-formats.md Section 8)
+- [X] T029 [US2] Implement SphinxGenerator.update_docs() method in src/speckit_docs/generators/sphinx.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_sphinx_md(), update index.md toctree (FR-013)
+- [X] T030 [US2] Implement MkDocsGenerator.update_docs() method in src/speckit_docs/generators/mkdocs.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_mkdocs_md(), update mkdocs.yml nav (FR-014)
+- [X] T031 [US2] Implement file naming logic in Generator: Strip feature number from directory name (001-user-auth → user-auth.md) (FR-013, file-formats.md Section 7)
+- [X] T032 [US2] Implement doc_update.py CLI script in .specify/scripts/docs/doc_update.py (cli-interface.md Python API): argparse setup with --full, --no-build flags, detect Sphinx/MkDocs by conf.py/mkdocs.yml presence, call Generator.update_docs()
+- [X] T033 [US2] Create Claude Code command definition in .claude/commands/doc-update.md: Execute `uv run python .specify/scripts/docs/doc_update.py {{ARGS}}` (cli-interface.md Command Mapping)
+- [X] T034 [US2] Add BuildResult dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 11): success, output_dir, warnings, errors, build_time, file_count, is_valid(), get_summary()
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - Full `/speckit.doc-init` → `/speckit.doc-update --no-build` workflow generates Markdown documentation
 

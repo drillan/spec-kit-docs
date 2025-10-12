@@ -169,3 +169,40 @@ class BaseGenerator(ABC):
             (self.docs_dir / "guides").mkdir(exist_ok=True)
             (self.docs_dir / "api").mkdir(exist_ok=True)
             (self.docs_dir / "architecture").mkdir(exist_ok=True)
+
+    def get_feature_doc_path(self, feature: Feature, structure_type: str) -> Path:
+        """
+        Get output file path for a feature document.
+
+        Args:
+            feature: Feature to generate path for
+            structure_type: "FLAT" or "COMPREHENSIVE"
+
+        Returns:
+            Path to the output Markdown file
+        """
+        # FR-003b: File naming based on structure type
+        if structure_type == "FLAT":
+            # FLAT: features/{feature-name}.md
+            return self.docs_dir / "features" / f"{feature.name}.md"
+        else:
+            # COMPREHENSIVE: features/{feature-name}/index.md
+            feature_dir = self.docs_dir / "features" / feature.name
+            feature_dir.mkdir(parents=True, exist_ok=True)
+            return feature_dir / "index.md"
+
+    def determine_structure_type(self) -> str:
+        """
+        Determine the structure type of the current documentation project.
+
+        Returns:
+            "FLAT" or "COMPREHENSIVE"
+        """
+        # Check if features directory exists and has subdirectories
+        features_dir = self.docs_dir / "features"
+        if not features_dir.exists():
+            return "FLAT"
+
+        # If features directory contains subdirectories, it's COMPREHENSIVE
+        subdirs = [d for d in features_dir.iterdir() if d.is_dir()]
+        return "COMPREHENSIVE" if subdirs else "FLAT"

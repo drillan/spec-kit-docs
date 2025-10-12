@@ -1,0 +1,170 @@
+"""Document representation for parsed Markdown files."""
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from .markdown_parser import MarkdownParser, Section
+
+
+@dataclass
+class Document:
+    """Represents a parsed Markdown document from a spec-kit feature."""
+
+    file_path: Path  # Path to the source Markdown file
+    title: str  # Document title (from first H1 or filename)
+    sections: List[Section]  # Top-level sections
+    metadata: Dict[str, any] = field(default_factory=dict)  # YAML frontmatter
+
+    @staticmethod
+    def parse(file_path: Path, parser: Optional[MarkdownParser] = None) -> "Document":
+        """
+        Parse a Markdown file into a Document.
+
+        Args:
+            file_path: Path to the Markdown file
+            parser: MarkdownParser instance (creates new one if None)
+
+        Returns:
+            Document instance with parsed content
+
+        Raises:
+            FileNotFoundError: If file does not exist
+            MarkdownParseError: If parsing fails
+        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        # Read file content
+        content = file_path.read_text(encoding="utf-8")
+
+        # Create parser if not provided
+        if parser is None:
+            parser = MarkdownParser(enable_myst=True)
+
+        # Extract metadata (YAML frontmatter)
+        metadata = parser.extract_metadata(content)
+
+        # Parse sections
+        sections = parser.parse(content)
+
+        # Determine title
+        if "title" in metadata:
+            title = metadata["title"]
+        elif sections and sections[0].level == 1:
+            # Use first H1 as title
+            title = sections[0].title
+        else:
+            # Use filename as fallback
+            title = file_path.stem.replace("-", " ").title()
+
+        return Document(
+            file_path=file_path,
+            title=title,
+            sections=sections,
+            metadata=metadata,
+        )
+
+    def to_sphinx_md(self) -> str:
+        """
+        Convert document to Sphinx MyST Markdown format.
+
+        Returns:
+            Full document content in MyST Markdown
+        """
+        lines = []
+
+        # Add title if not already in first section
+        if not self.sections or self.sections[0].title != self.title:
+            lines.append(f"# {self.title}\n")
+
+        # Convert all sections recursively
+        for section in self.sections:
+            lines.append(self._section_to_markdown(section, "sphinx"))
+
+        return "\n".join(lines)
+
+    def to_mkdocs_md(self) -> str:
+        """
+        Convert document to MkDocs Markdown format.
+
+        Returns:
+            Full document content in MkDocs Markdown
+        """
+        lines = []
+
+        # Add title if not already in first section
+        if not self.sections or self.sections[0].title != self.title:
+            lines.append(f"# {self.title}\n")
+
+        # Convert all sections recursively
+        for section in self.sections:
+            lines.append(self._section_to_markdown(section, "mkdocs"))
+
+        return "\n".join(lines)
+
+    def _section_to_markdown(self, section: Section, format: str) -> str:
+        """
+        Convert section and its subsections to Markdown.
+
+        Args:
+            section: Section to convert
+            format: "sphinx" or "mkdocs"
+
+        Returns:
+            Section content in Markdown format
+        """
+        # Convert main section
+        if format == "sphinx":
+            content = section.to_sphinx_md()
+        else:
+            content = section.to_mkdocs_md()
+
+        # Convert subsections recursively
+        if section.subsections:
+            subsection_content = []
+            for subsection in section.subsections:
+                subsection_content.append(self._section_to_markdown(subsection, format))
+            content += "\n\n" + "\n\n".join(subsection_content)
+
+        return content
+
+    def find_section(self, title: str, level: Optional[int] = None) -> Optional[Section]:
+        """
+        Find a section by title (and optionally level).
+
+        Args:
+            title: Section title to search for
+            level: Optional heading level filter
+
+        Returns:
+            First matching Section, or None if not found
+        """
+        def search(sections: List[Section]) -> Optional[Section]:
+            for section in sections:
+                if section.title == title and (level is None or section.level == level):
+                    return section
+                # Search in subsections
+                result = search(section.subsections)
+                if result:
+                    return result
+            return None
+
+        return search(self.sections)
+
+    def get_all_sections(self) -> List[Section]:
+        """
+        Get all sections (flattened list including subsections).
+
+        Returns:
+            List of all Section objects in document order
+        """
+        result = []
+
+        def collect(sections: List[Section]):
+            for section in sections:
+                result.append(section)
+                collect(section.subsections)
+
+        collect(self.sections)
+        return result

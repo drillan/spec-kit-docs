@@ -100,8 +100,130 @@ Thumbs.db
             features: List of features to generate docs for
             incremental: If True, only update changed features (not used in init)
         """
-        # TODO: Will be implemented in Phase 4 (User Story 2)
-        pass
+        from ..parsers.document import Document
+        from ..parsers.markdown_parser import MarkdownParser
+
+        # Determine structure type
+        structure_type = self.determine_structure_type()
+
+        # Create features directory if needed
+        features_dir = self.docs_dir / "features"
+        features_dir.mkdir(exist_ok=True)
+
+        # Initialize parser
+        parser = MarkdownParser(enable_myst=True)
+
+        # Process each feature
+        processed_features = []
+        for feature in features:
+            if feature.spec_file is None or not feature.spec_file.exists():
+                # Skip features without spec files
+                continue
+
+            try:
+                # Parse spec.md into Document
+                doc = Document.parse(feature.spec_file, parser)
+
+                # Get output path based on structure type
+                output_path = self.get_feature_doc_path(feature, structure_type)
+
+                # Convert to MkDocs Markdown
+                content = doc.to_mkdocs_md()
+
+                # Write to output file
+                output_path.write_text(content, encoding="utf-8")
+
+                processed_features.append({
+                    "id": feature.id,
+                    "name": feature.name,
+                    "title": doc.title,
+                    "file": str(output_path.relative_to(self.docs_dir)),
+                })
+
+            except Exception as e:
+                # Log error but continue processing other features
+                print(f"⚠️  警告: {feature.name} の処理中にエラーが発生しました: {e}")
+
+        # Update index.md and mkdocs.yml with features list
+        self._update_index(processed_features, structure_type)
+        self._update_mkdocs_yml(processed_features, structure_type)
+
+    def _update_index(self, features: List[dict], structure_type: str) -> None:
+        """
+        Update index.md with features list.
+
+        Args:
+            features: List of processed feature info dicts
+            structure_type: "FLAT" or "COMPREHENSIVE"
+        """
+        try:
+            template = self.jinja_env.get_template("index.md.j2")
+            index_content = template.render(
+                project_name=self.config.project_name,
+                description=self.config.description or "A spec-kit project",
+                features=features,
+                structure_type=structure_type,
+            )
+
+            index_path = self.docs_dir / "index.md"
+            index_path.write_text(index_content)
+
+        except TemplateNotFound:
+            # Fallback: manually update index.md
+            index_path = self.docs_dir / "index.md"
+            if not index_path.exists():
+                return
+
+            # Read existing content
+            content = index_path.read_text()
+
+            # Build features list
+            features_section = "\n## 機能一覧\n\n"
+            for feature in features:
+                features_section += f"- [{feature['title']}]({feature['file']})\n"
+
+            # Append or replace features section
+            if "## 機能一覧" in content:
+                # Replace existing section
+                import re
+                content = re.sub(
+                    r"## 機能一覧.*?(?=\n##|\Z)",
+                    features_section,
+                    content,
+                    flags=re.DOTALL
+                )
+            else:
+                # Append to end
+                content += "\n" + features_section
+
+            index_path.write_text(content)
+
+    def _update_mkdocs_yml(self, features: List[dict], structure_type: str) -> None:
+        """
+        Update mkdocs.yml navigation with features list.
+
+        Args:
+            features: List of processed feature info dicts
+            structure_type: "FLAT" or "COMPREHENSIVE"
+        """
+        try:
+            template = self.jinja_env.get_template("mkdocs.yml.j2")
+            config_content = template.render(
+                project_name=self.config.project_name,
+                author=self.config.author,
+                description=self.config.description or "A spec-kit project",
+                language=self.config.language,
+                theme=self.config.theme,
+                features=features,
+                structure_type=structure_type,
+            )
+
+            config_path = self.docs_dir / "mkdocs.yml"
+            config_path.write_text(config_content)
+
+        except TemplateNotFound:
+            # Skip if template not available
+            pass
 
     def build_docs(self) -> BuildResult:
         """

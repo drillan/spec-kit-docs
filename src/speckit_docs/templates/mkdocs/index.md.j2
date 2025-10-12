@@ -3,10 +3,15 @@
 {{ description | default("A spec-kit project") }}
 
 ## 機能一覧
+{% if features %}
 
 {% for feature in features -%}
-- [{{ feature.title }}]({% if structure_type == "FLAT" %}{{ feature.file_name }}{% else %}features/{{ feature.file_name }}{% endif %})
+- [{{ feature.title }}]({{ feature.file }})
 {% endfor %}
+{% else %}
+
+プロジェクトに機能が追加されていません。`/speckit.doc-update` を実行してドキュメントを生成してください。
+{% endif %}
 
 ## はじめに
 
