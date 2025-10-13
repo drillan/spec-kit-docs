@@ -47,7 +47,9 @@ def prompt_project_name(interactive: bool = True) -> str:
         return default_name
 
     while True:
-        name = input(f"\nプロジェクト名を入力してください [{default_name}]: ").strip() or default_name
+        name = (
+            input(f"\nプロジェクト名を入力してください [{default_name}]: ").strip() or default_name
+        )
 
         # Validate: no special characters
         if "/" in name or "\\" in name or ":" in name:
@@ -88,9 +90,7 @@ def prompt_author(interactive: bool = True) -> str:
     if not interactive:
         return default_author
 
-    author = (
-        input(f"\n著者名を入力してください [{default_author}]: ").strip() or default_author
-    )
+    author = input(f"\n著者名を入力してください [{default_author}]: ").strip() or default_author
 
     # If empty, use "Unknown Author"
     if not author:
@@ -145,7 +145,9 @@ def prompt_language(interactive: bool = True) -> str:
     return language
 
 
-def get_all_config_interactive(tool: str | None = None, interactive: bool = True) -> dict:
+def get_all_config_interactive(
+    tool: str | None = None, interactive: bool = True
+) -> dict[str, str]:
     """
     Get all configuration through interactive prompts.
 

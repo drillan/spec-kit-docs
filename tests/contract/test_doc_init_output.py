@@ -53,12 +53,13 @@ class TestSphinxOutputContract:
             pytest.fail(f"conf.py contains invalid Python syntax: {e}")
 
         # Validate required configuration
-        assert "myst_parser" in conf_content, \
-            "conf.py must include 'myst_parser' in extensions list"
-        assert "source_suffix" in conf_content, \
-            "conf.py must define source_suffix"
-        assert "myst_enable_extensions" in conf_content, \
-            "conf.py must enable MyST Markdown extensions"
+        assert (
+            "myst_parser" in conf_content
+        ), "conf.py must include 'myst_parser' in extensions list"
+        assert "source_suffix" in conf_content, "conf.py must define source_suffix"
+        assert (
+            "myst_enable_extensions" in conf_content
+        ), "conf.py must enable MyST Markdown extensions"
 
     def test_generated_conf_py_contains_myst_extensions(self, temp_project_dir):
         """Validate conf.py enables required MyST extensions.
@@ -79,8 +80,7 @@ class TestSphinxOutputContract:
         # Check for MyST extensions
         required_extensions = ["colon_fence", "deflist", "tasklist", "attrs_inline"]
         for ext in required_extensions:
-            assert ext in conf_content, \
-                f"conf.py must enable MyST extension '{ext}'"
+            assert ext in conf_content, f"conf.py must enable MyST extension '{ext}'"
 
     def test_generated_index_md_contains_toctree(self, temp_project_dir):
         """Validate generated index.md contains toctree directive with :maxdepth: option.
@@ -101,10 +101,10 @@ class TestSphinxOutputContract:
         index_content = index_md_path.read_text()
 
         # Check for MyST toctree directive
-        assert "```{toctree}" in index_content or "{toctree}" in index_content, \
-            "index.md must contain MyST toctree directive"
-        assert ":maxdepth:" in index_content, \
-            "toctree must have :maxdepth: option"
+        assert (
+            "```{toctree}" in index_content or "{toctree}" in index_content
+        ), "index.md must contain MyST toctree directive"
+        assert ":maxdepth:" in index_content, "toctree must have :maxdepth: option"
 
 
 class TestMkDocsOutputContract:
@@ -164,6 +164,6 @@ class TestMkDocsOutputContract:
                 pytest.skip("doc_init.py not yet generating index.md")
 
         # MkDocs expects docs/index.md structure
-        assert (temp_project_dir / "docs" / "docs" / "index.md").exists() or \
-               (temp_project_dir / "docs" / "index.md").exists(), \
-            "index.md must exist in docs/ subdirectory for MkDocs"
+        assert (temp_project_dir / "docs" / "docs" / "index.md").exists() or (
+            temp_project_dir / "docs" / "index.md"
+        ).exists(), "index.md must exist in docs/ subdirectory for MkDocs"

@@ -83,8 +83,13 @@ class SphinxGenerator(BaseGenerator):
         # Render template
         index_content = template.render(
             project_name=self.config.project_name,
-            description=self.config.description or "このプロジェクトは、spec-kitを使用して開発されています。",
-            structure_type=self.structure_type.value if isinstance(self.structure_type, StructureType) else self.structure_type,
+            description=self.config.description
+            or "このプロジェクトは、spec-kitを使用して開発されています。",
+            structure_type=(
+                self.structure_type.value
+                if isinstance(self.structure_type, StructureType)
+                else self.structure_type
+            ),
         )
 
         # Write index.md
@@ -153,7 +158,8 @@ class SphinxGenerator(BaseGenerator):
             template = self.jinja_env.get_template("index.md.j2")
             index_content = template.render(
                 project_name=self.config.project_name,
-                description=self.config.description or "このプロジェクトは、spec-kitを使用して開発されています。",
+                description=self.config.description
+                or "このプロジェクトは、spec-kitを使用して開発されています。",
                 features=[],  # Will be populated by update_docs
                 structure_type=structure_type,
             )
@@ -249,12 +255,14 @@ Thumbs.db
                 # Write to output file
                 output_path.write_text(content, encoding="utf-8")
 
-                processed_features.append({
-                    "id": feature.id,
-                    "name": feature.name,
-                    "title": doc.title,
-                    "file": str(output_path.relative_to(self.docs_dir)),
-                })
+                processed_features.append(
+                    {
+                        "id": feature.id,
+                        "name": feature.name,
+                        "title": doc.title,
+                        "file": str(output_path.relative_to(self.docs_dir)),
+                    }
+                )
 
             except Exception as e:
                 # Log error but continue processing other features
@@ -275,7 +283,8 @@ Thumbs.db
             template = self.jinja_env.get_template("index.md.j2")
             index_content = template.render(
                 project_name=self.config.project_name,
-                description=self.config.description or "このプロジェクトは、spec-kitを使用して開発されています。",
+                description=self.config.description
+                or "このプロジェクトは、spec-kitを使用して開発されています。",
                 features=features,
                 structure_type=structure_type,
             )
@@ -301,11 +310,9 @@ Thumbs.db
             if "## 機能一覧" in content:
                 # Replace existing section
                 import re
+
                 content = re.sub(
-                    r"## 機能一覧.*?(?=\n##|\Z)",
-                    features_section,
-                    content,
-                    flags=re.DOTALL
+                    r"## 機能一覧.*?(?=\n##|\Z)", features_section, content, flags=re.DOTALL
                 )
             else:
                 # Append to end
@@ -370,7 +377,9 @@ Thumbs.db
                 "Makeがインストールされているか確認してください（Linux/macOS）。Windowsの場合はmake.batを使用してください。",
             )
         except Exception as e:
-            raise BuildError(f"ビルド中にエラーが発生しました: {str(e)}", "ビルドログを確認してください。")
+            raise BuildError(
+                f"ビルド中にエラーが発生しました: {str(e)}", "ビルドログを確認してください。"
+            )
 
     def validate_project(self) -> ValidationResult:
         """

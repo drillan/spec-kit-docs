@@ -87,7 +87,8 @@ class GitRepository:
             if "HEAD~1" in base_ref and len(list(self.repo.iter_commits())) < 2:
                 return []
             raise GitValidationError(
-                f"Git diff の取得に失敗しました: {str(e)}", "Gitリポジトリの状態を確認してください。"
+                f"Git diff の取得に失敗しました: {str(e)}",
+                "Gitリポジトリの状態を確認してください。",
             )
 
     def get_changed_spec_files(self) -> list[Path]:
@@ -174,9 +175,7 @@ class ChangeDetector:
         """
         self.git_repo = GitRepository(repo_path)
 
-    def get_changed_features(
-        self, base_ref: str = "HEAD~1", target_ref: str = "HEAD"
-    ) -> list[Any]:
+    def get_changed_features(self, base_ref: str = "HEAD~1", target_ref: str = "HEAD") -> list[Any]:
         """
         Get list of features with changed spec.md files.
 

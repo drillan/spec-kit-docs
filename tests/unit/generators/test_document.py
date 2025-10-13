@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from speckit_docs.generators.document import DocumentGenerator
 from speckit_docs.models import Document, DocumentType, Feature, FeatureStatus
 
@@ -95,9 +93,7 @@ class TestDocumentGenerator:
         )
 
         generator = DocumentGenerator()
-        page_content = generator.generate_feature_page(
-            feature, spec_doc, tasks_doc=tasks_doc
-        )
+        page_content = generator.generate_feature_page(feature, spec_doc, tasks_doc=tasks_doc)
 
         # Verify both spec and tasks content are included
         assert "# Test Feature" in page_content

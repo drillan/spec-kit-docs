@@ -13,7 +13,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[3] / "src"))
 
-from speckit_docs.generators.base import GeneratorConfig
+from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
 from speckit_docs.generators.mkdocs import MkDocsGenerator
 from speckit_docs.generators.sphinx import SphinxGenerator
 from speckit_docs.parsers.document_structure import DocumentStructure
@@ -27,7 +27,7 @@ from speckit_docs.utils.validation import (
 )
 
 
-def main():
+def main() -> int:
     """Main entry point for doc-init command."""
     parser = argparse.ArgumentParser(
         description="Initialize documentation project for spec-kit",
@@ -111,7 +111,9 @@ def main():
                 if not confirm_overwrite(docs_dir, interactive=not args.no_interaction):
                     if args.no_interaction:
                         print("\n✗ エラー: docs/ ディレクトリが既に存在します。")
-                        print("💡 提案: --force フラグを追加するか、手動で docs/ を削除してください。")
+                        print(
+                            "💡 提案: --force フラグを追加するか、手動で docs/ を削除してください。"
+                        )
                         return 1
                     else:
                         print("\n中止しました。")
@@ -145,7 +147,9 @@ def main():
 
         # Get each config value (CLI args take priority)
         tool = args.type if args.type else prompt_tool_selection(interactive=interactive)
-        project_name = args.project_name if args.project_name else prompt_project_name(interactive=interactive)
+        project_name = (
+            args.project_name if args.project_name else prompt_project_name(interactive=interactive)
+        )
         author = args.author if args.author else prompt_author(interactive=interactive)
         version = args.version if args.version else prompt_version(interactive=interactive)
         language = args.language if args.language else prompt_language(interactive=interactive)
@@ -164,6 +168,7 @@ def main():
                 # Try to get Git remote origin URL
                 try:
                     import subprocess
+
                     result = subprocess.run(
                         ["git", "remote", "get-url", "origin"],
                         capture_output=True,
@@ -190,6 +195,7 @@ def main():
         # Step 7: Initialize project
         print(f"\n✓ {config.tool.capitalize()}プロジェクトを初期化中...")
 
+        generator: BaseGenerator
         if config.tool == "sphinx":
             generator = SphinxGenerator(config)
         else:

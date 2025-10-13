@@ -1,9 +1,5 @@
 """Unit tests for SphinxGenerator (T017)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.generators.base import GeneratorConfig
 from speckit_docs.generators.sphinx import SphinxGenerator
 from speckit_docs.models import StructureType
@@ -61,6 +57,55 @@ class TestSphinxGenerator:
         # Verify it's Markdown format
         content = index_md.read_text()
         assert len(content) > 0
+
+    def test_sphinx_generator_init_project(self, tmp_path):
+        """Test init_project() creates all required Sphinx files."""
+        # Create generator
+        config = GeneratorConfig(
+            tool="sphinx",
+            project_name="Init Test Project",
+            author="Init Test Author",
+            version="2.0.0",
+            language="en",
+        )
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Initialize project
+        generator.init_project()
+
+        # Verify all expected files exist
+        docs_dir = tmp_path / "docs"
+        assert (docs_dir / "conf.py").exists(), "conf.py should be created"
+        assert (docs_dir / "index.md").exists(), "index.md should be created"
+        assert (docs_dir / "Makefile").exists(), "Makefile should be created"
+        assert (docs_dir / "make.bat").exists(), "make.bat should be created"
+
+    def test_sphinx_generator_init_project_includes_myst_parser(self, tmp_path):
+        """Test that init_project() includes myst-parser configuration (FR-005a, T019)."""
+        # Create generator
+        config = GeneratorConfig(
+            tool="sphinx",
+            project_name="MyST Test",
+            author="MyST Author",
+            version="1.0.0",
+        )
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Initialize project
+        generator.init_project()
+
+        # Read generated conf.py
+        conf_py_path = tmp_path / "docs" / "conf.py"
+        assert conf_py_path.exists()
+
+        content = conf_py_path.read_text()
+
+        # Verify myst-parser is in extensions
+        assert "myst_parser" in content, "conf.py must include myst_parser in extensions"
+
+        # Verify source_suffix configuration for Markdown
+        assert "source_suffix" in content, "conf.py must define source_suffix"
+        assert ".md" in content or "markdown" in content, "conf.py must support .md files"
 
     def test_sphinx_generator_create_directory_structure_flat(self, tmp_path):
         """Test creating FLAT directory structure (≤5 features)."""

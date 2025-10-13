@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class FeatureStatus(Enum):
@@ -107,9 +107,9 @@ class Feature:
     directory_path: Path
     spec_file: Path
     status: FeatureStatus
-    plan_file: Optional[Path] = None
-    tasks_file: Optional[Path] = None
-    priority: Optional[str] = None
+    plan_file: Path | None = None
+    tasks_file: Path | None = None
+    priority: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -155,5 +155,75 @@ class Document:
     type: DocumentType
     content: str
     sections: list[Section] = field(default_factory=list)
-    last_modified: Optional[datetime] = None
+    last_modified: datetime | None = None
     git_status: GitStatus = GitStatus.UNTRACKED
+
+
+@dataclass
+class GeneratorConfig:
+    """Configuration for documentation generator.
+
+    Used to configure Sphinx or MkDocs documentation generation.
+
+    Attributes:
+        tool: Documentation generator tool (SPHINX or MKDOCS)
+        project_name: Project name for documentation
+        author: Author name
+        version: Project version string
+        language: Documentation language code (e.g., "en", "ja")
+        theme: Theme name (e.g., "alabaster", "furo" for Sphinx; "material" for MkDocs)
+        extensions: List of extensions to enable (Sphinx extensions or MkDocs plugins)
+        plugins: List of plugins to enable (primarily for MkDocs)
+        custom_settings: Additional custom settings as key-value pairs
+    """
+
+    tool: GeneratorTool
+    project_name: str
+    author: str
+    version: str
+    language: str = "en"
+    theme: str | None = None
+    extensions: list[str] = field(default_factory=list)
+    plugins: list[str] = field(default_factory=list)
+    custom_settings: dict[str, Any] = field(default_factory=dict)
+
+    def to_sphinx_conf(self) -> dict[str, Any]:
+        """Convert configuration to Sphinx conf.py dictionary.
+
+        Returns:
+            Dictionary with Sphinx configuration values
+        """
+        conf: dict[str, Any] = {
+            "project": self.project_name,
+            "author": self.author,
+            "version": self.version,
+            "language": self.language,
+            "extensions": self.extensions,
+        }
+
+        # Add theme if specified
+        if self.theme:
+            conf["html_theme"] = self.theme
+
+        # Merge custom settings
+        conf.update(self.custom_settings)
+
+        return conf
+
+    def to_mkdocs_yaml(self) -> dict[str, Any]:
+        """Convert configuration to MkDocs YAML dictionary.
+
+        Returns:
+            Dictionary with MkDocs configuration values
+        """
+        mkdocs_config: dict[str, Any] = {
+            "site_name": self.project_name,
+            "site_author": self.author,
+            "theme": {"name": self.theme or "material"},
+            "plugins": self.plugins if self.plugins else ["search"],
+        }
+
+        # Merge custom settings
+        mkdocs_config.update(self.custom_settings)
+
+        return mkdocs_config

@@ -47,8 +47,14 @@ User can test the system.
 
         # Initialize git repository (required by doc_init validation)
         subprocess.run(["git", "init"], cwd=project_path, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test User"], cwd=project_path, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=project_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"], cwd=project_path, capture_output=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=project_path,
+            capture_output=True,
+        )
 
         yield project_path
         shutil.rmtree(temp_dir)
@@ -65,15 +71,22 @@ User can test the system.
             # Run doc_init.py (non-interactive mode)
             result = subprocess.run(
                 [
-                    "uv", "run", "python", "-m", "speckit_docs.doc_init",
-                    "--type", "mkdocs",
-                    "--project-name", "Test Project",
-                    "--site-name", "Test Site",
-                    "--no-interaction"
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "speckit_docs.doc_init",
+                    "--type",
+                    "mkdocs",
+                    "--project-name",
+                    "Test Project",
+                    "--site-name",
+                    "Test Site",
+                    "--no-interaction",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode != 0:
@@ -100,15 +113,22 @@ User can test the system.
             # First initialize MkDocs project
             init_result = subprocess.run(
                 [
-                    "uv", "run", "python", "-m", "speckit_docs.doc_init",
-                    "--type", "mkdocs",
-                    "--project-name", "Test Project",
-                    "--site-name", "Test Site",
-                    "--no-interaction"
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "speckit_docs.doc_init",
+                    "--type",
+                    "mkdocs",
+                    "--project-name",
+                    "Test Project",
+                    "--site-name",
+                    "Test Site",
+                    "--no-interaction",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if init_result.returncode != 0:
@@ -119,7 +139,7 @@ User can test the system.
                 ["uv", "run", "python", "-m", "speckit_docs.doc_update", "--no-build"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if update_result.returncode != 0:
@@ -149,15 +169,22 @@ User can test the system.
             # Initialize
             subprocess.run(
                 [
-                    "uv", "run", "python", "-m", "speckit_docs.doc_init",
-                    "--type", "mkdocs",
-                    "--project-name", "Test Project",
-                    "--site-name", "Test Site",
-                    "--no-interaction"
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "speckit_docs.doc_init",
+                    "--type",
+                    "mkdocs",
+                    "--project-name",
+                    "Test Project",
+                    "--site-name",
+                    "Test Site",
+                    "--no-interaction",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             # Update
@@ -165,7 +192,7 @@ User can test the system.
                 ["uv", "run", "python", "-m", "speckit_docs.doc_update"],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             # Verify HTML was built

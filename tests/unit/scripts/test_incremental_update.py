@@ -1,8 +1,5 @@
 """Unit tests for incremental update functionality (T026)."""
 
-from pathlib import Path
-
-import pytest
 from git import Repo
 
 from speckit_docs.scripts.doc_update import main
@@ -83,9 +80,7 @@ class TestIncrementalUpdate:
 
         # Create feature
         (tmp_path / "specs" / "001-test-feature").mkdir(parents=True)
-        (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text(
-            "# Test Feature"
-        )
+        (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text("# Test Feature")
 
         # Initial commit
         repo.index.add(["*"])
@@ -115,14 +110,10 @@ class TestIncrementalUpdate:
 
         # Create multiple features
         (tmp_path / "specs" / "001-feature-one").mkdir(parents=True)
-        (tmp_path / "specs" / "001-feature-one" / "spec.md").write_text(
-            "# Feature One"
-        )
+        (tmp_path / "specs" / "001-feature-one" / "spec.md").write_text("# Feature One")
 
         (tmp_path / "specs" / "002-feature-two").mkdir(parents=True)
-        (tmp_path / "specs" / "002-feature-two" / "spec.md").write_text(
-            "# Feature Two"
-        )
+        (tmp_path / "specs" / "002-feature-two" / "spec.md").write_text("# Feature Two")
 
         # Initial commit
         repo.index.add(["*"])
@@ -156,9 +147,7 @@ class TestIncrementalUpdate:
 
         # Create initial feature
         (tmp_path / "specs" / "001-feature-one").mkdir(parents=True)
-        (tmp_path / "specs" / "001-feature-one" / "spec.md").write_text(
-            "# Feature One"
-        )
+        (tmp_path / "specs" / "001-feature-one" / "spec.md").write_text("# Feature One")
 
         # Initial commit
         repo.index.add(["*"])
@@ -166,9 +155,7 @@ class TestIncrementalUpdate:
 
         # Add new feature
         (tmp_path / "specs" / "002-new-feature").mkdir(parents=True)
-        (tmp_path / "specs" / "002-new-feature" / "spec.md").write_text(
-            "# New Feature"
-        )
+        (tmp_path / "specs" / "002-new-feature" / "spec.md").write_text("# New Feature")
 
         # Commit the new feature
         repo.index.add(["specs/002-new-feature"])
@@ -201,9 +188,7 @@ class TestIncrementalUpdate:
 
         # Create feature
         (tmp_path / "specs" / "001-test-feature").mkdir(parents=True)
-        (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text(
-            "# Test Feature"
-        )
+        (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text("# Test Feature")
 
         # Add but don't commit yet
         repo.index.add(["*"])

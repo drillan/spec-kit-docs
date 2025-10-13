@@ -15,21 +15,25 @@ try:
     from speckit_docs.generators import GeneratorConfig
     from speckit_docs.generators.mkdocs import MkDocsGenerator
     from speckit_docs.generators.sphinx import SphinxGenerator
+
     GENERATORS_AVAILABLE = True
 except ImportError:
     GENERATORS_AVAILABLE = False
+
     # Define placeholder classes for test collection
     class SphinxGenerator:
         pass
+
     class MkDocsGenerator:
         pass
+
     class GeneratorConfig:
         pass
 
+
 # Skip all tests if generators not yet implemented (TDD RED phase)
 pytestmark = pytest.mark.skipif(
-    not GENERATORS_AVAILABLE,
-    reason="Generators not yet implemented - TDD RED phase"
+    not GENERATORS_AVAILABLE, reason="Generators not yet implemented - TDD RED phase"
 )
 
 
@@ -51,7 +55,7 @@ class TestSphinxGenerator:
             project_name="Test Project",
             author="Test Author",
             version="1.0.0",
-            language="ja"
+            language="ja",
         )
 
     def test_init_project_creates_conf_py(self, temp_docs_dir, sphinx_config):
@@ -87,8 +91,9 @@ class TestSphinxGenerator:
         assert index_md_path.exists(), "index.md should be created"
 
         index_content = index_md_path.read_text()
-        assert "# Test Project" in index_content or "Test Project" in index_content, \
-            "index.md should contain project name"
+        assert (
+            "# Test Project" in index_content or "Test Project" in index_content
+        ), "index.md should contain project name"
 
     def test_init_project_creates_makefile(self, temp_docs_dir, sphinx_config):
         """Test that init_project() creates Makefile for building docs.
@@ -137,7 +142,7 @@ class TestMkDocsGenerator:
             tool="mkdocs",
             project_name="Test Project",
             site_name="Test Site",
-            repo_url="https://github.com/test/repo"
+            repo_url="https://github.com/test/repo",
         )
 
     def test_init_project_creates_mkdocs_yml(self, temp_docs_dir, mkdocs_config):
@@ -172,5 +177,6 @@ class TestMkDocsGenerator:
         assert index_md_path.exists(), "docs/index.md should be created"
 
         index_content = index_md_path.read_text()
-        assert "Test Project" in index_content or "Test Site" in index_content, \
-            "index.md should contain project/site name"
+        assert (
+            "Test Project" in index_content or "Test Site" in index_content
+        ), "index.md should contain project/site name"

@@ -1,9 +1,6 @@
 """Integration tests for install functionality (T014)."""
 
 import subprocess
-from pathlib import Path
-
-import pytest
 
 from speckit_docs.cli.install_handler import install_handler
 
@@ -38,7 +35,13 @@ class TestInstallIntegration:
 
         # Verify scripts are executable
         result = subprocess.run(
-            ["uv", "run", "python", tmp_path / ".specify" / "scripts" / "docs" / "doc_init.py", "--help"],
+            [
+                "uv",
+                "run",
+                "python",
+                tmp_path / ".specify" / "scripts" / "docs" / "doc_init.py",
+                "--help",
+            ],
             capture_output=True,
             text=True,
         )
@@ -46,7 +49,13 @@ class TestInstallIntegration:
         assert "--type" in result.stdout or "sphinx" in result.stdout
 
         result = subprocess.run(
-            ["uv", "run", "python", tmp_path / ".specify" / "scripts" / "docs" / "doc_update.py", "--help"],
+            [
+                "uv",
+                "run",
+                "python",
+                tmp_path / ".specify" / "scripts" / "docs" / "doc_update.py",
+                "--help",
+            ],
             capture_output=True,
             text=True,
         )

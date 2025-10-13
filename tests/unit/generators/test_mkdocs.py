@@ -1,9 +1,5 @@
 """Unit tests for MkDocsGenerator (T018)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.generators.base import GeneratorConfig
 from speckit_docs.generators.mkdocs import MkDocsGenerator
 from speckit_docs.models import StructureType
@@ -60,6 +56,49 @@ class TestMkDocsGenerator:
         # Verify it's Markdown format
         content = index_md.read_text()
         assert len(content) > 0
+
+    def test_mkdocs_generator_init_project(self, tmp_path):
+        """Test init_project() creates all required MkDocs files."""
+        # Create generator
+        config = GeneratorConfig(
+            tool="mkdocs",
+            project_name="Init Test Project",
+            author="Init Test Author",
+            version="2.0.0",
+        )
+        generator = MkDocsGenerator(config, tmp_path)
+
+        # Initialize project
+        generator.init_project()
+
+        # Verify all expected files exist
+        assert (tmp_path / "mkdocs.yml").exists(), "mkdocs.yml should be created in project root"
+        assert (tmp_path / "docs" / "index.md").exists(), "index.md should be created in docs/"
+
+    def test_mkdocs_generator_init_project_includes_material_theme(self, tmp_path):
+        """Test that init_project() includes Material theme configuration (T020)."""
+        # Create generator
+        config = GeneratorConfig(
+            tool="mkdocs",
+            project_name="Material Test",
+            author="Material Author",
+            version="1.0.0",
+            theme="material",
+        )
+        generator = MkDocsGenerator(config, tmp_path)
+
+        # Initialize project
+        generator.init_project()
+
+        # Read generated mkdocs.yml
+        mkdocs_yml_path = tmp_path / "mkdocs.yml"
+        assert mkdocs_yml_path.exists()
+
+        content = mkdocs_yml_path.read_text()
+
+        # Verify Material theme is configured
+        assert "theme:" in content, "mkdocs.yml must include theme configuration"
+        assert "material" in content, "mkdocs.yml must specify Material theme"
 
     def test_mkdocs_generator_create_directory_structure_flat(self, tmp_path):
         """Test creating FLAT directory structure (≤5 features)."""

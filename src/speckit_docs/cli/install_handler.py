@@ -42,9 +42,7 @@ def validate_speckit_project(project_dir: Path = Path(".")) -> bool:
     return True
 
 
-def _copy_package_files(
-    source_package_path: str, dest_dir: Path, force: bool
-) -> list[Path]:
+def _copy_package_files(source_package_path: str, dest_dir: Path, force: bool) -> list[Path]:
     """
     Copy files from a package directory to destination directory.
 
@@ -71,9 +69,7 @@ def _copy_package_files(
 
             # Check if file exists and handle confirmation
             if dest_file.exists() and not force:
-                if not typer.confirm(
-                    f"ファイル {dest_file} は既に存在します。上書きしますか？"
-                ):
+                if not typer.confirm(f"ファイル {dest_file} は既に存在します。上書きしますか？"):
                     console.print(f"[yellow]スキップ: {dest_file}[/yellow]")
                     continue
 

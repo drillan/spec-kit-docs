@@ -151,6 +151,58 @@ class BaseGenerator(ABC):
         """
         pass
 
+    @abstractmethod
+    def init_project(self) -> None:
+        """
+        Initialize a new documentation project.
+
+        This creates all necessary files and directories for a new documentation
+        project, including configuration files, index page, and directory structure.
+
+        Raises:
+            NotImplementedError: If not implemented by subclass
+        """
+        pass
+
+    @abstractmethod
+    def update_docs(self, features: list["Feature"]) -> None:
+        """
+        Update documentation for given features.
+
+        Args:
+            features: List of features to generate documentation for
+
+        Raises:
+            NotImplementedError: If not implemented by subclass
+        """
+        pass
+
+    @abstractmethod
+    def build_docs(self) -> BuildResult:
+        """
+        Build HTML documentation from source files.
+
+        Returns:
+            BuildResult with success status, warnings, errors, and build statistics
+
+        Raises:
+            NotImplementedError: If not implemented by subclass
+        """
+        pass
+
+    @abstractmethod
+    def validate_project(self) -> ValidationResult:
+        """
+        Validate documentation project structure and configuration.
+
+        Returns:
+            ValidationResult indicating if project is valid, with error/warning messages
+
+        Raises:
+            NotImplementedError: If not implemented by subclass
+        """
+        pass
+
     def determine_structure(self, feature_count: int) -> StructureType:
         """
         Determine structure type based on feature count (FR-005, FR-006).
@@ -162,11 +214,7 @@ class BaseGenerator(ABC):
             StructureType.FLAT for 5 or fewer features
             StructureType.COMPREHENSIVE for 6 or more features
         """
-        return (
-            StructureType.FLAT
-            if feature_count <= 5
-            else StructureType.COMPREHENSIVE
-        )
+        return StructureType.FLAT if feature_count <= 5 else StructureType.COMPREHENSIVE
 
     # Helper methods for backwards compatibility with existing implementations
     def _create_docs_directory(self) -> None:

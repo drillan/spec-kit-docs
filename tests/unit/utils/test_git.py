@@ -1,7 +1,6 @@
 """Unit tests for Git utilities."""
 
 import subprocess
-from pathlib import Path
 
 import pytest
 
@@ -166,9 +165,7 @@ class TestChangeDetector:
         """Test has_changes returns True when there are changes."""
         # Modify spec file
         (spec_kit_project / "specs/001-test-feature/spec.md").write_text("# Modified Spec")
-        subprocess.run(
-            ["git", "add", "."], cwd=spec_kit_project, check=True, capture_output=True
-        )
+        subprocess.run(["git", "add", "."], cwd=spec_kit_project, check=True, capture_output=True)
         subprocess.run(
             ["git", "commit", "-m", "Modify spec"],
             cwd=spec_kit_project,
@@ -181,7 +178,7 @@ class TestChangeDetector:
         # For now, we'll just test that the method exists and doesn't crash
         # Full functionality test will be done in integration tests
         try:
-            has_changes = detector.has_changes("HEAD~1", "HEAD")
+            detector.has_changes("HEAD~1", "HEAD")
             # If it succeeds, great. If not, that's expected until FeatureScanner is ready
         except Exception:
             pass  # Expected if FeatureScanner is not ready
@@ -191,7 +188,7 @@ class TestChangeDetector:
         detector = ChangeDetector(spec_kit_project)
 
         try:
-            has_changes = detector.has_changes("HEAD", "HEAD")
+            detector.has_changes("HEAD", "HEAD")
             # If it succeeds, should be False (no changes between same commit)
             # If FeatureScanner not ready, will raise exception
         except Exception:

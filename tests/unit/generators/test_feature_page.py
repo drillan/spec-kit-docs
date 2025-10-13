@@ -1,9 +1,5 @@
 """Unit tests for FeaturePageGenerator (T023)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.generators.feature_page import FeaturePageGenerator
 from speckit_docs.models import Feature, FeatureStatus, GeneratorTool, StructureType
 
@@ -210,7 +206,7 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generated_pages = generator.generate_pages(features)
+        generator.generate_pages(features)
 
         # Verify features/ subdirectory was created
         assert (docs_dir / "features").exists()

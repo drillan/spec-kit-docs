@@ -85,7 +85,9 @@ def main(
                         f"[green]✓[/green] {len(features)} 個の変更された機能を検出しました（インクリメンタル更新）"
                     )
                 else:
-                    console.print("[green]✓[/green] 変更が検出されませんでした。更新をスキップします。")
+                    console.print(
+                        "[green]✓[/green] 変更が検出されませんでした。更新をスキップします。"
+                    )
                     return 0
             except Exception:
                 # If Git detection fails (no repo, no commits, etc.), fall back to full update
@@ -96,9 +98,7 @@ def main(
         else:
             # Full update
             features = discoverer.discover_features()
-            console.print(
-                f"[green]✓[/green] {len(features)} 個の機能を検出しました（フル更新）"
-            )
+            console.print(f"[green]✓[/green] {len(features)} 個の機能を検出しました（フル更新）")
 
         if not features:
             console.print(
@@ -124,7 +124,7 @@ def main(
 
         # FR-020: Display update summary
         console.print("\n[bold green]✓ ドキュメント更新が完了しました！[/bold green]")
-        console.print(f"\n[bold]サマリー:[/bold]")
+        console.print("\n[bold]サマリー:[/bold]")
         console.print(f"  • 更新された機能: {len(features)}")
         console.print(f"  • 生成されたページ: {len(feature_pages)}")
 
@@ -135,9 +135,7 @@ def main(
         console.print(f"  💡 {e.suggestion}")
         return 1
     except Exception as e:
-        console.print(
-            f"[red]✗[/red] 予期しないエラーが発生しました: {e}", style="bold"
-        )
+        console.print(f"[red]✗[/red] 予期しないエラーが発生しました: {e}", style="bold")
         return 1
 
 

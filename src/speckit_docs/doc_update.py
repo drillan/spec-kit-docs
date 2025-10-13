@@ -13,6 +13,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[3] / "src"))
 
+from speckit_docs.generators.base import BaseGenerator
 from speckit_docs.generators.mkdocs import MkDocsGenerator
 from speckit_docs.generators.sphinx import SphinxGenerator
 from speckit_docs.parsers.feature_scanner import FeatureScanner
@@ -50,7 +51,7 @@ def detect_documentation_tool(docs_dir: Path, project_root: Path) -> str:
         )
 
 
-def main():
+def main() -> int:
     """Main entry point for doc-update command."""
     parser = argparse.ArgumentParser(
         description="Update documentation from spec-kit features",
@@ -144,6 +145,7 @@ def main():
         print("\n✓ ドキュメントを更新中...")
 
         # We need a minimal GeneratorConfig - read from existing config
+        generator: BaseGenerator
         if tool == "sphinx":
             # Read existing conf.py to get config
             conf_py = docs_dir / "conf.py"
@@ -151,6 +153,7 @@ def main():
 
             # Extract project name
             import re
+
             project_match = re.search(r"project\s*=\s*['\"](.+?)['\"]", content)
             author_match = re.search(r"author\s*=\s*['\"](.+?)['\"]", content)
             version_match = re.search(r"version\s*=\s*['\"](.+?)['\"]", content)

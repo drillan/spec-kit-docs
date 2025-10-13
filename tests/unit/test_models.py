@@ -128,9 +128,7 @@ class TestFeature:
             priority="P1",
         )
         assert feature.plan_file == Path("/path/to/specs/002-another-feature/plan.md")
-        assert feature.tasks_file == Path(
-            "/path/to/specs/002-another-feature/tasks.md"
-        )
+        assert feature.tasks_file == Path("/path/to/specs/002-another-feature/tasks.md")
         assert feature.priority == "P1"
 
     def test_feature_with_metadata(self):
@@ -279,3 +277,96 @@ class TestSection:
         assert len(level1_section.subsections) == 1
         assert len(level1_section.subsections[0].subsections) == 1
         assert level1_section.subsections[0].subsections[0].title == "Level 3"
+
+
+class TestGeneratorConfig:
+    """Tests for GeneratorConfig dataclass."""
+
+    def test_generator_config_creation_sphinx(self):
+        """Test that GeneratorConfig can be created for Sphinx projects."""
+        from speckit_docs.models import GeneratorConfig
+
+        config = GeneratorConfig(
+            tool=GeneratorTool.SPHINX,
+            project_name="Test Project",
+            author="Test Author",
+            version="1.0.0",
+        )
+        assert config.tool == GeneratorTool.SPHINX
+        assert config.project_name == "Test Project"
+        assert config.author == "Test Author"
+        assert config.version == "1.0.0"
+
+    def test_generator_config_creation_mkdocs(self):
+        """Test that GeneratorConfig can be created for MkDocs projects."""
+        from speckit_docs.models import GeneratorConfig
+
+        config = GeneratorConfig(
+            tool=GeneratorTool.MKDOCS,
+            project_name="MkDocs Project",
+            author="MkDocs Author",
+            version="2.0.0",
+        )
+        assert config.tool == GeneratorTool.MKDOCS
+        assert config.project_name == "MkDocs Project"
+
+    def test_generator_config_with_optional_fields(self):
+        """Test that GeneratorConfig supports optional fields."""
+        from speckit_docs.models import GeneratorConfig
+
+        config = GeneratorConfig(
+            tool=GeneratorTool.SPHINX,
+            project_name="Test",
+            author="Author",
+            version="1.0.0",
+            language="ja",
+            theme="furo",
+            extensions=["myst_parser", "sphinx.ext.autodoc"],
+            plugins=["search", "minify"],
+            custom_settings={"html_theme_options": {"sidebar_hide_name": True}},
+        )
+        assert config.language == "ja"
+        assert config.theme == "furo"
+        assert "myst_parser" in config.extensions
+        assert "search" in config.plugins
+        assert config.custom_settings["html_theme_options"]["sidebar_hide_name"] is True
+
+    def test_generator_config_to_sphinx_conf(self):
+        """Test that GeneratorConfig can be converted to Sphinx conf.py dict."""
+        from speckit_docs.models import GeneratorConfig
+
+        config = GeneratorConfig(
+            tool=GeneratorTool.SPHINX,
+            project_name="Sphinx Test",
+            author="Sphinx Author",
+            version="3.0.0",
+            language="en",
+            theme="alabaster",
+            extensions=["myst_parser"],
+        )
+        conf_dict = config.to_sphinx_conf()
+        assert conf_dict["project"] == "Sphinx Test"
+        assert conf_dict["author"] == "Sphinx Author"
+        assert conf_dict["version"] == "3.0.0"
+        assert conf_dict["language"] == "en"
+        assert conf_dict["html_theme"] == "alabaster"
+        assert "myst_parser" in conf_dict["extensions"]
+
+    def test_generator_config_to_mkdocs_yaml(self):
+        """Test that GeneratorConfig can be converted to MkDocs YAML dict."""
+        from speckit_docs.models import GeneratorConfig
+
+        config = GeneratorConfig(
+            tool=GeneratorTool.MKDOCS,
+            project_name="MkDocs Test",
+            author="MkDocs Author",
+            version="4.0.0",
+            theme="material",
+            plugins=["search", "tags"],
+        )
+        mkdocs_dict = config.to_mkdocs_yaml()
+        assert mkdocs_dict["site_name"] == "MkDocs Test"
+        assert mkdocs_dict["site_author"] == "MkDocs Author"
+        assert mkdocs_dict["theme"]["name"] == "material"
+        assert "search" in mkdocs_dict["plugins"]
+        assert "tags" in mkdocs_dict["plugins"]

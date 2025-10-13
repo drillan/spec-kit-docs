@@ -3,6 +3,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .markdown_parser import MarkdownParser, Section
 
@@ -14,7 +15,7 @@ class Document:
     file_path: Path  # Path to the source Markdown file
     title: str  # Document title (from first H1 or filename)
     sections: list[Section]  # Top-level sections
-    metadata: dict[str, any] = field(default_factory=dict)  # YAML frontmatter
+    metadata: dict[str, Any] = field(default_factory=dict)  # YAML frontmatter
 
     @property
     def last_modified(self) -> float:
@@ -139,10 +140,8 @@ class Document:
             Section content in Markdown format
         """
         # Convert main section
-        if format == "sphinx":
-            content = section.to_sphinx_md()
-        else:
-            content = section.to_mkdocs_md()
+        heading_prefix = "#" * section.level
+        content = f"{heading_prefix} {section.title}\n\n{section.content}"
 
         # Convert subsections recursively
         if section.subsections:
@@ -164,6 +163,7 @@ class Document:
         Returns:
             First matching Section, or None if not found
         """
+
         def search(sections: list[Section]) -> Section | None:
             for section in sections:
                 if section.title == title and (level is None or section.level == level):
@@ -183,9 +183,9 @@ class Document:
         Returns:
             List of all Section objects in document order
         """
-        result = []
+        result: list[Section] = []
 
-        def collect(sections: list[Section]):
+        def collect(sections: list[Section]) -> None:
             for section in sections:
                 result.append(section)
                 collect(section.subsections)

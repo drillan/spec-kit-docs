@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/driller/spec-kit-docs/actions/workflows/test.yml"><img src="https://github.com/driller/spec-kit-docs/actions/workflows/test.yml/badge.svg" alt="Tests"/></a>
+    <a href="https://github.com/driller/spec-kit-docs/actions/workflows/ci.yml"><img src="https://github.com/driller/spec-kit-docs/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
     <a href="https://github.com/driller/spec-kit-docs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/driller/spec-kit-docs" alt="License"/></a>
     <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"/></a>
 </p>
@@ -23,6 +23,7 @@
 - [🔧 Command Reference](#-command-reference)
 - [📚 Core philosophy](#-core-philosophy)
 - [🎯 Features](#-features)
+- [🎭 MVP Scope & Limitations](#-mvp-scope--limitations)
 - [🔧 Prerequisites](#-prerequisites)
 - [📖 Learn more](#-learn-more)
 - [📋 Detailed process](#-detailed-process)
@@ -56,47 +57,56 @@ For more details, see the [spec-kit documentation](https://github.com/github/spe
 
 ### 1. Install spec-kit-docs
 
-Once you have a spec-kit project, initialize spec-kit-docs in your project directory:
+Once you have a spec-kit project, install spec-kit-docs:
 
 ```bash
-# In your existing spec-kit project
-cd your-spec-kit-project
+# Install spec-kit-docs package
+uv pip install -e git+https://github.com/driller/spec-kit-docs.git#egg=speckit-docs
 
-# Run initialization
-uv run python /path/to/spec-kit-docs/.specify/scripts/docs/doc_init.py --tool sphinx
+# Or clone and install locally
+git clone https://github.com/driller/spec-kit-docs.git
+cd spec-kit-docs
+uv pip install -e .
 ```
 
-Or use MkDocs:
+Then install the slash commands and scripts in your project:
 
 ```bash
-uv run python /path/to/spec-kit-docs/.specify/scripts/docs/doc_init.py --tool mkdocs
+# In your spec-kit project directory
+cd your-spec-kit-project
+
+# Run the install handler (via Python API or CLI)
+uv run python -c "from speckit_docs.cli.install_handler import install_handler; install_handler()"
+
+# Or if using the CLI tool
+speckit-docs install
 ```
 
 This will:
-- Create `/doc-init` and `/doc-update` slash commands in `.claude/commands/`
-- Set up the basic documentation structure
-- Configure your chosen documentation tool (Sphinx or MkDocs)
+- Create `/speckit.doc-init` and `/speckit.doc-update` slash commands in `.claude/commands/`
+- Copy backend scripts to `.specify/scripts/docs/`
+- Set up the integration with your spec-kit project
 
 ### 2. Initialize documentation
 
-Use the **`/doc-init`** command to set up your documentation project:
+Use the **`/speckit.doc-init`** command to set up your documentation project:
 
 ```bash
-/doc-init I want to create Sphinx documentation with a clean, modern theme. Include API reference and feature documentation.
+/speckit.doc-init I want to create Sphinx documentation with a clean, modern theme. Include API reference and feature documentation.
 ```
 
 Or for MkDocs:
 
 ```bash
-/doc-init I want to create MkDocs documentation with the Material theme. Include user guides and API documentation.
+/speckit.doc-init I want to create MkDocs documentation with the Material theme. Include user guides and API documentation.
 ```
 
 ### 3. Update documentation
 
-After making changes to your specifications, use the **`/doc-update`** command to regenerate documentation:
+After making changes to your specifications, use the **`/speckit.doc-update`** command to regenerate documentation:
 
 ```bash
-/doc-update Update the documentation to reflect the latest changes in spec.md and plan.md
+/speckit.doc-update Update the documentation to reflect the latest changes in spec.md and plan.md
 ```
 
 The command will:
@@ -118,14 +128,14 @@ The command will:
 
 After running initialization, your AI coding agent will have access to these slash commands:
 
-| Command        | Description                                                           |
-|----------------|-----------------------------------------------------------------------|
-| `/doc-init`    | Initialize Sphinx or MkDocs documentation project for spec-kit       |
-| `/doc-update`  | Update documentation from spec-kit features                           |
+| Command              | Description                                                           |
+|----------------------|-----------------------------------------------------------------------|
+| `/speckit.doc-init`  | Initialize Sphinx or MkDocs documentation project for spec-kit       |
+| `/speckit.doc-update`| Update documentation from spec-kit features                           |
 
 ### Command Details
 
-#### `/doc-init`
+#### `/speckit.doc-init`
 
 Initializes a new documentation project in your spec-kit repository.
 
@@ -134,8 +144,8 @@ Initializes a new documentation project in your spec-kit repository.
 
 **Examples**:
 ```bash
-/doc-init Create Sphinx documentation with RTD theme
-/doc-init Set up MkDocs with Material theme for our API documentation
+/speckit.doc-init Create Sphinx documentation with RTD theme
+/speckit.doc-init Set up MkDocs with Material theme for our API documentation
 ```
 
 **What it does**:
@@ -145,7 +155,7 @@ Initializes a new documentation project in your spec-kit repository.
 4. Creates index page and basic structure
 5. Generates initial feature documentation from existing specs
 
-#### `/doc-update`
+#### `/speckit.doc-update`
 
 Updates existing documentation based on your spec-kit specifications.
 
@@ -154,9 +164,9 @@ Updates existing documentation based on your spec-kit specifications.
 
 **Examples**:
 ```bash
-/doc-update
-/doc-update Regenerate all feature documentation
-/doc-update Update only the API reference section
+/speckit.doc-update
+/speckit.doc-update Regenerate all feature documentation
+/speckit.doc-update Update only the API reference section
 ```
 
 **What it does**:
@@ -233,6 +243,74 @@ The system is designed for easy extension:
 - Smart merge of generated and manual content
 - Track documentation versions with git
 
+## 🎭 MVP Scope & Limitations
+
+### What's Included in MVP
+
+The current MVP version of spec-kit-docs includes:
+
+#### Core Functionality
+- ✅ **Documentation Initialization**: Set up Sphinx or MkDocs projects
+- ✅ **Feature Documentation Generation**: Automatically generate docs from spec.md
+- ✅ **Incremental Updates**: Update only changed features
+- ✅ **CLI Installation**: Install slash commands via `install_handler()`
+- ✅ **Template System**: Jinja2-based templates for customization
+
+#### Supported Documentation Tools
+- ✅ **Sphinx**: With MyST Markdown support
+- ✅ **MkDocs**: With Material theme support
+
+#### Quality Assurance
+- ✅ **Type Safety**: Full mypy --strict compliance
+- ✅ **Code Quality**: Ruff linting and Black formatting
+- ✅ **Test Coverage**: 46% test coverage (151 passing tests)
+- ✅ **CI/CD**: GitHub Actions workflow for automated testing
+
+### Known Limitations
+
+#### MVP Constraints
+- ⚠️ **Manual Edit Preservation**: Basic marker support only (not fully tested in all scenarios)
+- ⚠️ **Document Structure Detection**: COMPREHENSIVE structure is default (SIMPLE, STANDARD not fully implemented)
+- ⚠️ **Git Change Detection**: Implemented but not fully integrated with update workflow
+- ⚠️ **Build Automation**: HTML builds work but may have warnings in some configurations
+
+#### Not Yet Implemented
+- ❌ **PyPI Package**: Not yet published (install from Git only)
+- ❌ **Configuration File**: No `.speckit-docs.yml` support yet
+- ❌ **Custom Templates**: Template override system not documented
+- ❌ **Multi-Language**: Only Japanese and English messages
+- ❌ **Plugin System**: No plugin architecture yet
+
+#### Planned for Future Versions
+- 🔮 **Enhanced Navigation**: Auto-generated table of contents with better structure
+- 🔮 **Cross-References**: Automatic linking between related features
+- 🔮 **Versioned Docs**: Support for multiple documentation versions
+- 🔮 **API Documentation**: Automatic API reference from docstrings
+- 🔮 **Search Integration**: Better search functionality
+
+### Production Readiness
+
+**Current Status**: MVP / Beta
+
+The tool is functional for basic use cases but should be considered beta quality:
+
+- ✅ Use for: Personal projects, internal tools, proof-of-concepts
+- ⚠️ Use with caution for: Team projects (test thoroughly first)
+- ❌ Not ready for: Production documentation with SLAs or critical requirements
+
+### Reporting Issues
+
+If you encounter issues or limitations:
+
+1. Check the [Troubleshooting](#-troubleshooting) section
+2. Review [existing issues](https://github.com/driller/spec-kit-docs/issues)
+3. Open a [new issue](https://github.com/driller/spec-kit-docs/issues/new) with:
+   - Spec-kit version
+   - Spec-kit-docs version
+   - Documentation tool (Sphinx/MkDocs)
+   - Expected vs actual behavior
+   - Minimal reproduction steps
+
 ## 🔧 Prerequisites
 
 - **Linux/macOS** (or WSL2 on Windows)
@@ -308,10 +386,10 @@ Launch your AI agent (e.g., Claude Code):
 claude
 ```
 
-Use the `/doc-init` command to set up documentation:
+Use the `/speckit.doc-init` command to set up documentation:
 
 ```bash
-/doc-init Create Sphinx documentation with a modern theme. Include:
+/speckit.doc-init Create Sphinx documentation with a modern theme. Include:
 - Overview page with project description
 - Feature documentation for each spec in specs/
 - API reference section
@@ -348,7 +426,7 @@ Open your browser to `http://localhost:8000` to preview.
 After making changes to your specs:
 
 ```bash
-/doc-update Regenerate feature documentation to reflect the latest changes in spec.md and plan.md
+/speckit.doc-update Regenerate feature documentation to reflect the latest changes in spec.md and plan.md
 ```
 
 The AI agent will:
@@ -403,13 +481,13 @@ rsync -avz docs/_build/html/ user@server:/var/www/docs/
 
 ### Common Issues
 
-#### `/doc-init` or `/doc-update` commands not found
+#### `/speckit.doc-init` or `/speckit.doc-update` commands not found
 
 **Solution**: Ensure initialization script ran successfully:
 
 ```bash
 ls -la .claude/commands/
-# Should show doc-init.md and doc-update.md
+# Should show speckit.doc-init.md and speckit.doc-update.md
 ```
 
 If missing, re-run:

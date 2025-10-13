@@ -95,12 +95,10 @@ speckit-docs install
 **Non-Interactive Execution**: バックエンドスクリプト（doc_init.py、doc_update.py）は標準入力（stdin）を使用せず、コマンドライン引数のみで動作（II. Non-Interactive Execution原則）
 
 ## Recent Changes
+- 001-draft-init-spec: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 - 2025-10-13: **CLIフレームワーク変更決定（argparse → typer）**: Core Principle I（spec-kit Integration First）準拠のため、本家spec-kitとの一貫性を優先。Session 2025-10-13 Clarificationで記録、plan.md、research.md、CLAUDE.mdを更新（001-draft-init-spec）
 - 2025-10-13: Constitution Check完了（再評価）、typer採用により C004/C012/C013/C014 への準拠が強化された（001-draft-init-spec）
-- 2025-10-13: Project Structure定義完了、Single Project構造を採用（001-draft-init-spec）
-- 2025-10-13: Technical Context更新、CLIフレームワーク選択を typer に確定（001-draft-init-spec）
-- 2025-10-12: research.md生成、主要な技術選択（markdown-it-py、Jinja2、GitPython）の根拠を文書化（001-draft-init-spec）
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

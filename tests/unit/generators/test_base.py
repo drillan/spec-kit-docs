@@ -14,6 +14,8 @@ class TestBaseGenerator:
     def test_base_generator_interface(self, tmp_path):
         """Test that BaseGenerator can be subclassed with required methods."""
 
+        from speckit_docs.generators.base import BuildResult, ValidationResult
+
         class TestGenerator(BaseGenerator):
             """Concrete implementation for testing."""
 
@@ -28,6 +30,31 @@ class TestBaseGenerator:
             def create_directory_structure(self) -> None:
                 """Test implementation of create_directory_structure."""
                 pass
+
+            def init_project(self) -> None:
+                """Test implementation of init_project."""
+                pass
+
+            def update_docs(self, features) -> None:
+                """Test implementation of update_docs."""
+                pass
+
+            def build_docs(self) -> BuildResult:
+                """Test implementation of build_docs."""
+                return BuildResult(
+                    success=True,
+                    output_dir=Path("/tmp"),
+                    warnings=[],
+                    errors=[],
+                    build_time=0.0,
+                    file_count=0,
+                )
+
+            def validate_project(self) -> ValidationResult:
+                """Test implementation of validate_project."""
+                return ValidationResult(
+                    is_valid=True, errors=[], warnings=[], checked_items=[]
+                )
 
         # Create instance
         docs_dir = tmp_path / "docs"
@@ -45,6 +72,8 @@ class TestBaseGenerator:
     def test_determine_structure_flat_for_small_projects(self, tmp_path):
         """Test that determine_structure returns FLAT for 5 or fewer features."""
 
+        from speckit_docs.generators.base import BuildResult, ValidationResult
+
         class TestGenerator(BaseGenerator):
             def generate_config(self, **kwargs) -> None:
                 pass
@@ -54,6 +83,18 @@ class TestBaseGenerator:
 
             def create_directory_structure(self) -> None:
                 pass
+
+            def init_project(self) -> None:
+                pass
+
+            def update_docs(self, features) -> None:
+                pass
+
+            def build_docs(self) -> BuildResult:
+                return BuildResult(True, Path("/tmp"), [], [], 0.0, 0)
+
+            def validate_project(self) -> ValidationResult:
+                return ValidationResult(True, [], [], [])
 
         generator = TestGenerator(tmp_path / "docs")
 
@@ -65,6 +106,8 @@ class TestBaseGenerator:
     def test_determine_structure_comprehensive_for_large_projects(self, tmp_path):
         """Test that determine_structure returns COMPREHENSIVE for 6+ features."""
 
+        from speckit_docs.generators.base import BuildResult, ValidationResult
+
         class TestGenerator(BaseGenerator):
             def generate_config(self, **kwargs) -> None:
                 pass
@@ -74,6 +117,18 @@ class TestBaseGenerator:
 
             def create_directory_structure(self) -> None:
                 pass
+
+            def init_project(self) -> None:
+                pass
+
+            def update_docs(self, features) -> None:
+                pass
+
+            def build_docs(self) -> BuildResult:
+                return BuildResult(True, Path("/tmp"), [], [], 0.0, 0)
+
+            def validate_project(self) -> ValidationResult:
+                return ValidationResult(True, [], [], [])
 
         generator = TestGenerator(tmp_path / "docs")
 

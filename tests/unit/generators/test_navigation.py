@@ -1,9 +1,5 @@
 """Unit tests for NavigationUpdater (T024)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.generators.navigation import NavigationUpdater
 from speckit_docs.models import GeneratorTool
 

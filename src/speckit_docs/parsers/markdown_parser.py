@@ -15,6 +15,8 @@ except ImportError:
 from ..exceptions import SpecKitDocsError
 from ..models import Section
 
+__all__ = ["MarkdownParser", "Section"]
+
 
 class MarkdownParser:
     """Parser for Markdown documents using markdown-it-py."""
@@ -156,7 +158,8 @@ class MarkdownParser:
             List of code block contents
         """
         import re
-        pattern = r'```[\w]*\n(.*?)\n```'
+
+        pattern = r"```[\w]*\n(.*?)\n```"
         matches = re.findall(pattern, content, re.DOTALL)
         return matches
 
@@ -173,14 +176,14 @@ class MarkdownParser:
         import re
 
         # Match YAML frontmatter (--- ... ---)
-        pattern = r'^---\n(.*?)\n---'
+        pattern = r"^---\n(.*?)\n---"
         match = re.match(pattern, content, re.DOTALL)
 
         if not match:
             return {}
 
         try:
-            import yaml  # type: ignore[import-untyped]
+            import yaml
 
             metadata = yaml.safe_load(match.group(1))
             return metadata if isinstance(metadata, dict) else {}

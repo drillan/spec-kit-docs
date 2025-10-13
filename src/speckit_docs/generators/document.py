@@ -8,12 +8,9 @@ FR-017: Tasks summary
 FR-018: Missing file notes
 """
 
-from pathlib import Path
-from typing import Optional
-
 from jinja2 import Environment, PackageLoader
 
-from ..models import Document, DocumentType, Feature
+from ..models import Document, Feature
 
 
 class DocumentGenerator:
@@ -31,8 +28,8 @@ class DocumentGenerator:
         self,
         feature: Feature,
         spec_doc: Document,
-        plan_doc: Optional[Document] = None,
-        tasks_doc: Optional[Document] = None,
+        plan_doc: Document | None = None,
+        tasks_doc: Document | None = None,
     ) -> str:
         """
         Generate a feature documentation page from spec, plan, and tasks documents.

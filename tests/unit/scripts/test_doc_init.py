@@ -1,9 +1,5 @@
 """Unit tests for doc_init.py (T020)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.scripts.doc_init import main
 
 

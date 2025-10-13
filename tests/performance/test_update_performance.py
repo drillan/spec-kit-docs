@@ -51,8 +51,14 @@ User can test feature {i}.
 
         # Initialize git repository (required by doc_init validation)
         subprocess.run(["git", "init"], cwd=project_path, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test User"], cwd=project_path, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=project_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"], cwd=project_path, capture_output=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=project_path,
+            capture_output=True,
+        )
 
         yield project_path
         shutil.rmtree(temp_dir)
@@ -70,15 +76,22 @@ User can test feature {i}.
             # Initialize Sphinx project
             init_result = subprocess.run(
                 [
-                    "uv", "run", "python", "-m", "speckit_docs.doc_init",
-                    "--type", "sphinx",
-                    "--project-name", "Performance Test",
-                    "--author", "Test",
-                    "--no-interaction"
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "speckit_docs.doc_init",
+                    "--type",
+                    "sphinx",
+                    "--project-name",
+                    "Performance Test",
+                    "--author",
+                    "Test",
+                    "--no-interaction",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             if init_result.returncode != 0:
@@ -91,7 +104,7 @@ User can test feature {i}.
                 ["uv", "run", "python", "-m", "speckit_docs.doc_update", "--full", "--no-build"],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             elapsed_time = time.time() - start_time
@@ -100,8 +113,9 @@ User can test feature {i}.
                 pytest.skip(f"doc_update not yet implemented: {update_result.stderr}")
 
             # Verify performance criterion
-            assert elapsed_time <= 45.0, \
-                f"Full update took {elapsed_time:.2f}s, must be ≤ 45s (SC-006)"
+            assert (
+                elapsed_time <= 45.0
+            ), f"Full update took {elapsed_time:.2f}s, must be ≤ 45s (SC-006)"
 
         finally:
             os.chdir(original_dir)
@@ -120,22 +134,29 @@ User can test feature {i}.
             # Initialize and do full update first
             subprocess.run(
                 [
-                    "uv", "run", "python", "-m", "speckit_docs.doc_init",
-                    "--type", "sphinx",
-                    "--project-name", "Performance Test",
-                    "--author", "Test",
-                    "--no-interaction"
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "speckit_docs.doc_init",
+                    "--type",
+                    "sphinx",
+                    "--project-name",
+                    "Performance Test",
+                    "--author",
+                    "Test",
+                    "--no-interaction",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             subprocess.run(
                 ["uv", "run", "python", "-m", "speckit_docs.doc_update", "--full", "--no-build"],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             # Modify one feature's spec.md
@@ -147,18 +168,16 @@ User can test feature {i}.
             subprocess.run(["git", "init"], cwd=large_project, capture_output=True)
             subprocess.run(["git", "add", "."], cwd=large_project, capture_output=True)
             subprocess.run(
-                ["git", "commit", "-m", "Initial"],
-                cwd=large_project,
-                capture_output=True
+                ["git", "commit", "-m", "Initial"], cwd=large_project, capture_output=True
             )
 
             # Modify and commit again
-            feature_1_spec.write_text(current_content + "\n## Modified Section\n\nUpdated content.\n")
+            feature_1_spec.write_text(
+                current_content + "\n## Modified Section\n\nUpdated content.\n"
+            )
             subprocess.run(["git", "add", "."], cwd=large_project, capture_output=True)
             subprocess.run(
-                ["git", "commit", "-m", "Update feature 1"],
-                cwd=large_project,
-                capture_output=True
+                ["git", "commit", "-m", "Update feature 1"], cwd=large_project, capture_output=True
             )
 
             # Measure incremental update time
@@ -168,7 +187,7 @@ User can test feature {i}.
                 ["uv", "run", "python", "-m", "speckit_docs.doc_update", "--no-build"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             elapsed_time = time.time() - start_time
@@ -177,8 +196,9 @@ User can test feature {i}.
                 pytest.skip(f"Incremental update not yet implemented: {update_result.stderr}")
 
             # Verify performance criterion
-            assert elapsed_time <= 5.0, \
-                f"Incremental update took {elapsed_time:.2f}s, must be ≤ 5s (SC-008)"
+            assert (
+                elapsed_time <= 5.0
+            ), f"Incremental update took {elapsed_time:.2f}s, must be ≤ 5s (SC-008)"
 
         finally:
             os.chdir(original_dir)
@@ -196,9 +216,7 @@ User can test feature {i}.
             subprocess.run(["git", "init"], cwd=large_project, capture_output=True)
             subprocess.run(["git", "add", "."], cwd=large_project, capture_output=True)
             subprocess.run(
-                ["git", "commit", "-m", "Initial"],
-                cwd=large_project,
-                capture_output=True
+                ["git", "commit", "-m", "Initial"], cwd=large_project, capture_output=True
             )
 
             # Measure git diff detection time
@@ -209,14 +227,13 @@ User can test feature {i}.
                 ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
                 cwd=large_project,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             elapsed_time = time.time() - start_time
 
             # Verify overhead criterion
-            assert elapsed_time <= 1.0, \
-                f"Git diff overhead was {elapsed_time:.2f}s, must be ≤ 1s"
+            assert elapsed_time <= 1.0, f"Git diff overhead was {elapsed_time:.2f}s, must be ≤ 1s"
 
         finally:
             os.chdir(original_dir)

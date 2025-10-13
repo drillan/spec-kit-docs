@@ -1,8 +1,5 @@
 """Unit tests for MarkdownParser."""
 
-import pytest
-
-from speckit_docs.models import Section
 from speckit_docs.parsers.markdown_parser import MarkdownParser
 
 

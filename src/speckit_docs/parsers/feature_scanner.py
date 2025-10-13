@@ -1,44 +1,10 @@
 """Feature scanner for discovering spec-kit features."""
 
 import re
-from dataclasses import dataclass
 from pathlib import Path
 
+from ..models import Feature, FeatureStatus
 from ..utils.validation import ProjectValidationError
-
-
-@dataclass
-class Feature:
-    """Represents a spec-kit feature."""
-
-    id: str  # Feature number (e.g., "001")
-    name: str  # Feature name (e.g., "user-auth")
-    directory_path: Path  # Absolute path to feature directory
-    spec_file: Path | None = None  # Path to spec.md (required)
-    plan_file: Path | None = None  # Path to plan.md (optional)
-    tasks_file: Path | None = None  # Path to tasks.md (optional)
-    priority: str | None = None  # Priority (e.g., "P1", "P2", "P3")
-
-    @property
-    def file_name(self) -> str:
-        """
-        Get the file name for this feature (without number prefix).
-
-        Returns:
-            Feature name suitable for file naming (e.g., "user-auth.md")
-        """
-        return f"{self.name}.md"
-
-    @property
-    def title(self) -> str:
-        """
-        Get a human-readable title for this feature.
-
-        Returns:
-            Title with capitalized words (e.g., "User Auth")
-        """
-        # Replace hyphens with spaces and capitalize each word
-        return " ".join(word.capitalize() for word in self.name.split("-"))
 
 
 class FeatureScanner:
@@ -98,19 +64,31 @@ class FeatureScanner:
 
             # Check for spec.md (required by FR-001)
             spec_file = item / "spec.md"
-            if require_spec and not spec_file.exists():
+            if not spec_file.exists():
+                if require_spec:
+                    continue
+                # Skip features without spec.md since it's required by Feature model
                 continue
 
             # Check for optional files
             plan_file = item / "plan.md" if (item / "plan.md").exists() else None
             tasks_file = item / "tasks.md" if (item / "tasks.md").exists() else None
 
+            # Determine status based on which files exist
+            if tasks_file and plan_file:
+                status = FeatureStatus.IN_PROGRESS
+            elif plan_file:
+                status = FeatureStatus.PLANNED
+            else:
+                status = FeatureStatus.DRAFT
+
             # Create Feature object
             feature = Feature(
                 id=feature_id,
                 name=feature_name,
                 directory_path=item,
-                spec_file=spec_file if spec_file.exists() else None,
+                spec_file=spec_file,
+                status=status,
                 plan_file=plan_file,
                 tasks_file=tasks_file,
             )

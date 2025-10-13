@@ -1,9 +1,5 @@
 """Unit tests for FeatureDiscoverer (T015)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.models import FeatureStatus
 from speckit_docs.utils.feature_discovery import FeatureDiscoverer
 
@@ -17,9 +13,7 @@ class TestFeatureDiscoverer:
         (tmp_path / "specs" / "001-user-auth").mkdir(parents=True)
         (tmp_path / "specs" / "001-user-auth" / "spec.md").write_text("# User Auth")
         (tmp_path / "specs" / "002-api-integration").mkdir(parents=True)
-        (tmp_path / "specs" / "002-api-integration" / "spec.md").write_text(
-            "# API Integration"
-        )
+        (tmp_path / "specs" / "002-api-integration" / "spec.md").write_text("# API Integration")
 
         # Discover features
         discoverer = FeatureDiscoverer(tmp_path)

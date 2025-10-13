@@ -81,13 +81,9 @@ class NavigationUpdater:
 
         if toctree_marker_start in index_content:
             # Replace existing toctree between markers
-            pattern = (
-                rf"{re.escape(toctree_marker_start)}.*?{re.escape(toctree_marker_end)}"
-            )
+            pattern = rf"{re.escape(toctree_marker_start)}.*?{re.escape(toctree_marker_end)}"
             replacement = f"{toctree_marker_start}\n{toctree_block}\n{toctree_marker_end}"
-            updated_content = re.sub(
-                pattern, replacement, index_content, flags=re.DOTALL
-            )
+            updated_content = re.sub(pattern, replacement, index_content, flags=re.DOTALL)
         else:
             # Append new toctree with markers
             updated_content = (

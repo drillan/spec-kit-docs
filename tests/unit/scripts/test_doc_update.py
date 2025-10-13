@@ -1,9 +1,5 @@
 """Unit tests for doc_update.py (T025)."""
 
-from pathlib import Path
-
-import pytest
-
 from speckit_docs.scripts.doc_update import main
 
 
@@ -106,9 +102,7 @@ nav:
 
         # Create spec-kit feature
         (tmp_path / "specs" / "001-test-feature").mkdir(parents=True)
-        (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text(
-            "# Test Feature"
-        )
+        (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text("# Test Feature")
 
         # Run doc_update (full mode)
         result = main(incremental=False)
