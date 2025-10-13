@@ -94,33 +94,33 @@
 
 ### Tests for User Story 2（TDD: Red-Green-Refactor）
 
-- [ ] T036 [P] [US2] tests/unit/parsers/test_markdown_parser.pyの拡張（Document.parse()が見出し、リスト、テーブル、コードブロックを正しく抽出するテスト）
-- [ ] T037 [P] [US2] tests/unit/generators/test_feature_page.pyの拡張（FeaturePageGeneratorがspec.md、plan.md、tasks.mdから統合されたMarkdownページを生成するテスト）
-- [ ] T038 [P] [US2] tests/unit/generators/test_document.pyの拡張（DocumentGeneratorが機能ドキュメントを正しいパスに書き込むテスト: FR-013の命名規則に準拠）
-- [ ] T039 [P] [US2] tests/unit/generators/test_navigation.pyの拡張（NavigationUpdaterがindex.mdのtoctree（Sphinx）またはmkdocs.ymlのnav（MkDocs）を更新するテスト）
-- [ ] T040 [P] [US2] tests/unit/utils/test_git.pyの拡張（ChangeDetector.get_changed_features()がGit diffで変更されたFeatureのみを返すテスト）
-- [ ] T041 [US2] tests/integration/test_sphinx_workflow.pyの拡張（エンドツーエンド: doc-init → doc-update → 機能ページ生成確認 → index.md更新確認 → make htmlの成功確認）
-- [ ] T042 [US2] tests/integration/test_mkdocs_workflow.pyの拡張（エンドツーエンド: doc-init → doc-update → 機能ページ生成確認 → mkdocs.yml更新確認 → mkdocs buildの成功確認）
-- [ ] T043 [US2] tests/unit/scripts/test_incremental_update.pyの拡張（インクリメンタル更新テスト: 1機能のみ変更時、その機能のみ再生成されるか確認）
+- [X] T036 [P] [US2] tests/unit/parsers/test_markdown_parser.pyの拡張（Document.parse()が見出し、リスト、テーブル、コードブロックを正しく抽出するテスト）
+- [X] T037 [P] [US2] tests/unit/generators/test_feature_page.pyの拡張（FeaturePageGeneratorがspec.md、plan.md、tasks.mdから統合されたMarkdownページを生成するテスト）
+- [X] T038 [P] [US2] tests/unit/generators/test_document.pyの拡張（DocumentGeneratorが機能ドキュメントを正しいパスに書き込むテスト: FR-013の命名規則に準拠）
+- [X] T039 [P] [US2] tests/unit/generators/test_navigation.pyの拡張（NavigationUpdaterがindex.mdのtoctree（Sphinx）またはmkdocs.ymlのnav（MkDocs）を更新するテスト）
+- [X] T040 [P] [US2] tests/unit/utils/test_git.pyの拡張（ChangeDetector.get_changed_features()がGit diffで変更されたFeatureのみを返すテスト）
+- [X] T041 [US2] tests/integration/test_sphinx_workflow.pyの拡張（エンドツーエンド: doc-init → doc-update → 機能ページ生成確認 → index.md更新確認 → make htmlの成功確認）
+- [X] T042 [US2] tests/integration/test_mkdocs_workflow.pyの拡張（エンドツーエンド: doc-init → doc-update → 機能ページ生成確認 → mkdocs.yml更新確認 → mkdocs buildの成功確認）
+- [X] T043 [US2] tests/unit/scripts/test_incremental_update.pyの拡張（インクリメンタル更新テスト: 1機能のみ変更時、その機能のみ再生成されるか確認）
 
 ### Implementation for User Story 2
 
-- [ ] T044 [P] [US2] src/speckit_docs/parsers/document.pyの拡張（Document.parse()メソッドの実装: MarkdownParserを使用してセクションツリーを生成）
-- [ ] T045 [P] [US2] src/speckit_docs/parsers/markdown_parser.pyの拡張（extract_headings()、extract_code_blocks()、extract_metadata()の実装: markdown-it-pyを使用）
-- [ ] T046 [US2] src/speckit_docs/models.pyにSectionの変換メソッド追加（Section.to_sphinx_md()とSection.to_mkdocs_md(): MyST構文 ↔ MkDocs構文の変換）
-- [ ] T047 [US2] src/speckit_docs/generators/feature_page.pyの拡張（FeaturePageGeneratorクラスの実装: spec.md、plan.md、tasks.mdを統合してMarkdownページを生成、欠落ファイルには視覚的アドモニション追加）
-- [ ] T048 [US2] src/speckit_docs/generators/document.pyの拡張（DocumentGeneratorクラスの実装: feature-page.md.jinja2テンプレートを使用してMarkdownファイルを書き込む、FR-013の命名規則に準拠）
-- [ ] T049 [US2] src/speckit_docs/generators/navigation.pyの拡張（NavigationUpdaterクラスの実装: Sphinxのindex.mdにtoctree追加、MkDocsのmkdocs.ymlにnav追加、ruamel.yamlでコメント保持）
-- [ ] T050 [US2] src/speckit_docs/utils/git.pyの拡張（ChangeDetector.get_changed_features()の実装: GitPythonでgit diff --name-only HEAD~1 HEADを実行し、specs/配下の変更をフィルタリング）
-- [ ] T051 [US2] src/speckit_docs/generators/sphinx.pyのupdate_docs()メソッド実装（変更されたFeatureのみまたは全Featureを処理し、FeaturePageGenerator → DocumentGenerator → NavigationUpdaterを順次呼び出し）
-- [ ] T052 [US2] src/speckit_docs/generators/mkdocs.pyのupdate_docs()メソッド実装（同上）
-- [ ] T053 [US2] src/speckit_docs/doc_update.pyの拡張（ChangeDetector呼び出し、Generator.update_docs()呼び出し、更新サマリー表示ロジックの実装確認）
-- [ ] T054 [US2] .specify/scripts/docs/doc_update.pyの検証（typerベースのCLI: --full、--no-build、--aiオプションが定義され、main()が非対話的に動作するか確認）
-- [ ] T055 [US2] src/speckit_docs/commands/doc-update.mdの検証（Claude Code用コマンド定義: docs/存在確認→doc_update.py呼び出し→更新サマリー表示→エラーハンドリングのプロンプトが記述されているか確認）
-- [ ] T056 [US2] src/speckit_docs/generators/sphinx.pyのbuild_docs()メソッド実装（subprocess.run()で`make html`を実行し、BuildResultを返す）
-- [ ] T057 [US2] src/speckit_docs/generators/mkdocs.pyのbuild_docs()メソッド実装（subprocess.run()で`mkdocs build`を実行し、BuildResultを返す）
-- [ ] T058 [US2] src/speckit_docs/models.pyにBuildResultとValidationResultデータクラス追加（success、output_dir、warnings、errors、build_time、file_count等のフィールド）
-- [ ] T059 [US2] FR-019aとFR-019bの実装（DocumentStructureの自動移行: 機能数が6以上になった場合、フラット構造から包括的構造に自動移行、逆方向の移行は禁止）
+- [X] T044 [P] [US2] src/speckit_docs/parsers/document.pyの拡張（Document.parse()メソッドの実装: MarkdownParserを使用してセクションツリーを生成）
+- [X] T045 [P] [US2] src/speckit_docs/parsers/markdown_parser.pyの拡張（extract_headings()、extract_code_blocks()、extract_metadata()の実装: markdown-it-pyを使用）
+- [X] T046 [US2] src/speckit_docs/models.pyにSectionの変換メソッド追加（Section.to_sphinx_md()とSection.to_mkdocs_md(): MyST構文 ↔ MkDocs構文の変換）
+- [X] T047 [US2] src/speckit_docs/generators/feature_page.pyの拡張（FeaturePageGeneratorクラスの実装: spec.md、plan.md、tasks.mdを統合してMarkdownページを生成、欠落ファイルには視覚的アドモニション追加）
+- [X] T048 [US2] src/speckit_docs/generators/document.pyの拡張（DocumentGeneratorクラスの実装: feature-page.md.jinja2テンプレートを使用してMarkdownファイルを書き込む、FR-013の命名規則に準拠）
+- [X] T049 [US2] src/speckit_docs/generators/navigation.pyの拡張（NavigationUpdaterクラスの実装: Sphinxのindex.mdにtoctree追加、MkDocsのmkdocs.ymlにnav追加、ruamel.yamlでコメント保持）
+- [X] T050 [US2] src/speckit_docs/utils/git.pyの拡張（ChangeDetector.get_changed_features()の実装: GitPythonでgit diff --name-only HEAD~1 HEADを実行し、specs/配下の変更をフィルタリング）
+- [X] T051 [US2] src/speckit_docs/generators/sphinx.pyのupdate_docs()メソッド実装（変更されたFeatureのみまたは全Featureを処理し、FeaturePageGenerator → DocumentGenerator → NavigationUpdaterを順次呼び出し）
+- [X] T052 [US2] src/speckit_docs/generators/mkdocs.pyのupdate_docs()メソッド実装（同上）
+- [X] T053 [US2] src/speckit_docs/doc_update.pyの拡張（ChangeDetector呼び出し、Generator.update_docs()呼び出し、更新サマリー表示ロジックの実装確認）
+- [X] T054 [US2] .specify/scripts/docs/doc_update.pyの検証（typerベースのCLI: --full、--no-build、--aiオプションが定義され、main()が非対話的に動作するか確認）
+- [X] T055 [US2] src/speckit_docs/commands/doc-update.mdの検証（Claude Code用コマンド定義: docs/存在確認→doc_update.py呼び出し→更新サマリー表示→エラーハンドリングのプロンプトが記述されているか確認）
+- [X] T056 [US2] src/speckit_docs/generators/sphinx.pyのbuild_docs()メソッド実装（subprocess.run()で`make html`を実行し、BuildResultを返す）
+- [X] T057 [US2] src/speckit_docs/generators/mkdocs.pyのbuild_docs()メソッド実装（subprocess.run()で`mkdocs build`を実行し、BuildResultを返す）
+- [X] T058 [US2] src/speckit_docs/models.pyにBuildResultとValidationResultデータクラス追加（success、output_dir、warnings、errors、build_time、file_count等のフィールド）
+- [X] T059 [US2] FR-019aとFR-019bの実装（DocumentStructureの自動移行: 機能数が6以上になった場合、フラット構造から包括的構造に自動移行、逆方向の移行は禁止）
 
 **Checkpoint**: `/speckit.doc-update`コマンドが完全に機能し、specs/から機能ドキュメントを生成・更新できる。Git diffによるインクリメンタル更新が動作し、ビルドが成功する。
 

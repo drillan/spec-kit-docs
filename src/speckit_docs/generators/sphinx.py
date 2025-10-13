@@ -225,12 +225,30 @@ Thumbs.db
         from ..parsers.document import Document
         from ..parsers.markdown_parser import MarkdownParser
 
-        # Determine structure type
-        structure_type = self.determine_structure_type()
+        # Determine current and ideal structure types (FR-019a/FR-019b)
+        current_structure = self.determine_structure_type()
+        ideal_structure = self.determine_structure(len(features))
+
+        # Check for auto-migration needs
+        if current_structure == "FLAT" and ideal_structure == StructureType.COMPREHENSIVE:
+            # Auto-migrate from FLAT to COMPREHENSIVE (FR-019a)
+            print("\n⚠️  機能数が6以上になりました。")
+            print("   FLAT構造からCOMPREHENSIVE構造へ自動移行します...\n")
+            self._migrate_flat_to_comprehensive()
+            structure_type = "COMPREHENSIVE"
+        elif current_structure == "COMPREHENSIVE" and ideal_structure == StructureType.FLAT:
+            # Prevent reverse migration (FR-019b)
+            raise DocumentationProjectError(
+                "COMPREHENSIVE構造からFLAT構造への移行は禁止されています。",
+                "機能数が減少しても、構造タイプは維持されます。"
+            )
+        else:
+            structure_type = current_structure
 
         # Create features directory if needed
         features_dir = self.docs_dir / "features"
-        features_dir.mkdir(exist_ok=True)
+        if structure_type == "COMPREHENSIVE":
+            features_dir.mkdir(exist_ok=True)
 
         # Initialize parser
         parser = MarkdownParser(enable_myst=True)
@@ -425,3 +443,37 @@ Thumbs.db
         return ValidationResult(
             is_valid=is_valid, errors=errors, warnings=warnings, checked_items=checked_items
         )
+
+    def _migrate_flat_to_comprehensive(self) -> None:
+        """
+        Migrate documentation from FLAT to COMPREHENSIVE structure.
+
+        Moves feature Markdown files from docs/*.md to docs/features/*.md,
+        excluding index.md and other infrastructure files.
+
+        This implements FR-019a (auto-migration when feature count >= 6).
+        """
+        import shutil
+
+        # Create features directory
+        features_dir = self.docs_dir / "features"
+        features_dir.mkdir(parents=True, exist_ok=True)
+
+        # Files to exclude from migration
+        exclude_files = {"index.md", "conf.py", "Makefile", "make.bat", ".gitignore"}
+
+        # Find all .md files in docs root (FLAT structure)
+        md_files = [f for f in self.docs_dir.glob("*.md") if f.name not in exclude_files]
+
+        # Move each file to features/ directory
+        migrated_count = 0
+        for md_file in md_files:
+            target_path = features_dir / md_file.name
+            shutil.move(str(md_file), str(target_path))
+            migrated_count += 1
+            print(f"   ✓ {md_file.name} → features/{md_file.name}")
+
+        if migrated_count > 0:
+            print(f"\n✓ {migrated_count}個のファイルを移行しました。")
+        else:
+            print("\n   移行対象のファイルはありませんでした。")

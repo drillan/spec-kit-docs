@@ -2,30 +2,18 @@
 """
 doc_update.py - Update documentation from specifications
 
-This script is executed by /doc-update command.
+This script wraps src/speckit_docs/doc_update.py for spec-kit integration.
+Executed by /doc-update command.
 """
 import sys
+from pathlib import Path
 
-import typer
+# Add src directory to path to import speckit_docs module
+repo_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(repo_root / "src"))
 
-app = typer.Typer()
-
-
-@app.command()
-def main(
-    incremental: bool = typer.Option(
-        True, "--incremental/--full", help="Incremental or full update"
-    ),
-) -> int:
-    """Update documentation from spec-kit specifications."""
-    print(f"Updating documentation...")
-    print(f"Mode: {'incremental' if incremental else 'full'}")
-
-    # TODO: Full implementation in Phase 5 (US2)
-    print("\n[Stub] This is a placeholder. Full implementation coming in Phase 5.")
-
-    return 0
-
+# Import and execute main function from src
+from speckit_docs.doc_update import main
 
 if __name__ == "__main__":
-    sys.exit(app())
+    sys.exit(main())
