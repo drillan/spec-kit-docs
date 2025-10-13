@@ -1,246 +1,150 @@
 #!/usr/bin/env python3
 """
-doc_init.py - Initialize documentation project for spec-kit
+doc_init.py - Initialize documentation project
 
-This script initializes a Sphinx or MkDocs documentation project
-for a spec-kit project.
+This script is executed by /doc-init command.
 """
-
-import argparse
+import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parents[3] / "src"))
+import typer
+from rich.console import Console
 
-from speckit_docs.generators.base import GeneratorConfig
-from speckit_docs.generators.mkdocs import MkDocsGenerator
-from speckit_docs.generators.sphinx import SphinxGenerator
-from speckit_docs.parsers.document_structure import DocumentStructure
-from speckit_docs.parsers.feature_scanner import FeatureScanner
-from speckit_docs.utils.prompts import confirm_overwrite, get_all_config_interactive
-from speckit_docs.utils.validation import (
-    GitValidationError,
-    ProjectValidationError,
-    validate_git_repo,
-    validate_speckit_project,
-)
+# Import from parent package
+try:
+    from speckit_docs.exceptions import SpecKitDocsError
+    from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
+    from speckit_docs.generators.mkdocs import MkDocsGenerator
+    from speckit_docs.generators.sphinx import SphinxGenerator
+    from speckit_docs.utils.feature_discovery import FeatureDiscoverer
+except ImportError:
+    # When running as script directly, try relative imports
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+    from speckit_docs.exceptions import SpecKitDocsError
+    from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
+    from speckit_docs.generators.mkdocs import MkDocsGenerator
+    from speckit_docs.generators.sphinx import SphinxGenerator
+    from speckit_docs.utils.feature_discovery import FeatureDiscoverer
+
+app = typer.Typer()
+console = Console()
 
 
-def main():
-    """Main entry point for doc-init command."""
-    parser = argparse.ArgumentParser(
-        description="Initialize documentation project for spec-kit",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--type",
-        choices=["sphinx", "mkdocs"],
-        help="Documentation tool (sphinx or mkdocs)",
-    )
-
-    parser.add_argument(
-        "--project-name",
-        type=str,
-        help="Project name (default: current directory name)",
-    )
-
-    parser.add_argument(
-        "--author",
-        type=str,
-        help="Author name (default: Git user.name or 'Unknown Author')",
-    )
-
-    parser.add_argument(
-        "--version",
-        type=str,
-        help="Initial version (default: 0.1.0)",
-    )
-
-    parser.add_argument(
-        "--language",
-        type=str,
-        help="Documentation language (default: ja)",
-    )
-
-    parser.add_argument(
-        "--site-name",
-        type=str,
-        help="Site name for MkDocs (default: same as project name)",
-    )
-
-    parser.add_argument(
-        "--repo-url",
-        type=str,
-        help="Repository URL for MkDocs (default: Git remote origin URL or empty)",
-    )
-
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing docs/ directory without confirmation",
-    )
-
-    parser.add_argument(
-        "--no-interaction",
-        action="store_true",
-        help="Disable interactive mode (use defaults)",
-    )
-
-    args = parser.parse_args()
-
+@app.command()
+def main(
+    doc_type: str = typer.Option("sphinx", "--type", help="Documentation tool (sphinx/mkdocs)"),
+    project_name: Optional[str] = typer.Option(None, "--project-name", help="Project name"),
+    author: Optional[str] = typer.Option(None, "--author", help="Author name"),
+    version: str = typer.Option("0.1.0", "--version", help="Project version"),
+    language: str = typer.Option("ja", "--language", help="Documentation language"),
+    force: bool = typer.Option(False, "--force", help="Force overwrite existing files"),
+) -> int:
+    """Initialize documentation project."""
     try:
-        # Step 1: Validate spec-kit project
-        print("✓ spec-kitプロジェクトを検証中...")
-        validate_speckit_project()
-        print("✓ spec-kitプロジェクトを検出しました")
+        # FR-003b: Set default values
+        if project_name is None:
+            project_name = Path.cwd().name
+            console.print(f"[dim]Using project name: {project_name}[/dim]")
 
-        # Step 2: Validate Git repository
-        print("✓ Gitリポジトリを検証中...")
-        validate_git_repo()
+        if author is None:
+            # Try to get from git config
+            try:
+                author = subprocess.check_output(
+                    ["git", "config", "user.name"],
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                ).strip()
+                console.print(f"[dim]Using author from git: {author}[/dim]")
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                author = "Unknown Author"
+                console.print("[dim]Using default author: Unknown Author[/dim]")
 
-        # Step 3: Check for existing docs directory
-        docs_dir = Path.cwd() / "docs"
-        if docs_dir.exists():
-            # If --force is specified, proceed without confirmation
-            if args.force:
-                print("✓ --force フラグが指定されました。既存の docs/ を上書きします。")
-            else:
-                # Interactive confirmation (or fail in non-interactive mode)
-                if not confirm_overwrite(docs_dir, interactive=not args.no_interaction):
-                    if args.no_interaction:
-                        print("\n✗ エラー: docs/ ディレクトリが既に存在します。")
-                        print("💡 提案: --force フラグを追加するか、手動で docs/ を削除してください。")
-                        return 1
-                    else:
-                        print("\n中止しました。")
-                        return 0
-            print()
-
-        # Step 4: Scan features
-        print("✓ 機能をスキャン中...")
-        scanner = FeatureScanner()
-        features = scanner.scan(require_spec=True)
+        # Discover features to determine structure
+        console.print("\n[bold]機能を検出中...[/bold]")
+        discoverer = FeatureDiscoverer()
+        features = discoverer.discover_features()
         feature_count = len(features)
-        print(f"✓ {feature_count}つの機能を発見しました")
+        console.print(f"[green]✓[/green] {feature_count} 個の機能を検出しました")
 
-        # Step 5: Determine document structure
-        structure = DocumentStructure.determine_structure(feature_count)
-        structure_name = "フラット" if structure.value == "FLAT" else "包括的"
-        print(f"✓ ドキュメント構造: {structure_name} ({feature_count}機能)")
+        # FR-003d: Check if docs/ already exists
+        docs_dir = Path("docs")
+        if docs_dir.exists() and not force:
+            console.print(
+                "[red]✗[/red] docs/ ディレクトリが既に存在します。",
+                style="bold",
+            )
+            console.print("  --force フラグを使用するか、docs/ を手動で削除してください。")
+            return 1
 
-        # Step 6: Get configuration
-        # Priority: CLI args > Interactive prompts > Defaults
-        interactive = not args.no_interaction
-
-        # Import individual prompt functions
-        from speckit_docs.utils.prompts import (
-            prompt_tool_selection,
-            prompt_project_name,
-            prompt_author,
-            prompt_version,
-            prompt_language,
-        )
-
-        # Get each config value (CLI args take priority)
-        tool = args.type if args.type else prompt_tool_selection(interactive=interactive)
-        project_name = args.project_name if args.project_name else prompt_project_name(interactive=interactive)
-        author = args.author if args.author else prompt_author(interactive=interactive)
-        version = args.version if args.version else prompt_version(interactive=interactive)
-        language = args.language if args.language else prompt_language(interactive=interactive)
-
-        # MkDocs-specific settings (FR-003b)
-        custom_settings = {}
-        if tool == "mkdocs":
-            # Site name: default to project name
-            site_name = args.site_name if args.site_name else project_name
-            custom_settings["site_name"] = site_name
-
-            # Repository URL: default to Git remote origin URL or empty string
-            if args.repo_url:
-                repo_url = args.repo_url
-            else:
-                # Try to get Git remote origin URL
-                try:
-                    import subprocess
-                    result = subprocess.run(
-                        ["git", "remote", "get-url", "origin"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                    repo_url = result.stdout.strip()
-                except Exception:
-                    repo_url = ""  # Default to empty string if Git remote not found
-
-            if repo_url:  # Only add if non-empty
-                custom_settings["repo_url"] = repo_url
-
-        # Create GeneratorConfig
+        # Create generator config
         config = GeneratorConfig(
-            tool=tool,
+            tool=doc_type,
             project_name=project_name,
             author=author,
             version=version,
             language=language,
-            custom_settings=custom_settings,
         )
 
-        # Step 7: Initialize project
-        print(f"\n✓ {config.tool.capitalize()}プロジェクトを初期化中...")
+        # Select and initialize generator
+        console.print(f"\n[bold]{doc_type.capitalize()} プロジェクトを初期化中...[/bold]")
 
-        if config.tool == "sphinx":
-            generator = SphinxGenerator(config)
+        generator: BaseGenerator
+        if doc_type == "sphinx":
+            generator = SphinxGenerator(config, Path.cwd())
+        elif doc_type == "mkdocs":
+            generator = MkDocsGenerator(config, Path.cwd())
         else:
-            generator = MkDocsGenerator(config)
+            console.print(f"[red]✗[/red] 不明なドキュメントツール: {doc_type}")
+            console.print("  サポートされているツール: sphinx, mkdocs")
+            return 1
 
-        generator.init_project(structure_type=structure.value)
+        # Determine structure based on feature count
+        structure_type = generator.determine_structure(feature_count)
+        generator.structure_type = structure_type
 
-        print(f"✓ {config.tool.capitalize()}プロジェクトを初期化しました")
+        structure_name = "FLAT" if structure_type.value == "FLAT" else "COMPREHENSIVE"
+        console.print(f"[dim]構造タイプ: {structure_name} ({feature_count} features)[/dim]")
 
-        # Step 8: Show generated files
-        print("\n生成されたファイル:")
-        if config.tool == "sphinx":
-            print("  - docs/conf.py")
-            print("  - docs/index.md")
-            print("  - docs/Makefile")
-            print("  - docs/make.bat")
-        else:
-            print("  - docs/mkdocs.yml")
-            print("  - docs/index.md")
+        # Create directory structure
+        generator.create_directory_structure()
 
-        # Step 9: Show next steps
-        print("\n次のステップ:")
-        print("  1. /speckit.doc-update を実行してドキュメントを生成")
+        # Generate config files
+        generator.generate_config(
+            project_name=project_name,
+            author=author,
+            version=version,
+            language=language,
+            year=datetime.now().year,
+        )
 
-        if config.tool == "sphinx":
-            print("  2. cd docs && make html でHTMLをビルド")
-            print("  3. docs/_build/html/index.html をブラウザで開く")
-        else:
-            print("  2. cd docs && mkdocs serve でプレビュー")
-            print("  3. ブラウザで http://127.0.0.1:8000 を開く")
+        # Generate index
+        generator.generate_index()
+
+        # Success message
+        console.print("\n[bold green]✓ ドキュメントプロジェクトの初期化が完了しました！[/bold green]")
+        console.print(f"\n[bold]次のステップ:[/bold]")
+        if doc_type == "sphinx":
+            console.print("  1. cd docs/")
+            console.print("  2. make html")
+            console.print("  3. ブラウザで _build/html/index.html を開く")
+        else:  # mkdocs
+            console.print("  1. mkdocs serve")
+            console.print("  2. ブラウザで http://127.0.0.1:8000 を開く")
 
         return 0
 
-    except ProjectValidationError as e:
-        print(f"\n✗ エラー: {e.message}")
-        print(f"\n💡 提案: {e.suggestion}")
+    except SpecKitDocsError as e:
+        console.print(f"[red]✗[/red] {e.message}", style="bold")
+        console.print(f"  💡 {e.suggestion}")
         return 1
-
-    except GitValidationError as e:
-        print(f"\n✗ エラー: {e.message}")
-        print(f"\n💡 提案: {e.suggestion}")
-        return 1
-
     except Exception as e:
-        print(f"\n✗ エラー: {str(e)}")
-        print("\n予期しないエラーが発生しました。")
-        import traceback
-
-        traceback.print_exc()
+        console.print(f"[red]✗[/red] 予期しないエラーが発生しました: {e}", style="bold")
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(app())

@@ -187,15 +187,15 @@ class ChangeDetector:
         Returns:
             List of Feature objects for changed features
         """
-        from ..parsers.feature_scanner import FeatureScanner
+        from ..utils.feature_discovery import FeatureDiscoverer
 
         # Get all features first
-        scanner = FeatureScanner()
-        all_features = scanner.scan(require_spec=False)
+        discoverer = FeatureDiscoverer()
+        all_features = discoverer.discover_features()
 
-        # Get changed spec files
+        # Get changed spec files in specs/ directory
         changed_files = self.git_repo.get_changed_files(
-            base_ref=base_ref, target_ref=target_ref, path_filter=".specify/specs/"
+            base_ref=base_ref, target_ref=target_ref, path_filter="specs/"
         )
 
         # Filter for spec.md files

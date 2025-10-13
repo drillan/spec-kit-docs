@@ -1,0 +1,58 @@
+{#
+Feature Page Template
+Combines spec.md, plan.md, and tasks.md into a single documentation page
+FR-015: Spec extraction
+FR-016: Plan architecture sections
+FR-017: Tasks summary
+FR-018: Missing file notes
+#}
+# {{ feature.name | replace("-", " ") | title }}
+
+**Feature ID**: {{ feature.id }}
+**Status**: {{ feature.status.value }}
+
+---
+
+## Specification
+
+{{ spec_content }}
+
+---
+
+{% if plan_content %}
+## Implementation Plan
+
+{{ plan_content }}
+
+---
+{% else %}
+{# FR-018: Show note for missing plan #}
+> **Note**: Implementation plan (plan.md) is not yet available for this feature.
+
+---
+{% endif %}
+
+{% if tasks_content %}
+## Implementation Tasks
+
+{{ tasks_content }}
+
+---
+{% else %}
+{# FR-018: Show note for missing tasks #}
+> **Note**: Implementation tasks (tasks.md) have not been generated for this feature yet.
+
+---
+{% endif %}
+
+## Feature Files
+
+- **Specification**: `{{ feature.spec_file.name }}`
+{%- if feature.plan_file %}
+- **Plan**: `{{ feature.plan_file.name }}`
+{%- endif %}
+{%- if feature.tasks_file %}
+- **Tasks**: `{{ feature.tasks_file.name }}`
+{%- endif %}
+
+**Feature Directory**: `{{ feature.directory_path.name }}`
