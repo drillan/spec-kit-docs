@@ -480,7 +480,7 @@ GitPythonを使用してGit diffで変更検出を実装する（research.md Dec
 **Story Dependencies**: None (独立して実装可能)
 **Independent Test**: 既存spec-kitプロジェクトで`speckit-docs install`を実行し、コマンド定義とスクリプトがコピーされることを確認
 
-### T008: typer CLIアプリケーションの実装
+### T008: typer CLIアプリケーションの実装 [X]
 **File**: `src/speckit_docs/cli/__init__.py`
 **Type**: US3 - Implementation
 **Story**: US3 (P1 MVP)
@@ -550,7 +550,7 @@ typer CLIフレームワークを使用してメインアプリケーション�
 
 ---
 
-### T009: install_handlerの実装（spec-kitプロジェクト検証）
+### T009: install_handlerの実装（spec-kitプロジェクト検証） [X]
 **File**: `src/speckit_docs/cli/install_handler.py`
 **Type**: US3 - Implementation
 **Story**: US3 (P1 MVP)
