@@ -618,7 +618,7 @@ spec-kitプロジェクト検証ロジックを実装する（FR-021a）。
 
 ---
 
-### T010: [P] コマンドテンプレートファイルのコピー実装
+### T010: [P] コマンドテンプレートファイルのコピー実装 [X]
 **File**: `src/speckit_docs/cli/install_handler.py`
 **Type**: US3 - Implementation
 **Story**: US3 (P1 MVP)
@@ -698,7 +698,7 @@ spec-kitプロジェクト検証ロジックを実装する（FR-021a）。
 
 ---
 
-### T011: [P] バックエンドスクリプトのコピー実装
+### T011: [P] バックエンドスクリプトのコピー実装 [X]
 **File**: `src/speckit_docs/cli/install_handler.py`
 **Type**: US3 - Implementation
 **Story**: US3 (P1 MVP)
@@ -754,7 +754,7 @@ spec-kitプロジェクト検証ロジックを実装する（FR-021a）。
 
 ---
 
-### T012: コマンドテンプレートファイルの作成
+### T012: コマンドテンプレートファイルの作成 [X]
 **File**: `src/speckit_docs/commands/doc-init.md`, `doc-update.md`
 **Type**: US3 - Assets
 **Story**: US3 (P1 MVP)
@@ -816,7 +816,7 @@ Claude Codeが解釈するコマンド定義Markdownファイルを作成する�
 
 ---
 
-### T013: バックエンドスクリプトのスタブ実装
+### T013: バックエンドスクリプトのスタブ実装 [X]
 **File**: `src/speckit_docs/scripts/doc_init.py`, `doc_update.py`
 **Type**: US3 - Assets
 **Story**: US3 (P1 MVP)
@@ -867,7 +867,7 @@ T010/T011でコピーされるバックエンドスクリプトのスタブ実�
 
 ---
 
-### T014: インストール統合テスト
+### T014: インストール統合テスト [X]
 **File**: `tests/integration/test_install.py`
 **Type**: US3 - Integration Test
 **Story**: US3 (P1 MVP)

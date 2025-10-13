@@ -164,33 +164,95 @@ def determine_structure(feature_count: int) -> str:
 
 ---
 
-## 7. CLI インターフェース：argparse
+## 7. CLI インターフェース：typer
+
+**更新（2025-10-13）**: argparseからtyperに変更（Session 2025-10-13 Clarificationで決定）
 
 ### Decision
-**argparse**（標準ライブラリ）を使用してCLIインターフェースを実装。
+**typer**を使用してCLIインターフェースを実装（argparseではなく）。
 
 ### Rationale
-1. **標準ライブラリ**: 追加依存なし
-2. **十分な機能**: サブコマンド、オプション、ヘルプ生成
-3. **シンプル**: 過剰な機能なし
+1. **Core Principle I準拠（spec-kit Integration First）**: 本家spec-kitがtyperを使用しており、一貫性を最優先
+2. **実質的な追加依存なし**: specify-cli経由で既にtyperが依存ツリーに存在するため、新しい外部依存は増えない
+3. **型ヒントのネイティブサポート**: Python 3.11+の型ヒント（`int`, `str`, `bool`等）を直接使用でき、mypy互換（C006: 堅牢コード品質準拠）
+4. **DRY原則（C012）**: 本家spec-kitのtyperパターン（`typer.confirm()`、`typer.Option()`等）を再利用できる
+5. **Phase 2計画との整合**: research.md Section 11で計画されている「specify-cliからStepTracker/console再利用」がtyper前提
 
-### Alternatives Considered
-- **Click**: 人気だが、追加依存が発生
-- **Typer**: モダンだが、追加依存が発生
-- **docopt**: 宣言的だが、柔軟性に欠ける
+### Alternatives Considered（再評価）
+- **argparse（初期選択）**: 標準ライブラリで追加依存なしだが、Core Principle Iへの違反（本家spec-kitとの不一致）
+- **Click**: 人気だが、typer登場後はレガシー化。本家spec-kitもClickを使用していない
+- **docopt**: 宣言的だが、柔軟性に欠け、型ヒントサポートなし
 
 ### Implementation Notes
+
+#### 基本的なCLI構造（typer使用）
 ```python
-parser = argparse.ArgumentParser(description='spec-kit-docs')
-subparsers = parser.add_subparsers(dest='command')
+import typer
+from typing import Optional
 
-# doc-init
-init_parser = subparsers.add_parser('doc-init')
-init_parser.add_argument('--type', choices=['sphinx', 'mkdocs'])
+app = typer.Typer()
 
-# doc-update
-update_parser = subparsers.add_parser('doc-update')
+@app.command()
+def install(
+    force: bool = typer.Option(False, "--force", help="Skip confirmation and overwrite existing files"),
+):
+    """Install spec-kit-docs commands into the current project."""
+    # Implementation
+    pass
+
+@app.command(name="doc-init")
+def doc_init(
+    doc_type: Optional[str] = typer.Option(None, "--type", help="Documentation tool (sphinx/mkdocs)"),
+    project_name: Optional[str] = typer.Option(None, "--project-name", help="Project name"),
+    author: Optional[str] = typer.Option(None, "--author", help="Author name"),
+    version: Optional[str] = typer.Option("0.1.0", "--version", help="Project version"),
+    language: Optional[str] = typer.Option("ja", "--language", help="Documentation language"),
+    force: bool = typer.Option(False, "--force", help="Overwrite existing docs/"),
+):
+    """Initialize documentation project."""
+    # Implementation
+    pass
+
+@app.command(name="doc-update")
+def doc_update():
+    """Update documentation from spec-kit features."""
+    # Implementation
+    pass
+
+if __name__ == "__main__":
+    app()
 ```
+
+#### インタラクティブ確認パターン（本家spec-kit参考）
+```python
+from rich.console import Console
+
+console = Console()
+
+if docs_dir.exists():
+    console.print(f"[yellow]Warning:[/yellow] docs/ already exists")
+
+    if force:
+        console.print("[cyan]--force supplied: skipping confirmation[/cyan]")
+    else:
+        response = typer.confirm("Do you want to continue?")
+        if not response:
+            console.print("[yellow]Operation cancelled[/yellow]")
+            raise typer.Exit(0)
+```
+
+**フラグの優先順位**: `--force` > interactive prompt > default: abort
+
+### Migration from argparse
+- **Action Required**: Phase 1実装時に`doc_init.py`と`doc_update.py`のCLI部分をtyperに変更
+- **Backward Compatibility**: 新規実装のため後方互換性の問題なし
+- **Testing**: pytestでtyperコマンドをテスト可能（`typer.testing.CliRunner`使用）
+
+### References
+- `/home/driller/repo/spec-kit/src/specify_cli/__init__.py`: 本家spec-kitのtyper使用パターン
+- Typer Documentation: Commands and Options (2025)
+- Typer Documentation: Ask with Prompt (typer.confirm())
+- Session 2025-10-13 Clarification: CLIフレームワーク再評価決定
 
 ---
 

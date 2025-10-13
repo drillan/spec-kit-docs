@@ -7,331 +7,237 @@
 
 ## Summary
 
-spec-kit-docsは、spec-kitプロジェクトにドキュメント生成機能を追加する拡張パッケージです。`speckit-docs install`コマンドで既存のspec-kitプロジェクトに`/speckit.doc-init`と`/speckit.doc-update`コマンドを追加し、spec.md/plan.md/tasks.mdからSphinx/MkDocsドキュメントを自動生成します。AI エージェント（Claude Code）とバックエンドPythonスクリプトの協調により、対話的なドキュメント初期化とインクリメンタル更新を実現します。
+spec-kit-docsは、spec-kitプロジェクトのAI駆動型ドキュメント生成拡張機能です。
+
+**主要機能**:
+1. **`speckit-docs install`**: Pythonパッケージ内のテンプレートファイル（コマンド定義、スクリプト）をユーザープロジェクトの`.claude/commands/`と`.specify/scripts/docs/`にコピー
+2. **`/doc-init`**: SphinxまたはMkDocsドキュメントプロジェクトを初期化（AIエージェント経由でインタラクティブに設定を収集）
+3. **`/doc-update`**: `specs/`ディレクトリからドキュメントを自動生成・更新（Git diffベースのインクリメンタル更新）
+
+**技術的アプローチ**（Phase 0 research.mdで決定）:
+- **Markdown統一**: Sphinx + myst-parserを使用し、全ファイルをMarkdown形式で統一（spec.md/plan.md/tasks.mdからの変換不要）
+- **Strategy Pattern**: BaseGeneratorを継承したSphinxGenerator/MkDocsGeneratorで拡張性を確保
+- **非対話的実行**: AIエージェント（Claude Code）が対話を担当、Pythonスクリプトは引数のみで動作（CI/CD対応）
+- **Git diff変更検出**: インクリメンタル更新での再処理を変更ファイルのみに限定（GitPython使用）
+
+**重要な設計決定変更（Session 2025-10-13）**:
+- **CLIフレームワーク**: argparse → **typer**に変更（Core Principle I「spec-kit Integration First」準拠）
+  - 理由：本家spec-kitがtyperを使用し、specify-cli経由で既に依存ツリーに存在するため、実質的な追加依存なし
+  - 利点：型ヒントのネイティブサポート（C006: 堅牢コード品質）、`typer.confirm()`統合、本家spec-kitパターンの再利用（C012: DRY原則）
 
 ## Technical Context
 
 **Language/Version**: Python 3.11+（spec-kit前提条件との互換性）
 **Primary Dependencies**:
-- `specify-cli` (Git URL: `git+https://github.com/github/spec-kit.git`) - StepTracker、consoleなどのユーティリティ
-- `sphinx` + `myst-parser` 2.0+ (Sphinx使用時)
-- `mkdocs` 1.5+ (MkDocs使用時)
-- `typer` (CLIフレームワーク)
-- `jinja2` (テンプレートエンジン)
-
-**Storage**: ファイルシステム（`docs/` ディレクトリ、`.specify/scripts/docs/`、`.claude/commands/`）
-**Testing**: pytest（単体テスト、統合テスト）
-**Target Platform**: Linux/macOS/Windows（Python実行環境）
-**Project Type**: 単一Pythonパッケージ（CLIツール + ライブラリ）
+- **CLIフレームワーク**: typer - 本家spec-kitとの一貫性を保つため採用（Session 2025-10-13 Clarificationで決定）。specify-cli経由で既に依存ツリーに存在
+- **ドキュメントツール**: Sphinx 7.0+ with myst-parser 2.0+、MkDocs 1.5+
+- **Markdown解析**: markdown-it-py 3.0+（MyST互換性）
+- **テンプレート**: Jinja2 3.1+（設定ファイル・ドキュメント生成）
+- **Git操作**: GitPython 3.1+（変更検出）
+- **CLI UI（Phase 2）**: specify-cliからStepTracker/console再利用（統一UX）
+**Storage**: N/A（ファイルシステム：`docs/`ディレクトリ、`.specify/scripts/docs/`、`.claude/commands/`）
+**Testing**: pytest 8.0+、pytest-cov（単体テスト・統合テスト）
+**Target Platform**: Linux/macOS（WSL2対応）
+**Project Type**: single（Pythonパッケージとして配布、既存spec-kitプロジェクトに拡張機能を追加）
 **Performance Goals**:
-- ドキュメント初期化：30秒以内（対話的入力時間を除く）
-- ドキュメント更新：10機能プロジェクトで45秒以内
-- インクリメンタル更新で変更されていない機能の再処理を回避
-
+- `/doc-init`：30秒以内（対話的入力時間を除く）
+- `/doc-update`：45秒以内（10機能フル更新）、5秒以内（1機能のみ変更時、インクリメンタル更新）
 **Constraints**:
-- 非対話的環境での実行可能性（CI/CD、自動化ワークフロー）
-- spec-kitとの一貫性（`specify init --here`パターン、エラーハンドリング）
-- オフライン動作可能（パッケージインストール後）
-
+- **非対話的実行**: Pythonスクリプトは`input()`使用禁止（Core Principle II）
+- **spec-kit統合**: `specify init --here`パターン、`--force`フラグ、エラーハンドリング（ベストエフォート方式）の一貫性（Core Principle I）
+- **型安全性**: Python 3.11+ type hintsとmypyチェック必須（C006: 堅牢コード品質）
 **Scale/Scope**:
-- 対象：1-20機能の spec-kit プロジェクト（50機能以上は便利な追加機能）
-- インストールファイル数：コマンド定義2つ + スクリプト数個
-- MVP範囲：Sphinx/MkDocsサポート、Claude Codeサポート
+- **対象機能数**: 1-20機能（典型的）、50機能以上（Phase 3で並列処理最適化）
+- **対象ユーザー**: spec-kitプロジェクトを持つ開発者、AIエージェント（Claude Code、将来的にはGitHub Copilot/Gemini等）
+- **MVP範囲（Phase 1）**: 基本的なドキュメント初期化・更新のみ（高度な統合機能、対象者別フィルタリング、バージョン履歴追跡はPhase 2-3）
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**Constitution Status**: v1.1.0 ratified on 2025-10-13
-
 ### Critical Rules Compliance (C001-C014)
 
-| Rule | Compliance | Notes |
-|------|-----------|-------|
-| C001 (ルール歪曲禁止) | ✅ PASS | すべてのルールを最上位命令として遵守 |
-| C002 (エラー迂回禁止) | ✅ PASS | SpecKitDocsErrorで構造化エラー、ベストエフォート方式で部分的失敗を明示（FR-033, FR-035） |
-| C003 (冒頭表示必須) | ✅ PASS | AIエージェントが実行時に表示 |
-| C004 (理想実装ファースト) | ✅ PASS | 各フェーズは理想品質で実装、段階的改善ではなくIncremental Delivery（機能の段階的配信） |
-| C005 (記録管理徹底) | ✅ PASS | spec-kitメモリーシステム活用、各タスク完了後にコミット |
-| C006 (堅牢コード品質) | ✅ PASS | ruff, black, mypyチェック必須 |
-| C007 (品質例外化禁止) | ✅ PASS | テストタスクをREQUIRED化（tasks.md更新済み） |
-| C008 (ドキュメント整合性) | ✅ PASS | 実装前にspec/plan/tasks読み込み、/speckit.clarifyで曖昧性解消 |
-| C009 (ブランチ作成必須) | ✅ PASS | feature/001-draft-init-specブランチで作業 |
-| C010 (TDD必須) | ✅ PASS | tasks.mdはRed-Green-Refactorサイクルに従う（更新済み） |
-| C011 (一次データ推測禁止) | ✅ PASS | doc_init.pyは引数のみ使用、デフォルト値は明示的定義（FR-003b） |
-| C012 (DRY原則) | ✅ PASS | 共通ロジックはbase.pyに抽出、パーサー/ジェネレータ/ユーティリティ分離 |
-| C013 (破壊的リファクタリング) | N/A | 新規プロジェクト |
-| C014 (妥協実装絶対禁止) | ✅ PASS | 暫定版なし、各機能は最初から理想品質で実装 |
+| Rule | Status | Compliance Note |
+|------|--------|-----------------|
+| C001: ルール歪曲禁止・最上位命令遵守 | ✅ PASS | このConstitution Checkの実施自体がC001への準拠を示す。すべての設計判断はconstitution.mdの原則に従う |
+| C002: エラー迂回絶対禁止・主観判断排除 | ✅ PASS | SpecKitDocsError例外による明示的エラーハンドリング（FR-035）。ログファイル優先確認はGitPythonエラーログに適用 |
+| C003: 冒頭表示必須 | ✅ PASS | AI Agent (Claude Code)が`/doc-init`, `/doc-update`実行時に表示する責務を持つ（コマンド定義.mdに記載） |
+| C004: 理想実装ファースト原則 | ✅ PASS | **typer採用決定**（argparseからの変更）がこの原則の実践例。「とりあえずargparseで」ではなく、理想的な設計（本家spec-kitとの一貫性）を最初から実現 |
+| C005: 記録管理徹底 | ✅ PASS | research.md（技術決定の根拠記録）、Session 2025-10-13 Clarification（typer採用の決定記録）が存在 |
+| C006: 堅牢コード品質 | ✅ PASS | pyproject.tomlでruff/black/mypyを開発依存に含める。Type hints必須（Python 3.11+）、Constraints項で明記 |
+| C007: 品質例外化禁止 | ✅ PASS | MVP範囲の明確化（Phase 1-3）により「時間がないから機能削減」ではなく、最初から必要十分な機能のみを定義 |
+| C008: ドキュメント整合性絶対遵守 | ✅ PASS | spec.md → plan.md → research.mdの順で一貫性を保持。typer採用は spec.md Clarificationで記録後、plan.mdとresearch.mdに反映 |
+| C009: 実装計画ブランチ作成必須 | ✅ PASS | Branch: `001-draft-init-spec`で実施中 |
+| C010: テスト駆動開発必須 | ✅ PASS | pytest使用、Red-Green-Refactorサイクルを tasks.md生成時に反映（実装前テスト作成を義務付け） |
+| C011: 一次データ推測禁止 | ✅ PASS | FR-003b: 引数未指定時のデフォルト値は、Git user.nameやディレクトリ名など**取得可能な値**のみ。推測は禁止 |
+| C012: DRY原則 | ✅ PASS | **typer採用の理由の一つ**：本家spec-kitのtyperパターン（`typer.confirm()`等）を再利用。StepTracker/console再利用（Phase 2計画） |
+| C013: 破壊的リファクタリング推奨 | ✅ PASS | **argparse → typerへの変更**がこの原則の実践例。V2クラス作成ではなく、既存設計（research.md Section 7）を直接修正 |
+| C014: 妥協実装絶対禁止 | ✅ PASS | typer採用決定により「argparseで暫定実装して後でtyperにリファクタリング」という妥協を排除。最初から理想形で実装 |
+
+**Critical Rules Summary**: 全14ルール準拠 ✅
+
+---
 
 ### Core Principles Compliance (I-V)
 
-| Principle | Compliance | Notes |
-|-----------|-----------|-------|
-| I. spec-kit Integration First | ✅ PASS | `specify init --here`パターン、`--force`セマンティクス、`specs/`ディレクトリ構造準拠 |
-| II. Non-Interactive Execution | ✅ PASS | スクリプトは`input()`不使用、引数のみで動作（FR-003c） |
-| III. Extensibility & Modularity | ✅ PASS | BaseGenerator抽象クラス、独立モジュール設計 |
-| IV. Incremental Delivery | ✅ PASS | P1→P2→P3段階的配信、各フェーズ独立テスト可能 |
-| V. Testability | ✅ PASS | TDD必須（C010）、90%以上カバレッジ目標、決定的入力/出力 |
+#### I. spec-kit Integration First ✅ PASS
 
-**評価**: ✅ **PASS** - すべてのCritical RulesとCore Principlesに準拠
+**Evidence**:
+- **typer採用決定**（Session 2025-10-13）：本家spec-kitとの一貫性を最優先し、argparseから変更
+- `specify init --here`パターンの採用（FR-021b）
+- `--force`フラグの一貫したセマンティクス（FR-003d, FR-023b）
+- エラーハンドリングのベストエフォート方式（FR-023c）
+- `specs/`ディレクトリ構造の正しい認識（Session 2025-10-12 Correctionで修正済み）
 
-**Re-check Trigger**: Phase 1 design完了後、tasks.md生成後（/speckit.analyzeで検証）
+**Compliance Level**: 完全準拠
+
+---
+
+#### II. Non-Interactive Execution ✅ PASS
+
+**Evidence**:
+- FR-003c: doc_init.pyは標準入力（stdin）を使用しない
+- FR-003a: すべての設定はコマンドライン引数から取得
+- FR-003b: 引数未指定時のデフォルト値を明確に定義
+- FR-022a/022b: AIエージェント（Claude Code）が対話を担当、スクリプトは非対話的に実行
+
+**Constraints項で明記**: Pythonスクリプトは`input()`使用禁止
+
+**Compliance Level**: 完全準拠
+
+---
+
+#### III. Extensibility & Modularity ✅ PASS
+
+**Evidence**:
+- Strategy Pattern: BaseGenerator抽象ベースクラス + SphinxGenerator/MkDocsGenerator実装（research.md Section 3）
+- 独立モジュール: `generators/sphinx.py`, `generators/mkdocs.py`
+- パーサーとジェネレータの分離: markdown-it-py（パーサー）とJinja2（ジェネレーター）
+- 将来拡張への準備: Phase 2-3で他のドキュメントツール（Docusaurus、VitePress）やAIエージェント（GitHub Copilot、Gemini）のサポート追加が容易
+
+**Compliance Level**: 完全準拠
+
+---
+
+#### IV. Incremental Delivery ✅ PASS
+
+**Evidence**:
+- MVP範囲（Phase 1）: 基本的なドキュメント初期化・更新のみ（P1ユーザーストーリー3つ）
+- Phase 2-3: 高度な統合機能、対象者別フィルタリング、バージョン履歴追跡（P2-P3ユーザーストーリー）
+- 優先度マーキング: spec.mdの各ユーザーストーリーにP1/P2/P3を明記
+- アンインストール/アップグレード機能: MVP範囲外（Scope Boundaryで明確化）
+
+**Relationship to C004**: typer採用決定により、**Phase 1の理想品質実装**が保証される（「まずargparseで動かして後で改善」という妥協を排除）
+
+**Compliance Level**: 完全準拠
+
+---
+
+#### V. Testability (Enhanced with C010) ✅ PASS
+
+**Evidence**:
+- pytest 8.0+ + pytest-cov使用（Technical Context）
+- **TDD必須（C010）**: Red-Green-Refactorサイクルを tasks.md生成時に義務付け
+- 決定的な入力/出力: 非対話的実行によりテストケース作成が容易
+- ファイルシステム操作の抽象化: pytestのtmpdir fixtureでモック可能
+- 統合テスト計画: 実際のspec-kitプロジェクト構造を使用（Testability原則）
+
+**Target Coverage**: 主要コードパス（初期化、更新、エラーハンドリング）の90%以上
+
+**Compliance Level**: 完全準拠
+
+---
+
+### Post-Design Constitution Check Re-Evaluation
+
+**Timing**: Phase 1設計完了後（data-model.md, contracts/, quickstart.md生成後）に再評価
+
+**Current Status**: Phase 0完了、research.mdとplan.md Technical Contextが整合済み。**typer採用決定により、C004/C012/C013/C014への準拠が強化された**。
+
+**Action Required**: Phase 1完了後、この Constitution Check セクションを再確認し、設計変更があればConstitution準拠を再評価する。
+
+---
+
+### Constitution Check Conclusion
+
+✅ **All 14 Critical Rules (C001-C014) PASSED**
+✅ **All 5 Core Principles (I-V) PASSED**
+
+**Key Decision**: typer採用（argparseから変更）により、以下の原則への準拠が強化された：
+- C004 (理想実装ファースト): 最初から理想的な設計を実現
+- C012 (DRY原則): 本家spec-kitのtyperパターン再利用
+- C013 (破壊的リファクタリング推奨): 既存設計を直接修正
+- C014 (妥協実装絶対禁止): 「後で改善」の技術的負債を排除
+- Core Principle I (spec-kit Integration First): 本家spec-kitとの完全な一貫性
+
+**Gate Status**: ✅ CLEARED - Phase 0 researchおよびtyper採用決定により、すべての憲章要件を満たしている。Phase 1設計作業に進んで良い。
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-specs/001-draft-init-spec/
-├── spec.md              # 機能仕様（完成）
-├── plan.md              # このファイル（/speckit.plan command output）
-├── research.md          # Phase 0 output（これから作成）
-├── data-model.md        # Phase 1 output（これから作成）
-├── quickstart.md        # Phase 1 output（これから作成）
-└── contracts/           # Phase 1 output（これから作成）
+specs/[###-feature]/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-└── speckit_docs/
-    ├── __init__.py
-    ├── cli.py                    # speckit-docs installコマンドエントリーポイント
-    ├── commands/                 # コマンドテンプレート（パッケージ内包）
-    │   ├── doc-init.md          # /speckit.doc-init コマンド定義
-    │   └── doc-update.md        # /speckit.doc-update コマンド定義
-    ├── doc_init.py              # ドキュメント初期化スクリプト
-    ├── doc_update.py            # ドキュメント更新スクリプト
-    ├── generators/              # ドキュメントジェネレータ
-    │   ├── __init__.py
-    │   ├── base.py             # 抽象ベースクラス
-    │   ├── sphinx.py           # Sphinx生成ロジック
-    │   └── mkdocs.py           # MkDocs生成ロジック
-    ├── parsers/                 # spec-kitファイルパーサー
-    │   ├── __init__.py
-    │   ├── spec_parser.py      # spec.md パーサー
-    │   ├── plan_parser.py      # plan.md パーサー
-    │   └── tasks_parser.py     # tasks.md パーサー
-    ├── templates/               # Jinja2テンプレート
-    │   ├── sphinx/
-    │   │   ├── conf.py.j2
-    │   │   ├── index.md.j2
-    │   │   └── Makefile.j2
-    │   └── mkdocs/
-    │       ├── mkdocs.yml.j2
-    │       └── index.md.j2
-    └── utils/                   # ユーティリティ
-        ├── __init__.py
-        ├── git_utils.py        # Git操作（diff検出）
-        ├── file_utils.py       # ファイル操作
-        └── prompts.py          # コマンド定義プロンプト生成
+├── models/
+├── services/
+├── cli/
+└── lib/
 
 tests/
-├── unit/
-│   ├── test_cli.py
-│   ├── test_doc_init.py
-│   ├── test_doc_update.py
-│   ├── test_parsers.py
-│   └── test_generators.py
+├── contract/
 ├── integration/
-│   ├── test_install_workflow.py
-│   ├── test_sphinx_generation.py
-│   └── test_mkdocs_generation.py
-└── fixtures/
-    └── sample_specs/           # テスト用のサンプルspec-kitプロジェクト
+└── unit/
 
-.specify/
-└── scripts/
-    └── docs/
-        ├── doc_init.py         # src/からコピー（インストール時）
-        └── doc_update.py       # src/からコピー（インストール時）
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
 
-.claude/
-└── commands/
-    ├── speckit.doc-init.md     # src/commands/からコピー（インストール時）
-    └── speckit.doc-update.md   # src/commands/からコピー（インストール時）
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
 
-pyproject.toml                  # パッケージ定義、依存関係
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: 単一Pythonパッケージ構成を選択しました。理由：
-1. CLIツールとライブラリを統合した標準的なPythonパッケージ構造
-2. `src/speckit_docs/`配下にすべてのコードを集約し、保守性を確保
-3. `commands/`と`templates/`をパッケージ内に含めることで、`importlib.resources`でアクセス可能
-4. テストはプロダクションコードと分離し、`tests/`配下に配置
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
 *Fill ONLY if Constitution Check has violations that must be justified*
 
-**Constitution Status**: v1.1.0 ratified on 2025-10-13
-
-**Evaluation**: ✅ No complexity violations detected
-
-**Analysis**:
-- **C004 (理想実装ファースト)**: 設計は最初から理想的な品質を目指しており、「とりあえず動く」暫定版は含まれていません
-- **C010 (TDD必須)**: tasks.mdはRed-Green-Refactorサイクルに従った構造に更新されました（2025-10-13）
-- **C011 (一次データ推測禁止)**: doc_init.pyはすべての設定をコマンドライン引数から取得し、デフォルト値は明示的に定義されています（FR-003b）
-- **C012 (DRY原則)**: パーサー、ジェネレータ、ユーティリティは明確に分離され、共通ロジックはベースクラス（generators/base.py）に抽出されています
-- **C013 (破壊的リファクタリング推奨)**: 新規プロジェクトのため該当なし
-- **C014 (妥協実装絶対禁止)**: MVPはP1機能を理想品質で実装し、P2/P3は将来フェーズとして明確に分離されています
-
-**Justifications**: なし（すべての原則に準拠）
-
----
-
-## Phase 0: Research & Technical Decisions
-
-*Output: research.md*
-
-### Research Topics
-
-以下のトピックについて調査し、`research.md`に記録します：
-
-1. **specify-cliからの機能再利用**
-   - StepTracker、consoleの使用方法
-   - spec-kitのGit URL依存関係の指定方法（pyproject.toml）
-
-2. **importlib.resourcesの使用パターン**
-   - Python 3.11+でのテンプレートファイルアクセス方法
-   - パッケージ内リソースの読み取り・コピー
-
-3. **Sphinx + myst-parserの設定**
-   - MyST Markdown拡張機能の有効化方法
-   - conf.pyでのmyst-parser設定
-   - Markdownファイルのビルド設定
-
-4. **MkDocsの設定**
-   - mkdocs.ymlの基本構造
-   - navセクションの動的生成方法
-   - テーマ設定（Material for MkDocsなど）
-
-5. **Git diffを使用したインクリメンタル更新**
-   - git diffコマンドでの変更ファイル検出
-   - 前回コミットからの差分取得方法
-
-6. **インタラクティブ確認のパターン**
-   - spec-kit本家の`specify init --here`実装
-   - `--force`フラグの処理方法
-
-### Expected Outcomes
-
-- 各技術の実装パターンと推奨設定が明確化される
-- spec-kit本家との一貫性が確保される
-- 実装時の落とし穴（pitfalls）が事前に特定される
-
----
-
-## Phase 1: Design Artifacts
-
-*Output: data-model.md, contracts/, quickstart.md*
-
-### Data Model (data-model.md)
-
-主要なエンティティ：
-
-1. **DocumentationProject**
-   - type: "sphinx" | "mkdocs"
-   - config: Dict（Sphinx: conf.py設定、MkDocs: mkdocs.yml設定）
-   - structure: "flat" | "comprehensive"
-   - feature_count: int
-
-2. **Feature**
-   - directory: Path
-   - name: str（番号なし、例："user-auth"）
-   - number: int（例：001）
-   - has_spec: bool
-   - has_plan: bool
-   - has_tasks: bool
-   - last_modified: datetime
-
-3. **CommandTemplate**
-   - name: str（例："doc-init"、"doc-update"）
-   - source_path: Path（パッケージ内）
-   - target_path: Path（.claude/commands/）
-   - content: str（Jinja2テンプレート）
-
-4. **ScriptFile**
-   - name: str（例："doc_init.py"、"doc_update.py"）
-   - source_path: Path（src/）
-   - target_path: Path（.specify/scripts/docs/）
-
-### API Contracts (contracts/)
-
-このプロジェクトはCLIツールであり、外部APIは提供しません。代わりに、CLIインターフェースを記述します：
-
-```
-contracts/
-└── cli-interface.md
-```
-
-**CLIインターフェース**:
-
-```bash
-# インストールコマンド
-speckit-docs install [--force]
-  --force: 既存ファイルの上書き確認をスキップ
-  Exit codes: 0 (成功), 1 (エラー)
-
-# doc_init.py（.specify/scripts/docs/経由で実行）
-uv run python .specify/scripts/docs/doc_init.py \
-  --type {sphinx|mkdocs} \
-  --project-name <name> \
-  --author <author> \
-  [--version <version>] \
-  [--language <lang>] \
-  [--site-name <name>] \
-  [--repo-url <url>] \
-  [--force]
-  Exit codes: 0 (成功), 1 (エラー)
-
-# doc_update.py（.specify/scripts/docs/経由で実行）
-uv run python .specify/scripts/docs/doc_update.py
-  Exit codes: 0 (成功), 1 (エラー)
-```
-
-### Quickstart (quickstart.md)
-
-ユーザーが5分以内にspec-kit-docsを導入し、最初のドキュメントを生成できる手順を提供します。
-
----
-
-## Phase 2: Task Breakdown
-
-*Not generated by /speckit.plan - will be created by /speckit.tasks*
-
-Phase 2の詳細なタスク分解は、`/speckit.tasks`コマンドで生成されます。
-
----
-
-## Implementation Notes
-
-### Critical Path
-
-1. **Phase 0**: specify-cli依存関係の確認とimportlib.resourcesパターンの調査
-2. **Phase 1**: CLIエントリーポイントとコマンドテンプレートの実装
-3. **Phase 1**: Sphinx/MkDocsジェネレータの実装
-4. **Phase 1**: インストールワークフローのテスト
-
-### Risk Mitigation
-
-- **specify-cli依存関係**: Git URL直接指定で問題ないことを確認済み
-- **既存ファイル処理**: spec-kit本家パターンを踏襲し、一貫性を確保
-- **エラーハンドリング（C002準拠）**: ベストエフォート方式で部分的な状態を許容し、以下の基準に従う：
-  - **継続可能なエラー**（処理継続）: 不正なmarkdown（FR-035）、欠落ファイル（plan.md/tasks.md不在、FR-018）、個別機能の解析失敗 → ログに警告を出力し、他の機能の処理を継続
-  - **致命的エラー**（即座に中断）: .specify/ディレクトリ不在（FR-001）、docs/初期化失敗（FR-003d）、Gitリポジトリ不在（FR-012準拠）、テンプレートファイル破損 → SpecKitDocsErrorを発生させ、明確なエラーメッセージと復旧手順をstderrに出力
-  - **ロールバック不要**（ベストエフォート）: ファイル作成中のエラーは部分的な状態を残し、ユーザーが手動で修正または再実行可能（FR-023c）
-  - **ログファイル優先**（C002原則）: すべてのエラー詳細はstderrに出力され、AIエージェントがユーザーに提示
-
-### Technology Choices Rationale
-
-- **Python 3.11+**: spec-kitとの互換性
-- **specify-cli依存**: StepTracker、consoleを再利用しコード重複を削減
-- **importlib.resources**: Python標準ライブラリで、パッケージ内リソースへの安全なアクセス
-- **Jinja2**: テンプレートエンジンの業界標準、Sphinx/MkDocsとの親和性
-- **pytest**: Python標準のテストフレームワーク
-
----
-
-**Plan Status**: Phase 0準備完了。次のステップ：`research.md`の作成を開始します。
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

@@ -32,10 +32,22 @@
 ### Session 2025-10-13 (Install Command Clarifications)
 
 - Q: pyproject.tomlでのspecify-cliの依存関係指定方法は？ → A: オプション A - Git URL直接指定（`dependencies = ["specify-cli @ git+https://github.com/github/spec-kit.git"]`）。理由：specify-cliは公開リポジトリであり、Git URL直接指定で問題なくインストール可能
+
+### Session 2025-10-13 (CLI Design Clarifications)
+
+- Q: CLIツールの設計：どのようなコマンド構造にすべきか（独立したCLIツール vs spec-kitとの統合）？ → A: オプション B - `speckit-docs`コマンドを`specify`コマンドと統合し、`specify add-docs`のようなサブコマンドとして実装する。理由：(1) spec-kitエコシステムの一貫性を最大化、(2) ユーザーの学習コストを削減（新しいCLIツールを覚える必要がない）、(3) `/speckit.doc-init`と`/speckit.doc-update`のスラッシュコマンドは完全に維持される（インストール方法のみが統合され、使用方法は変わらない）
+- Q: 配布方法：PyPIへの公開も検討すべきか、それともGitHubのみで十分か？ → A: オプション A - GitHubのみで配布（`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`）、PyPI公開は将来のフェーズで検討。理由：(1) MVP段階では開発とリリースプロセスをシンプルに保つ、(2) spec-kit自体もGitHubから配布されており、ユーザーは既にこのパターンに慣れている、(3) PyPI公開は追加の保守負担（バージョン管理、リリースプロセス、パッケージメタデータ）があり初期段階では不要
+- Q: spec-kitとの統合方法：spec-kitリポジトリに統合すべきか、独立したリポジトリで開発すべきか？ → A: オプション A - 独立したCLIツールとして実装し、spec-kitの`specify`コマンドとは別に`speckit-docs install`を提供（spec-kitとの統合は名目上のみ）。理由：(1) spec-kitリポジトリへのPRは承認が必要で開発スピードが遅くなる可能性がある、(2) 独立したリポジトリで開発することで、spec-kit-docs固有の機能やリリースサイクルを柔軟に管理できる、(3) コマンド体系はspec-kitと一貫性を保ちながら（`specify add-docs`のようなパターン）、実装は独立して進められる
+- Q: スラッシュコマンドの生成：CLIツールがどのようにして.claude/commands/にスラッシュコマンドを配置すべきか？ → A: オプション A - `speckit-docs install`コマンドがPythonパッケージ内のテンプレートファイル（`src/speckit_docs/commands/doc-init.md`, `doc-update.md`）をユーザープロジェクトの`.claude/commands/`にコピーする。理由：(1) spec-kitの`specify init`と同じパターンに従い実装がシンプル、(2) ユーザーにとって透明性が高く、コピー後のファイルをカスタマイズ可能、(3) importlib.resourcesでパッケージ内テンプレートにアクセスするためオフライン環境でも動作、(4) `--force`オプションで上書き更新が可能
+- Q: 既存プロジェクトへのインストール：`--here`フラグのようなオプションは必要か？ → A: オプション A - カレントディレクトリに自動的にインストール（`cd my-project && speckit-docs install`）、明示的なディレクトリ指定は不要。理由：(1) spec-kit-docsは既存のspec-kitプロジェクトに拡張機能を追加するツールであり、ユーザーは既にプロジェクトルートにいることが前提、(2) 新しいディレクトリを作成することはなく常に既存プロジェクトへの追加なので`--here`フラグも不要、(3) コマンドがシンプルになり使いやすさが向上
 - Q: 既存ファイル（.claude/commands/や.specify/scripts/）が存在する場合の動作は？ → A: オプション C - インタラクティブ確認（全体）+ --forceで確認スキップ。理由：(1) spec-kitの本家`specify init --here`パターンと一貫性がある、(2) デフォルトは安全（確認を求める）だが、自動化時は`--force`で対応可能、(3) ユーザーの学習コストを削減
 - Q: コマンドテンプレート（doc-init.md, doc-update.md）の配置場所とインストール方法は？ → A: オプション A - `src/speckit_docs/commands/` に配置し、importlib.resourcesでアクセス。理由：(1) 少数のファイル（2つのコマンド定義 + スクリプト）なので、Pythonパッケージに含めるのが適切、(2) オフライン環境でも動作（pip install後にネットワーク不要）、(3) Python標準のパッケージングベストプラクティスに準拠、(4) spec-kitのGitHubダウンロード方式は大量ファイル配布向けでspec-kit-docsには過剰
 - Q: インストール失敗時の動作は？ → A: オプション B - ベストエフォート（エラー発生時もそこまでのファイルは残す）。理由：(1) spec-kitの`specify init --here`パターンと一貫性がある（既存ディレクトリへの追加時は部分的な状態を残す）、(2) spec-kit-docsは既存プロジェクトにファイルを追加するだけなので、プロジェクト全体を壊すリスクは低い、(3) ユーザーが手動で修正可能（失敗したファイルを削除して再実行）、(4) トランザクション機構は複雑でMVP範囲を超える
 - Q: アンインストール・アップグレード機能は必要か？ → A: オプション D - 機能は提供しない（MVP範囲外）。理由：(1) 本家spec-kitもuninstall/upgrade機能を提供していない（一貫性）、(2) MVPの焦点は「ドキュメント生成」であり、ライフサイクル管理は二次的、(3) 少数のファイルなので手動削除も容易、(4) アップグレードは`speckit-docs install --force`で代替可能、(5) 将来必要になれば追加可能
+
+### Session 2025-10-13 (CLI Framework Re-evaluation)
+
+- Q: CLIフレームワーク選択の再検討：本家spec-kitが**typer**を使用しており、spec-kit-docsも`specify-cli`に依存するため既にtyperが依存ツリーに存在している。Constitution（憲章）のCore Principle I「spec-kit Integration First」に基づき、argparseからtyperに変更すべきか？ → A: **Option B (typerに変更)** - 本家spec-kitとの一貫性を最優先する。既にtyperに間接依存しており、追加の依存関係はない。ユーザーは一貫したCLI体験を得られ、型ヒントのネイティブサポートも得られる（C006: 堅牢コード品質に準拠）。エラーハンドリングの制御は、本家spec-kitが既に実現しているように、typerでも可能。理由：(1) **Core Principle I (spec-kit Integration First)への準拠** - 「spec-kitの標準パターンと完全に一貫していなければならない」という憲章要件を満たす、(2) **実質的な追加依存なし** - specify-cli経由で既にtyperに間接依存しているため、新しい外部依存は増えない、(3) **型ヒントのネイティブサポート** - Python 3.11+の型ヒント（`int`, `str`, `bool`等）を直接使用でき、mypy互換（C006準拠）、(4) **DRY原則** - 本家spec-kitのtyperパターン（`typer.confirm()`、`typer.Option()`等）を再利用できる（C012準拠）、(5) **Phase 2計画との整合** - research.mdでPhase 2に計画されている「specify-cliからStepTracker/console再利用」がtyper前提であり、一貫性が保たれる
 
 ## アーキテクチャと責務分担
 
@@ -123,11 +135,11 @@ spec-kit-docs は、AI エージェント（Claude Code）とバックエンド�
 
 **この優先度の理由**: ユーザーはツールを使用する前にインストールできる必要があります。これは他のすべての機能の前提条件です。
 
-**独立テスト**: 既存の spec-kit プロジェクトを持つユーザーがインストールコマンドを実行します。インストール後、Claude Code で `/speckit.doc-init` と `/speckit.doc-update` を実行でき、エラーなくコマンドが実行されることを確認します。
+**独立テスト**: 既存の spec-kit プロジェクトを持つユーザーが、まず`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`でCLIツールをインストールし、次にプロジェクトルートで`speckit-docs install`を実行します。インストール後、Claude Code で `/speckit.doc-init` と `/speckit.doc-update` を実行でき、エラーなくコマンドが実行されることを確認します。
 
 **受け入れシナリオ**:
 
-1. **前提条件**: spec-kit プロジェクトとして初期化されたディレクトリ（`.specify/` と `.claude/` ディレクトリを持つ）、**実行**: ユーザーがプロジェクトルートからインストールコマンドを実行、**期待結果**: システムが `.claude/commands/` にドキュメントコマンド定義（`speckit.doc-init.md` と `speckit.doc-update.md`）を追加し、必要なスクリプトを `.specify/scripts/docs/` にコピーし、インストール成功を確認
+1. **前提条件**: spec-kit プロジェクトとして初期化されたディレクトリ（`.specify/` と `.claude/` ディレクトリを持つ）、**実行**: ユーザーがプロジェクトルートで`speckit-docs install`を実行、**期待結果**: システムが`.claude/commands/`にドキュメントコマンド定義（`doc-init.md`と`doc-update.md`、Pythonパッケージ内の`src/speckit_docs/commands/`からコピー）を追加し、必要なスクリプトを`.specify/scripts/docs/`にコピーし、インストール成功を確認
 
 2. **前提条件**: spec-kit-docs をインストールしたユーザー、**実行**: プロジェクトディレクトリで Claude Code を開き、`/speckit` と入力、**期待結果**: `/speckit.specify`、`/speckit.plan` などと並んで、利用可能なコマンドリストに `/speckit.doc-init` と `/speckit.doc-update` が表示される
 
@@ -257,13 +269,15 @@ spec-kit-docs は、AI エージェント（Claude Code）とバックエンド�
 
 #### インストールとプロジェクト構造
 
-- **FR-021**: システムは、`.claude/` ディレクトリを確認することで使用中の AI エージェント（最初は Claude Code）を検出し、適切な場所にコマンド定義をインストールしなければならない
-- **FR-022**: システムは、インストール時に `.claude/commands/speckit.doc-init.md` と `.claude/commands/speckit.doc-update.md` の2つのコマンド定義を作成しなければならない
-- **FR-022a**: `.claude/commands/speckit.doc-init.md` は、以下のワークフローを実行するプロンプトを記述しなければならない：(1) ユーザーに対話的に質問（ドキュメントツール選択、プロジェクト名、著者名、バージョン、言語等）、(2) 収集した情報をコマンドライン引数に構築、(3) `uv run python .specify/scripts/docs/doc_init.py` を適切な引数で呼び出し、(4) スクリプトの結果をユーザーにフィードバック、(5) エラーが発生した場合は明確なメッセージと次のステップを提示
-- **FR-022b**: `.claude/commands/speckit.doc-update.md` は、以下のワークフローを実行するプロンプトを記述しなければならない：(1) `docs/` ディレクトリの存在確認、(2) `uv run python .specify/scripts/docs/doc_update.py` の呼び出し、(3) 更新されたファイルのサマリー表示、(4) エラーハンドリングとユーザーフィードバック
-- **FR-023**: システムは、インストール時に必要なスクリプトを `.specify/scripts/docs/` にコピーしなければならない
-- **FR-023a**: コマンドテンプレートファイル（`doc-init.md`、`doc-update.md`）は `src/speckit_docs/commands/` ディレクトリに配置され、`importlib.resources`を使用してアクセスされなければならない。これにより、Pythonパッケージに含まれ、オフライン環境でも動作する
-- **FR-023b**: `speckit-docs install` コマンドは、既存のコマンド定義ファイル（`.claude/commands/speckit.doc-*.md`）または スクリプトファイル（`.specify/scripts/docs/`）が存在する場合、ユーザーに上書き確認を求めなければならない。`--force` フラグが指定された場合は、確認をスキップして上書きする（spec-kitの`specify init --here`パターンと一貫）
+- **FR-021**: `speckit-docs`CLIツールは、独立したPythonパッケージとしてGitHubから配布され（`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`）、spec-kitエコシステムと一貫したコマンド体系を提供しなければならない。PyPI公開は将来のフェーズで検討する
+- **FR-021a**: `speckit-docs install`コマンドは、カレントディレクトリがspec-kitプロジェクトであることを確認し（`.specify/`ディレクトリと`.claude/`ディレクトリの存在確認）、そうでない場合は明確なエラーメッセージを表示しなければならない
+- **FR-021b**: `speckit-docs install`コマンドは、カレントディレクトリに自動的にインストールし、明示的なディレクトリ指定引数を要求してはならない（`cd my-project && speckit-docs install`パターン）
+- **FR-022**: `speckit-docs install`コマンドは、インストール時に `.claude/commands/doc-init.md` と `.claude/commands/doc-update.md` の2つのコマンド定義を作成しなければならない（`speckit.doc-init.md`ではなく`doc-init.md`を使用し、Claude Codeが`/doc-init`として認識できるようにする）
+- **FR-022a**: `.claude/commands/doc-init.md` は、以下のワークフローを実行するプロンプトを記述しなければならない：(1) ユーザーに対話的に質問（ドキュメントツール選択、プロジェクト名、著者名、バージョン、言語等）、(2) 収集した情報をコマンドライン引数に構築、(3) `uv run python .specify/scripts/docs/doc_init.py` を適切な引数で呼び出し、(4) スクリプトの結果をユーザーにフィードバック、(5) エラーが発生した場合は明確なメッセージと次のステップを提示
+- **FR-022b**: `.claude/commands/doc-update.md` は、以下のワークフローを実行するプロンプトを記述しなければならない：(1) `docs/` ディレクトリの存在確認、(2) `uv run python .specify/scripts/docs/doc_update.py` の呼び出し、(3) 更新されたファイルのサマリー表示、(4) エラーハンドリングとユーザーフィードバック
+- **FR-023**: `speckit-docs install`コマンドは、インストール時に必要なスクリプト（`doc_init.py`、`doc_update.py`）を `.specify/scripts/docs/` にコピーしなければならない
+- **FR-023a**: コマンドテンプレートファイル（`doc-init.md`、`doc-update.md`）とスクリプトファイル（`doc_init.py`、`doc_update.py`）は `src/speckit_docs/commands/` および `src/speckit_docs/scripts/` ディレクトリに配置され、`importlib.resources`を使用してアクセスされなければならない。これにより、Pythonパッケージに含まれ、オフライン環境でも動作する
+- **FR-023b**: `speckit-docs install` コマンドは、既存のコマンド定義ファイル（`.claude/commands/doc-*.md`）または スクリプトファイル（`.specify/scripts/docs/`）が存在する場合、ユーザーに上書き確認を求めなければならない。`--force` フラグが指定された場合は、確認をスキップして上書きする（spec-kitの`specify init --here`パターンと一貫）
 - **FR-023c**: インストール中にエラーが発生した場合、システムはベストエフォート方式で動作し、エラー発生時点までにコピーされたファイルは残す。ユーザーは手動で修正するか、問題を解決してから再実行できる（spec-kitの既存ディレクトリへの追加パターンと一貫）
 - **FR-024**: システムは、コンテンツを統合する際に時間的順序を決定するために、機能ディレクトリの番号付け（001、002、003）を使用しなければならない
 
