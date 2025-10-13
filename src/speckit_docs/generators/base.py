@@ -79,6 +79,35 @@ class ValidationResult:
     warnings: list[str]
     checked_items: list[str]
 
+    def format_errors(self) -> str:
+        """
+        Format validation errors and warnings with suggestions.
+
+        Returns:
+            Formatted string with errors, warnings, and suggestions
+        """
+        output = []
+
+        if self.errors:
+            output.append("❌ エラー:")
+            for error in self.errors:
+                output.append(f"  • {error}")
+
+        if self.warnings:
+            output.append("\n⚠️  警告:")
+            for warning in self.warnings:
+                output.append(f"  • {warning}")
+
+        if self.checked_items:
+            output.append(f"\n✓ 検証項目: {len(self.checked_items)}個")
+
+        if not self.is_valid:
+            output.append("\n💡 提案:")
+            output.append("  • プロジェクト構造を確認してください")
+            output.append("  • 必要なファイルが存在することを確認してください")
+
+        return "\n".join(output) if output else "✓ すべての検証に合格しました"
+
 
 class BaseGenerator(ABC):
     """

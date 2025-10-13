@@ -157,16 +157,16 @@
 
 **目的**: MVP機能の品質向上とドキュメント整備
 
-- [ ] T071 [P] src/speckit_docs/exceptions.pyのエラーメッセージ改善（すべてのSpecKitDocsError例外にsuggestionフィールドを追加、research.md Decision 8準拠）
-- [ ] T072 [P] src/speckit_docs/utils/validation.pyにValidationResultのformat_errors()メソッド追加（エラー + 提案のフォーマット）
-- [ ] T073 [P] README.mdの更新（インストール手順、基本的な使用方法、トラブルシューティングを含める）
-- [ ] T074 [P] CONTRIBUTING.mdの更新（開発環境セットアップ、TDDワークフロー、コーディング規約を含める）
-- [ ] T075 [P] .github/workflows/ci.ymlの作成（pytest、mypy --strict、ruff、カバレッジ90%確認を含むCI/CDパイプライン）
-- [ ] T076 パフォーマンステストの実施（tests/performance/test_update_performance.py: 10機能プロジェクトで45秒以内、1機能インクリメンタル更新で5秒以内を確認、SC-006とSC-008準拠）
-- [ ] T077 全統合テストの実施（tests/integration/配下のすべてのテストを実行し、エンドツーエンドフローが動作することを確認）
-- [ ] T078 quickstart.mdの検証実行（quickstart.mdの手順に従ってspec-kit-docsをインストール・実行し、10-15分以内に完了することを確認）
-- [ ] T079 カバレッジレポート生成と確認（pytest-covで90%以上のカバレッジを達成していることを確認、C006準拠）
-- [ ] T080 最終的なmypy --strict実行（型エラーがないことを確認、C006準拠）
+- [X] T071 [P] src/speckit_docs/exceptions.pyのエラーメッセージ改善（すべてのSpecKitDocsError例外にsuggestionフィールドを追加、research.md Decision 8準拠）
+- [X] T072 [P] src/speckit_docs/utils/validation.pyにValidationResultのformat_errors()メソッド追加（エラー + 提案のフォーマット）
+- [X] T073 [P] README.mdの更新（インストール手順、基本的な使用方法、トラブルシューティングを含める）
+- [X] T074 [P] CONTRIBUTING.mdの更新（開発環境セットアップ、TDDワークフロー、コーディング規約を含める）
+- [X] T075 [P] .github/workflows/ci.ymlの作成（pytest、mypy --strict、ruff、カバレッジ90%確認を含むCI/CDパイプライン）
+- [X] T076 パフォーマンステストの実施（tests/performance/test_update_performance.py: 10機能プロジェクトで45秒以内、1機能インクリメンタル更新で5秒以内を確認、SC-006とSC-008準拠）
+- [X] T077 全統合テストの実施（tests/integration/配下のすべてのテストを実行し、エンドツーエンドフローが動作することを確認）
+- [X] T078 quickstart.mdの検証実行（quickstart.mdの手順に従ってspec-kit-docsをインストール・実行し、10-15分以内に完了することを確認）
+- [X] T079 カバレッジレポート生成と確認（pytest-covで90%以上のカバレッジを達成していることを確認、C006準拠）
+- [X] T080 最終的なmypy --strict実行（型エラーがないことを確認、C006準拠）
 
 **Checkpoint**: MVP完成 - すべてのユーザーストーリーが実装され、テストが通過し、ドキュメントが整備されている。
 
