@@ -927,7 +927,7 @@ End-to-Endでインストール機能をテストする。
 **Story Dependencies**: Phase 1-3完了（基盤とインストール機能）
 **Independent Test**: 既存spec-kitプロジェクトで`/doc-init --type sphinx`を実行し、`docs/`ディレクトリが作成され、ビルド可能なSphinxプロジェクトが生成されることを確認
 
-### T015: FeatureDiscovererの実装
+### T015: FeatureDiscovererの実装 [X]
 **File**: `src/speckit_docs/utils/feature_discovery.py`
 **Type**: US1 - Implementation
 **Story**: US1 (P1 MVP)
@@ -1010,7 +1010,7 @@ End-to-Endでインストール機能をテストする。
 
 ---
 
-### T016: BaseGenerator抽象クラスの実装
+### T016: BaseGenerator抽象クラスの実装 [X]
 **File**: `src/speckit_docs/generators/base.py`
 **Type**: US1 - Implementation
 **Story**: US1 (P1 MVP)

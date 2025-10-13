@@ -3,10 +3,11 @@
 import subprocess
 import time
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from ..parsers.feature_scanner import Feature
+from ..models import Feature
 from ..utils.validation import BuildError, DocumentationProjectError
 from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
 
@@ -14,9 +15,16 @@ from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
 class MkDocsGenerator(BaseGenerator):
     """MkDocs documentation generator."""
 
-    def __init__(self, config: GeneratorConfig, project_root: Path = None):
+    def __init__(self, config: GeneratorConfig, project_root: Path | None = None):
         """Initialize MkDocs generator."""
-        super().__init__(config, project_root)
+        # Note: BaseGenerator now expects docs_dir, but we maintain compatibility
+        # by computing it from project_root
+        computed_project_root = project_root or Path.cwd()
+        docs_dir = computed_project_root / "docs"
+        super().__init__(docs_dir)
+
+        self.config = config
+        self.project_root = computed_project_root
 
         # Setup Jinja2 environment
         template_dir = Path(__file__).parent.parent / "templates" / "mkdocs"
@@ -25,6 +33,21 @@ class MkDocsGenerator(BaseGenerator):
         # Set default theme for MkDocs
         if self.config.theme == "alabaster":  # Sphinx default
             self.config.theme = "material"  # MkDocs default
+
+    def generate_config(self, **kwargs: Any) -> None:
+        """Generate MkDocs mkdocs.yml (T018 stub)."""
+        # TODO: T018 will implement this
+        pass
+
+    def generate_index(self) -> None:
+        """Generate index.md (T018 stub)."""
+        # TODO: T018 will implement this
+        pass
+
+    def create_directory_structure(self) -> None:
+        """Create MkDocs directory structure (T018 stub)."""
+        # TODO: T018 will implement this
+        pass
 
     def init_project(self, structure_type: str = "FLAT") -> None:
         """
@@ -148,7 +171,7 @@ Thumbs.db
         self._update_index(processed_features, structure_type)
         self._update_mkdocs_yml(processed_features, structure_type)
 
-    def _update_index(self, features: list[dict], structure_type: str) -> None:
+    def _update_index(self, features: list[dict[str, Any]], structure_type: str) -> None:
         """
         Update index.md with features list.
 
@@ -198,7 +221,7 @@ Thumbs.db
 
             index_path.write_text(content)
 
-    def _update_mkdocs_yml(self, features: list[dict], structure_type: str) -> None:
+    def _update_mkdocs_yml(self, features: list[dict[str, Any]], structure_type: str) -> None:
         """
         Update mkdocs.yml navigation with features list.
 

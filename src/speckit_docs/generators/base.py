@@ -1,11 +1,14 @@
 """Base generator interface for documentation generation."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ..parsers.feature_scanner import Feature
+from ..models import StructureType
+
+if TYPE_CHECKING:
+    from ..models import Feature
 
 
 @dataclass
@@ -21,18 +24,9 @@ class GeneratorConfig:
     description: str = ""
     site_name: str | None = None  # For MkDocs
     repo_url: str | None = None  # For MkDocs
-    extensions: list[str] = None  # Sphinx extensions
-    plugins: list[str] = None  # MkDocs plugins
-    custom_settings: dict[str, Any] = None
-
-    def __post_init__(self):
-        """Initialize default values for mutable fields."""
-        if self.extensions is None:
-            self.extensions = []
-        if self.plugins is None:
-            self.plugins = []
-        if self.custom_settings is None:
-            self.custom_settings = {}
+    extensions: list[str] = field(default_factory=list)  # Sphinx extensions
+    plugins: list[str] = field(default_factory=list)  # MkDocs plugins
+    custom_settings: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -87,104 +81,137 @@ class ValidationResult:
 
 
 class BaseGenerator(ABC):
-    """Abstract base class for documentation generators."""
+    """
+    Abstract base class for documentation generators.
 
-    def __init__(self, config: GeneratorConfig, project_root: Path | None = None):
+    This class provides a common interface for Sphinx and MkDocs generators.
+    Subclasses must implement the abstract methods to generate tool-specific
+    configuration and documentation structure.
+    """
+
+    def __init__(self, docs_dir: Path) -> None:
         """
-        Initialize generator.
+        Initialize the generator.
 
         Args:
-            config: Generator configuration
-            project_root: Optional project root path (defaults to current directory)
+            docs_dir: Path to the documentation directory
         """
-        self.config = config
-        self.project_root = project_root or Path.cwd()
-        self.docs_dir = self.project_root / "docs"
+        self.docs_dir = docs_dir
+        self.structure_type = StructureType.FLAT
 
     @abstractmethod
-    def init_project(self, structure_type: str = "FLAT") -> None:
+    def generate_config(self, **kwargs: Any) -> None:
         """
-        Initialize documentation project.
+        Generate tool-specific configuration file.
+
+        For Sphinx: conf.py
+        For MkDocs: mkdocs.yml
 
         Args:
-            structure_type: "FLAT" or "COMPREHENSIVE"
+            **kwargs: Configuration parameters (project_name, author, version, etc.)
 
         Raises:
-            DocumentationProjectError: If initialization fails
+            NotImplementedError: If not implemented by subclass
         """
         pass
 
     @abstractmethod
-    def update_docs(self, features: list[Feature], incremental: bool = True) -> None:
+    def generate_index(self) -> None:
         """
-        Update documentation from features.
-
-        Args:
-            features: List of features to generate docs for
-            incremental: If True, only update changed features
+        Generate index page (index.md).
 
         Raises:
-            MarkdownParseError: If parsing fails
-            DocumentationProjectError: If update fails
+            NotImplementedError: If not implemented by subclass
         """
         pass
 
     @abstractmethod
-    def build_docs(self) -> BuildResult:
+    def create_directory_structure(self) -> None:
         """
-        Build HTML documentation.
+        Create directory structure based on structure_type.
+
+        For FLAT structure (≤5 features):
+            - docs/
+              - index.md
+              - feature-1.md
+              - feature-2.md
+
+        For COMPREHENSIVE structure (>5 features):
+            - docs/
+              - index.md
+              - features/
+                - feature-1.md
+                - feature-2.md
+              - guides/
+              - api/
+              - architecture/
+
+        Raises:
+            NotImplementedError: If not implemented by subclass
+        """
+        pass
+
+    def determine_structure(self, feature_count: int) -> StructureType:
+        """
+        Determine structure type based on feature count (FR-005, FR-006).
+
+        Args:
+            feature_count: Number of features in the project
 
         Returns:
-            BuildResult with build status and metrics
-
-        Raises:
-            BuildError: If build fails
+            StructureType.FLAT for 5 or fewer features
+            StructureType.COMPREHENSIVE for 6 or more features
         """
-        pass
+        return (
+            StructureType.FLAT
+            if feature_count <= 5
+            else StructureType.COMPREHENSIVE
+        )
 
-    @abstractmethod
-    def validate_project(self) -> ValidationResult:
-        """
-        Validate documentation project structure.
-
-        Returns:
-            ValidationResult with validation status
-
-        Raises:
-            DocumentationProjectError: If validation fails
-        """
-        pass
-
+    # Helper methods for backwards compatibility with existing implementations
     def _create_docs_directory(self) -> None:
         """Create docs directory if it doesn't exist."""
-        self.docs_dir.mkdir(exist_ok=True)
+        self.docs_dir.mkdir(parents=True, exist_ok=True)
 
-    def _create_subdirectories(self, structure_type: str) -> None:
+    def _create_subdirectories(self, structure_type: StructureType | str) -> None:
         """
         Create subdirectories based on structure type.
 
         Args:
-            structure_type: "FLAT" or "COMPREHENSIVE"
+            structure_type: StructureType or string ("FLAT" or "COMPREHENSIVE")
         """
-        if structure_type == "COMPREHENSIVE":
-            (self.docs_dir / "features").mkdir(exist_ok=True)
-            (self.docs_dir / "guides").mkdir(exist_ok=True)
-            (self.docs_dir / "api").mkdir(exist_ok=True)
-            (self.docs_dir / "architecture").mkdir(exist_ok=True)
+        # Handle both StructureType enum and string
+        is_comprehensive = (
+            structure_type == StructureType.COMPREHENSIVE
+            if isinstance(structure_type, StructureType)
+            else structure_type == "COMPREHENSIVE"
+        )
 
-    def get_feature_doc_path(self, feature: Feature, structure_type: str) -> Path:
+        if is_comprehensive:
+            (self.docs_dir / "features").mkdir(parents=True, exist_ok=True)
+            (self.docs_dir / "guides").mkdir(parents=True, exist_ok=True)
+            (self.docs_dir / "api").mkdir(parents=True, exist_ok=True)
+            (self.docs_dir / "architecture").mkdir(parents=True, exist_ok=True)
+
+    def get_feature_doc_path(self, feature: "Feature", structure_type: StructureType | str) -> Path:
         """
         Get output file path for a feature document.
 
         Args:
             feature: Feature to generate path for
-            structure_type: "FLAT" or "COMPREHENSIVE"
+            structure_type: StructureType or string ("FLAT" or "COMPREHENSIVE")
 
         Returns:
             Path to the output Markdown file
         """
-        # FR-013, FR-014: File naming based on structure type
-        if structure_type == "FLAT":
+        # Handle both StructureType enum and string
+        is_flat = (
+            structure_type == StructureType.FLAT
+            if isinstance(structure_type, StructureType)
+            else structure_type == "FLAT"
+        )
+
+        if is_flat:
             # FLAT: docs/{feature-name}.md (5 features or less)
             return self.docs_dir / f"{feature.name}.md"
         else:
@@ -205,6 +232,6 @@ class BaseGenerator(ABC):
         if not features_dir.exists():
             return "FLAT"
 
-        # If features directory contains subdirectories, it's COMPREHENSIVE
-        subdirs = [d for d in features_dir.iterdir() if d.is_dir()]
-        return "COMPREHENSIVE" if subdirs else "FLAT"
+        # If features directory contains files or subdirectories, it's COMPREHENSIVE
+        has_contents = any(features_dir.iterdir())
+        return "COMPREHENSIVE" if has_contents else "FLAT"

@@ -4,10 +4,11 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from ..parsers.feature_scanner import Feature
+from ..models import Feature
 from ..utils.validation import BuildError, DocumentationProjectError
 from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
 
@@ -15,13 +16,35 @@ from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
 class SphinxGenerator(BaseGenerator):
     """Sphinx + myst-parser documentation generator."""
 
-    def __init__(self, config: GeneratorConfig, project_root: Path = None):
+    def __init__(self, config: GeneratorConfig, project_root: Path | None = None):
         """Initialize Sphinx generator."""
-        super().__init__(config, project_root)
+        # Note: BaseGenerator now expects docs_dir, but we maintain compatibility
+        # by computing it from project_root
+        computed_project_root = project_root or Path.cwd()
+        docs_dir = computed_project_root / "docs"
+        super().__init__(docs_dir)
+
+        self.config = config
+        self.project_root = computed_project_root
 
         # Setup Jinja2 environment
         template_dir = Path(__file__).parent.parent / "templates" / "sphinx"
         self.jinja_env = Environment(loader=FileSystemLoader(str(template_dir)))
+
+    def generate_config(self, **kwargs: Any) -> None:
+        """Generate Sphinx conf.py (T017 stub)."""
+        # TODO: T017 will implement this
+        pass
+
+    def generate_index(self) -> None:
+        """Generate index.md (T017 stub)."""
+        # TODO: T017 will implement this
+        pass
+
+    def create_directory_structure(self) -> None:
+        """Create Sphinx directory structure (T017 stub)."""
+        # TODO: T017 will implement this
+        pass
 
     def init_project(self, structure_type: str = "FLAT") -> None:
         """
@@ -170,7 +193,7 @@ Thumbs.db
         # Update index.md with features list
         self._update_index(processed_features, structure_type)
 
-    def _update_index(self, features: list[dict], structure_type: str) -> None:
+    def _update_index(self, features: list[dict[str, Any]], structure_type: str) -> None:
         """
         Update index.md with features list.
 
