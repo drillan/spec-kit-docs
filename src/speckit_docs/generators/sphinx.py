@@ -8,7 +8,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from ..models import Feature
+from ..models import Feature, StructureType
 from ..utils.validation import BuildError, DocumentationProjectError
 from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
 
@@ -32,19 +32,89 @@ class SphinxGenerator(BaseGenerator):
         self.jinja_env = Environment(loader=FileSystemLoader(str(template_dir)))
 
     def generate_config(self, **kwargs: Any) -> None:
-        """Generate Sphinx conf.py (T017 stub)."""
-        # TODO: T017 will implement this
-        pass
+        """
+        Generate Sphinx conf.py with myst-parser configuration.
+
+        Args:
+            **kwargs: Configuration parameters (project_name, author, version, language, etc.)
+        """
+        # Create docs directory if it doesn't exist
+        self.docs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get template
+        try:
+            template = self.jinja_env.get_template("conf.py.j2")
+        except TemplateNotFound:
+            raise DocumentationProjectError(
+                "Sphinx conf.py template not found",
+                "テンプレートファイルが見つかりません。パッケージが正しくインストールされているか確認してください。",
+            )
+
+        # Render template with provided kwargs or use config
+        render_params = {
+            "project_name": kwargs.get("project_name", self.config.project_name),
+            "author": kwargs.get("author", self.config.author),
+            "version": kwargs.get("version", self.config.version),
+            "year": datetime.now().year,
+            "language": kwargs.get("language", self.config.language),
+            "theme": kwargs.get("theme", self.config.theme),
+        }
+
+        conf_content = template.render(**render_params)
+
+        # Write conf.py
+        conf_path = self.docs_dir / "conf.py"
+        conf_path.write_text(conf_content)
 
     def generate_index(self) -> None:
-        """Generate index.md (T017 stub)."""
-        # TODO: T017 will implement this
-        pass
+        """Generate index.md in Markdown format."""
+        # Create docs directory if it doesn't exist
+        self.docs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get template
+        try:
+            template = self.jinja_env.get_template("index.md.j2")
+        except TemplateNotFound:
+            raise DocumentationProjectError(
+                "Sphinx index.md template not found",
+                "テンプレートファイルが見つかりません。パッケージが正しくインストールされているか確認してください。",
+            )
+
+        # Render template
+        index_content = template.render(
+            project_name=self.config.project_name,
+            description=self.config.description or "このプロジェクトは、spec-kitを使用して開発されています。",
+            structure_type=self.structure_type.value if isinstance(self.structure_type, StructureType) else self.structure_type,
+        )
+
+        # Write index.md
+        index_path = self.docs_dir / "index.md"
+        index_path.write_text(index_content)
 
     def create_directory_structure(self) -> None:
-        """Create Sphinx directory structure (T017 stub)."""
-        # TODO: T017 will implement this
-        pass
+        """
+        Create Sphinx directory structure based on structure_type.
+
+        For FLAT structure (≤5 features):
+            - docs/
+              - conf.py
+              - index.md
+
+        For COMPREHENSIVE structure (>5 features):
+            - docs/
+              - conf.py
+              - index.md
+              - features/
+              - guides/
+              - api/
+              - architecture/
+        """
+        # Create docs directory
+        self._create_docs_directory()
+
+        # Create subdirectories if COMPREHENSIVE
+        if self.structure_type == StructureType.COMPREHENSIVE:
+            self._create_subdirectories(self.structure_type)
 
     def init_project(self, structure_type: str = "FLAT") -> None:
         """

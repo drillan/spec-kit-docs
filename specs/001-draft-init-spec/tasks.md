@@ -1081,7 +1081,7 @@ End-to-Endでインストール機能をテストする。
 
 ---
 
-### T017: SphinxGeneratorの実装
+### T017: SphinxGeneratorの実装 [X]
 **File**: `src/speckit_docs/generators/sphinx.py`
 **Type**: US1 - Implementation
 **Story**: US1 (P1 MVP)
@@ -1164,7 +1164,7 @@ Sphinxドキュメントプロジェクトを生成する（FR-005, FR-005a）�
 
 ---
 
-### T018: MkDocsGeneratorの実装
+### T018: MkDocsGeneratorの実装 [X]
 **File**: `src/speckit_docs/generators/mkdocs.py`
 **Type**: US1 - Implementation
 **Story**: US1 (P1 MVP)

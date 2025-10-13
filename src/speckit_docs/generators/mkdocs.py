@@ -7,7 +7,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from ..models import Feature
+from ..models import Feature, StructureType
 from ..utils.validation import BuildError, DocumentationProjectError
 from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
 
@@ -35,19 +35,84 @@ class MkDocsGenerator(BaseGenerator):
             self.config.theme = "material"  # MkDocs default
 
     def generate_config(self, **kwargs: Any) -> None:
-        """Generate MkDocs mkdocs.yml (T018 stub)."""
-        # TODO: T018 will implement this
-        pass
+        """
+        Generate MkDocs mkdocs.yml configuration file.
+
+        Args:
+            **kwargs: Configuration parameters (project_name, author, version, language, etc.)
+        """
+        # Get template
+        try:
+            template = self.jinja_env.get_template("mkdocs.yml.j2")
+        except TemplateNotFound:
+            raise DocumentationProjectError(
+                "MkDocs mkdocs.yml template not found",
+                "テンプレートファイルが見つかりません。パッケージが正しくインストールされているか確認してください。",
+            )
+
+        # Render template with provided kwargs or use config
+        render_params = {
+            "project_name": kwargs.get("project_name", self.config.project_name),
+            "description": kwargs.get("description", self.config.description or ""),
+            "author": kwargs.get("author", self.config.author),
+            "repo_url": kwargs.get("repo_url", self.config.repo_url),
+            "theme": kwargs.get("theme", self.config.theme),
+            "language": kwargs.get("language", self.config.language),
+        }
+
+        config_content = template.render(**render_params)
+
+        # Write mkdocs.yml to project root (parent of docs_dir)
+        mkdocs_yml = self.project_root / "mkdocs.yml"
+        mkdocs_yml.write_text(config_content)
 
     def generate_index(self) -> None:
-        """Generate index.md (T018 stub)."""
-        # TODO: T018 will implement this
-        pass
+        """Generate index.md in Markdown format."""
+        # Create docs directory if it doesn't exist
+        self.docs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get template
+        try:
+            template = self.jinja_env.get_template("index.md.j2")
+        except TemplateNotFound:
+            raise DocumentationProjectError(
+                "MkDocs index.md template not found",
+                "テンプレートファイルが見つかりません。パッケージが正しくインストールされているか確認してください。",
+            )
+
+        # Render template
+        index_content = template.render(
+            project_name=self.config.project_name,
+            description=self.config.description or "このプロジェクトは、spec-kitを使用して開発されています。",
+            structure_type=self.structure_type.value if isinstance(self.structure_type, StructureType) else self.structure_type,
+        )
+
+        # Write index.md
+        index_path = self.docs_dir / "index.md"
+        index_path.write_text(index_content)
 
     def create_directory_structure(self) -> None:
-        """Create MkDocs directory structure (T018 stub)."""
-        # TODO: T018 will implement this
-        pass
+        """
+        Create MkDocs directory structure based on structure_type.
+
+        For FLAT structure (≤5 features):
+            - docs/
+              - index.md
+
+        For COMPREHENSIVE structure (>5 features):
+            - docs/
+              - index.md
+              - features/
+              - guides/
+              - api/
+              - architecture/
+        """
+        # Create docs directory
+        self._create_docs_directory()
+
+        # Create subdirectories if COMPREHENSIVE
+        if self.structure_type == StructureType.COMPREHENSIVE:
+            self._create_subdirectories(self.structure_type)
 
     def init_project(self, structure_type: str = "FLAT") -> None:
         """
