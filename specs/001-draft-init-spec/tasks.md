@@ -134,20 +134,20 @@
 
 ### Tests for User Story 3（TDD: Red-Green-Refactor）
 
-- [ ] T060 [P] [US3] tests/unit/cli/test_install_handler.pyの拡張（install_handler.install()がカレントディレクトリに.claude/commands/と.specify/scripts/を作成するテスト）
-- [ ] T061 [P] [US3] tests/unit/cli/test_install_handler.pyに上書き確認テスト追加（既存ファイルがある場合、--forceフラグなしで確認プロンプトを表示するテスト）
-- [ ] T062 [P] [US3] tests/unit/cli/test_install_handler.pyにspec-kitプロジェクト検証テスト追加（.specify/と.claude/が存在しない場合、エラーを返すテスト）
-- [ ] T063 [P] [US3] tests/integration/test_install.pyの拡張（エンドツーエンド: speckit-docs install → ファイル作成確認 → /speckit.doc-initの実行確認）
+- [X] T060 [P] [US3] tests/unit/cli/test_install_handler.pyの拡張（install_handler.install()がカレントディレクトリに.claude/commands/と.specify/scripts/を作成するテスト）
+- [X] T061 [P] [US3] tests/unit/cli/test_install_handler.pyに上書き確認テスト追加（既存ファイルがある場合、--forceフラグなしで確認プロンプトを表示するテスト）
+- [X] T062 [P] [US3] tests/unit/cli/test_install_handler.pyにspec-kitプロジェクト検証テスト追加（.specify/と.claude/が存在しない場合、エラーを返すテスト）
+- [X] T063 [P] [US3] tests/integration/test_install.pyの拡張（エンドツーエンド: speckit-docs install → ファイル作成確認 → /speckit.doc-initの実行確認）
 
 ### Implementation for User Story 3
 
-- [ ] T064 [P] [US3] src/speckit_docs/cli/install_handler.pyの拡張（install()関数の実装: importlib.resourcesでsrc/speckit_docs/commands/とsrc/speckit_docs/scripts/にアクセスし、.claude/commands/と.specify/scripts/docs/にコピー）
-- [ ] T065 [P] [US3] src/speckit_docs/cli/__init__.pyの拡張（typerアプリ定義: @app.command("install")でinstall_handler.install()を呼び出す）
-- [ ] T066 [US3] pyproject.tomlに[project.scripts]エントリ追加（`speckit-docs = "speckit_docs.cli:app"`）
-- [ ] T067 [US3] src/speckit_docs/cli/install_handler.pyに既存ファイル確認ロジック追加（.claude/commands/speckit.doc-*.mdまたは.specify/scripts/docs/が存在する場合、typer.confirm()で上書き確認、--forceフラグで確認スキップ）
-- [ ] T068 [US3] src/speckit_docs/cli/install_handler.pyにspec-kitプロジェクト検証追加（validate_speckit_project()を呼び出し、.specify/と.claude/の存在確認、エラー時は明確なメッセージを表示）
-- [ ] T069 [US3] src/speckit_docs/cli/install_handler.pyにベストエフォートエラーハンドリング追加（ファイルコピー中にエラーが発生してもそれまでのファイルは残す、FR-023c準拠）
-- [ ] T070 [US3] .claude/commands/speckit.doc-init.mdと.claude/commands/speckit.doc-update.mdの最終確認（Claude Codeが認識できる形式でコマンド定義が記述されているか確認）
+- [X] T064 [P] [US3] src/speckit_docs/cli/install_handler.pyの拡張（install()関数の実装: importlib.resourcesでsrc/speckit_docs/commands/とsrc/speckit_docs/scripts/にアクセスし、.claude/commands/と.specify/scripts/docs/にコピー）
+- [X] T065 [P] [US3] src/speckit_docs/cli/__init__.pyの拡張（typerアプリ定義: @app.command("install")でinstall_handler.install()を呼び出す）
+- [X] T066 [US3] pyproject.tomlに[project.scripts]エントリ追加（`speckit-docs = "speckit_docs.cli:app"`）
+- [X] T067 [US3] src/speckit_docs/cli/install_handler.pyに既存ファイル確認ロジック追加（.claude/commands/speckit.doc-*.mdまたは.specify/scripts/docs/が存在する場合、typer.confirm()で上書き確認、--forceフラグで確認スキップ）
+- [X] T068 [US3] src/speckit_docs/cli/install_handler.pyにspec-kitプロジェクト検証追加（validate_speckit_project()を呼び出し、.specify/と.claude/の存在確認、エラー時は明確なメッセージを表示）
+- [X] T069 [US3] src/speckit_docs/cli/install_handler.pyにベストエフォートエラーハンドリング追加（ファイルコピー中にエラーが発生してもそれまでのファイルは残す、FR-023c準拠）
+- [X] T070 [US3] .claude/commands/speckit.doc-init.mdと.claude/commands/speckit.doc-update.mdの最終確認（Claude Codeが認識できる形式でコマンド定義が記述されているか確認）
 
 **Checkpoint**: `speckit-docs install`コマンドが完全に機能し、既存のspec-kitプロジェクトに拡張機能をインストールできる。Claude Codeで`/speckit.doc-init`と`/speckit.doc-update`が認識され、実行可能。
 

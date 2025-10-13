@@ -125,7 +125,7 @@ class TestInstallIntegration:
 
         assert result.returncode == 0
         assert "sphinx" in result.stdout.lower()
-        assert "TestProject" in result.stdout or "N/A" in result.stdout
+        assert "ドキュメントプロジェクトの初期化が完了しました" in result.stdout
 
         # Test doc_update.py with arguments
         script_path = tmp_path / ".specify" / "scripts" / "docs" / "doc_update.py"
@@ -136,4 +136,4 @@ class TestInstallIntegration:
         )
 
         assert result.returncode == 0
-        assert "full" in result.stdout.lower() or "Full" in result.stdout
+        assert "フル" in result.stdout or "full" in result.stdout.lower()
