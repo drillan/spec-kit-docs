@@ -18,12 +18,16 @@ classifiers = [
     "Topic :: Software Development :: Documentation",
 ]
 dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
     "sphinx>=7.0",
     "myst-parser>=2.0",
     "mkdocs>=1.5",
     "markdown-it-py>=3.0",
     "GitPython>=3.1",
     "Jinja2>=3.1",
+    "PyYAML>=6.0",
+    "specify-cli",
 ]
 
 [project.optional-dependencies]
@@ -32,7 +36,11 @@ dev = [
     "pytest-cov>=4.0",
     "black>=24.0",
     "ruff>=0.1.0",
+    "mypy>=1.0",
 ]
+
+[project.scripts]
+speckit-docs = "speckit_docs.cli:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -86,3 +94,6 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
+
+[tool.uv.sources]
+specify-cli = { git = "https://github.com/github/spec-kit.git" }
