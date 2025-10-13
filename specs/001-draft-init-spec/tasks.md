@@ -1202,7 +1202,7 @@ MkDocsドキュメントプロジェクトを生成する（FR-006）。
 
 ---
 
-### T019: Jinja2テンプレートファイルの作成
+### T019: Jinja2テンプレートファイルの作成 [X]
 **File**: `src/speckit_docs/templates/sphinx/conf.py.jinja2`, `index.md.jinja2`, `mkdocs/mkdocs.yml.jinja2`
 **Type**: US1 - Assets
 **Story**: US1 (P1 MVP)
@@ -1254,7 +1254,7 @@ Sphinx/MkDocs設定ファイルのJinja2テンプレートを作成する。
 
 ---
 
-### T020: doc_init.pyの完全実装
+### T020: doc_init.pyの完全実装 [X]
 **File**: `src/speckit_docs/scripts/doc_init.py`
 **Type**: US1 - Implementation
 **Story**: US1 (P1 MVP)
