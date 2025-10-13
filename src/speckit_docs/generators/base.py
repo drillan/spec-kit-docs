@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..parsers.feature_scanner import Feature
 
@@ -19,11 +19,11 @@ class GeneratorConfig:
     language: str = "ja"
     theme: str = "alabaster"  # Default for Sphinx
     description: str = ""
-    site_name: Optional[str] = None  # For MkDocs
-    repo_url: Optional[str] = None  # For MkDocs
-    extensions: List[str] = None  # Sphinx extensions
-    plugins: List[str] = None  # MkDocs plugins
-    custom_settings: Dict[str, Any] = None
+    site_name: str | None = None  # For MkDocs
+    repo_url: str | None = None  # For MkDocs
+    extensions: list[str] = None  # Sphinx extensions
+    plugins: list[str] = None  # MkDocs plugins
+    custom_settings: dict[str, Any] = None
 
     def __post_init__(self):
         """Initialize default values for mutable fields."""
@@ -41,8 +41,8 @@ class BuildResult:
 
     success: bool
     output_dir: Path
-    warnings: List[str]
-    errors: List[str]
+    warnings: list[str]
+    errors: list[str]
     build_time: float  # seconds
     file_count: int
 
@@ -81,15 +81,15 @@ class ValidationResult:
     """Result of project validation."""
 
     is_valid: bool
-    errors: List[str]
-    warnings: List[str]
-    checked_items: List[str]
+    errors: list[str]
+    warnings: list[str]
+    checked_items: list[str]
 
 
 class BaseGenerator(ABC):
     """Abstract base class for documentation generators."""
 
-    def __init__(self, config: GeneratorConfig, project_root: Optional[Path] = None):
+    def __init__(self, config: GeneratorConfig, project_root: Path | None = None):
         """
         Initialize generator.
 
@@ -115,7 +115,7 @@ class BaseGenerator(ABC):
         pass
 
     @abstractmethod
-    def update_docs(self, features: List[Feature], incremental: bool = True) -> None:
+    def update_docs(self, features: list[Feature], incremental: bool = True) -> None:
         """
         Update documentation from features.
 

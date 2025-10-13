@@ -4,16 +4,17 @@ This module tests SphinxGenerator and MkDocsGenerator classes per TDD Red phase.
 Tests are written before implementation to verify expected behavior.
 """
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
+
+import pytest
 
 # Try to import generators - will fail in RED phase (expected)
 try:
-    from speckit_docs.generators.sphinx import SphinxGenerator
-    from speckit_docs.generators.mkdocs import MkDocsGenerator
     from speckit_docs.generators import GeneratorConfig
+    from speckit_docs.generators.mkdocs import MkDocsGenerator
+    from speckit_docs.generators.sphinx import SphinxGenerator
     GENERATORS_AVAILABLE = True
 except ImportError:
     GENERATORS_AVAILABLE = False

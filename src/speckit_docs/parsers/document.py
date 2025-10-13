@@ -3,7 +3,6 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from .markdown_parser import MarkdownParser, Section
 
@@ -14,8 +13,8 @@ class Document:
 
     file_path: Path  # Path to the source Markdown file
     title: str  # Document title (from first H1 or filename)
-    sections: List[Section]  # Top-level sections
-    metadata: Dict[str, any] = field(default_factory=dict)  # YAML frontmatter
+    sections: list[Section]  # Top-level sections
+    metadata: dict[str, any] = field(default_factory=dict)  # YAML frontmatter
 
     @property
     def last_modified(self) -> float:
@@ -42,7 +41,7 @@ class Document:
         return self.last_modified > since
 
     @staticmethod
-    def parse(file_path: Path, parser: Optional[MarkdownParser] = None) -> "Document":
+    def parse(file_path: Path, parser: MarkdownParser | None = None) -> "Document":
         """
         Parse a Markdown file into a Document.
 
@@ -154,7 +153,7 @@ class Document:
 
         return content
 
-    def find_section(self, title: str, level: Optional[int] = None) -> Optional[Section]:
+    def find_section(self, title: str, level: int | None = None) -> Section | None:
         """
         Find a section by title (and optionally level).
 
@@ -165,7 +164,7 @@ class Document:
         Returns:
             First matching Section, or None if not found
         """
-        def search(sections: List[Section]) -> Optional[Section]:
+        def search(sections: list[Section]) -> Section | None:
             for section in sections:
                 if section.title == title and (level is None or section.level == level):
                     return section
@@ -177,7 +176,7 @@ class Document:
 
         return search(self.sections)
 
-    def get_all_sections(self) -> List[Section]:
+    def get_all_sections(self) -> list[Section]:
         """
         Get all sections (flattened list including subsections).
 
@@ -186,7 +185,7 @@ class Document:
         """
         result = []
 
-        def collect(sections: List[Section]):
+        def collect(sections: list[Section]):
             for section in sections:
                 result.append(section)
                 collect(section.subsections)

@@ -4,12 +4,13 @@ End-to-end tests for MkDocs documentation generation per Constitution V. Testabi
 Tests the complete workflow: doc-init → doc-update → build.
 """
 
-import pytest
-from pathlib import Path
-import tempfile
+import os
 import shutil
 import subprocess
-import os
+import tempfile
+from pathlib import Path
+
+import pytest
 
 
 class TestMkDocsWorkflow:

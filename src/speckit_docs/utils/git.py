@@ -1,7 +1,6 @@
 """Git integration utilities for speckit-docs."""
 
 from pathlib import Path
-from typing import List, Optional
 
 try:
     from git import Repo
@@ -16,7 +15,7 @@ from .validation import GitValidationError
 class GitRepository:
     """Wrapper for Git repository operations using GitPython."""
 
-    def __init__(self, repo_path: Optional[Path] = None):
+    def __init__(self, repo_path: Path | None = None):
         """
         Initialize Git repository wrapper.
 
@@ -46,8 +45,8 @@ class GitRepository:
         self.repo_path = Path(self.repo.working_dir)
 
     def get_changed_files(
-        self, base_ref: str = "HEAD~1", target_ref: str = "HEAD", path_filter: Optional[str] = None
-    ) -> List[Path]:
+        self, base_ref: str = "HEAD~1", target_ref: str = "HEAD", path_filter: str | None = None
+    ) -> list[Path]:
         """
         Get list of changed files between two commits.
 
@@ -87,7 +86,7 @@ class GitRepository:
                 f"Git diff の取得に失敗しました: {str(e)}", "Gitリポジトリの状態を確認してください。"
             )
 
-    def get_changed_spec_files(self) -> List[Path]:
+    def get_changed_spec_files(self) -> list[Path]:
         """
         Get list of changed spec.md files in .specify/specs/.
 
@@ -135,7 +134,7 @@ class GitRepository:
             return ""
 
 
-def get_changed_features(repo_path: Optional[Path] = None) -> List[Path]:
+def get_changed_features(repo_path: Path | None = None) -> list[Path]:
     """
     Get list of feature directories with changed spec.md files.
 
@@ -157,7 +156,7 @@ def get_changed_features(repo_path: Optional[Path] = None) -> List[Path]:
 class ChangeDetector:
     """Detect changed features in spec-kit project using Git diff."""
 
-    def __init__(self, repo_path: Optional[Path] = None):
+    def __init__(self, repo_path: Path | None = None):
         """
         Initialize change detector.
 
@@ -180,7 +179,7 @@ class ChangeDetector:
         Returns:
             List of Feature objects for changed features
         """
-        from ..parsers.feature_scanner import Feature, FeatureScanner
+        from ..parsers.feature_scanner import FeatureScanner
 
         # Get all features first
         scanner = FeatureScanner()

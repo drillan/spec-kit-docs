@@ -1,7 +1,6 @@
 """Validation utilities and custom error classes for speckit-docs."""
 
 from pathlib import Path
-from typing import Optional
 
 
 class SpecKitDocsError(Exception):
@@ -50,7 +49,7 @@ class BuildError(SpecKitDocsError):
     pass
 
 
-def validate_speckit_project(project_root: Optional[Path] = None) -> Path:
+def validate_speckit_project(project_root: Path | None = None) -> Path:
     """
     Validate that the current directory is a spec-kit project.
 
@@ -83,7 +82,7 @@ def validate_speckit_project(project_root: Optional[Path] = None) -> Path:
     return specify_dir
 
 
-def validate_git_repo(project_root: Optional[Path] = None) -> Path:
+def validate_git_repo(project_root: Path | None = None) -> Path:
     """
     Validate that the current directory is a Git repository.
 
@@ -111,7 +110,7 @@ def validate_git_repo(project_root: Optional[Path] = None) -> Path:
 
 
 def validate_docs_project(
-    project_root: Optional[Path] = None, require_sphinx: bool = False, require_mkdocs: bool = False
+    project_root: Path | None = None, require_sphinx: bool = False, require_mkdocs: bool = False
 ) -> Path:
     """
     Validate that documentation project exists.
@@ -157,7 +156,7 @@ def validate_docs_project(
     return docs_dir
 
 
-def detect_docs_tool(project_root: Optional[Path] = None) -> Optional[str]:
+def detect_docs_tool(project_root: Path | None = None) -> str | None:
     """
     Detect which documentation tool is configured (Sphinx or MkDocs).
 

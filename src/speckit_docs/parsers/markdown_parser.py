@@ -1,7 +1,6 @@
 """Markdown parser using markdown-it-py."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 try:
     from markdown_it import MarkdownIt
@@ -22,7 +21,7 @@ class Section:
     content: str  # Section body content (Markdown)
     line_start: int  # Starting line number
     line_end: int  # Ending line number
-    subsections: List["Section"] = field(default_factory=list)  # Child sections
+    subsections: list["Section"] = field(default_factory=list)  # Child sections
 
     def to_sphinx_md(self) -> str:
         """
@@ -56,7 +55,7 @@ class Section:
 
         return f"{heading}\n\n{content}"
 
-    def extract_code_blocks(self) -> List[str]:
+    def extract_code_blocks(self) -> list[str]:
         """
         Extract code blocks from section content.
 
@@ -96,7 +95,7 @@ class MarkdownParser:
             # Enable MyST extensions
             self.md.enable(["table", "strikethrough"])
 
-    def parse(self, content: str) -> List[Section]:
+    def parse(self, content: str) -> list[Section]:
         """
         Parse Markdown content into a list of sections.
 
@@ -111,7 +110,6 @@ class MarkdownParser:
         current_section = None
         section_stack = []
 
-        lines = content.split("\n")
         current_line = 0
         content_buffer = []
 
@@ -168,7 +166,7 @@ class MarkdownParser:
 
         return sections
 
-    def extract_headings(self, content: str) -> List[Dict[str, any]]:
+    def extract_headings(self, content: str) -> list[dict[str, any]]:
         """
         Extract all headings from Markdown content.
 
@@ -193,7 +191,7 @@ class MarkdownParser:
 
         return headings
 
-    def extract_code_blocks(self, content: str) -> List[str]:
+    def extract_code_blocks(self, content: str) -> list[str]:
         """
         Extract code blocks from Markdown content.
 
@@ -208,7 +206,7 @@ class MarkdownParser:
         matches = re.findall(pattern, content, re.DOTALL)
         return matches
 
-    def extract_metadata(self, content: str) -> Dict[str, str]:
+    def extract_metadata(self, content: str) -> dict[str, str]:
         """
         Extract YAML frontmatter metadata from Markdown content.
 

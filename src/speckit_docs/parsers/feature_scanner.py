@@ -3,7 +3,6 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 from ..utils.validation import ProjectValidationError
 
@@ -15,10 +14,10 @@ class Feature:
     id: str  # Feature number (e.g., "001")
     name: str  # Feature name (e.g., "user-auth")
     directory_path: Path  # Absolute path to feature directory
-    spec_file: Optional[Path] = None  # Path to spec.md (required)
-    plan_file: Optional[Path] = None  # Path to plan.md (optional)
-    tasks_file: Optional[Path] = None  # Path to tasks.md (optional)
-    priority: Optional[str] = None  # Priority (e.g., "P1", "P2", "P3")
+    spec_file: Path | None = None  # Path to spec.md (required)
+    plan_file: Path | None = None  # Path to plan.md (optional)
+    tasks_file: Path | None = None  # Path to tasks.md (optional)
+    priority: str | None = None  # Priority (e.g., "P1", "P2", "P3")
 
     @property
     def file_name(self) -> str:
@@ -47,7 +46,7 @@ class FeatureScanner:
 
     FEATURE_DIR_PATTERN = re.compile(r"^(\d{3})-(.+)$")
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         """
         Initialize feature scanner.
 
@@ -69,7 +68,7 @@ class FeatureScanner:
                 "'specify init' を実行してspec-kitプロジェクトを初期化してください。",
             )
 
-    def scan(self, require_spec: bool = True) -> List[Feature]:
+    def scan(self, require_spec: bool = True) -> list[Feature]:
         """
         Scan specs directory for features.
 
@@ -129,7 +128,7 @@ class FeatureScanner:
 
         return features
 
-    def get_feature(self, feature_id: str) -> Optional[Feature]:
+    def get_feature(self, feature_id: str) -> Feature | None:
         """
         Get a specific feature by ID.
 

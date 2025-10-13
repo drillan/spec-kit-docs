@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List
 
 
 class StructureType(Enum):
@@ -19,7 +18,7 @@ class DocumentStructure:
 
     type: StructureType  # FLAT or COMPREHENSIVE
     root_dir: Path  # docs/ directory
-    directories: List[str]  # Subdirectories to create
+    directories: list[str]  # Subdirectories to create
     index_file: Path  # index.md path
 
     @staticmethod

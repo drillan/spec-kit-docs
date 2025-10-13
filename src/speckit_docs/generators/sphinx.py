@@ -1,15 +1,12 @@
 """Sphinx documentation generator."""
 
-import shutil
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from ..parsers.document_structure import DocumentStructure, StructureType
 from ..parsers.feature_scanner import Feature
 from ..utils.validation import BuildError, DocumentationProjectError
 from .base import BaseGenerator, BuildResult, GeneratorConfig, ValidationResult
@@ -118,7 +115,7 @@ Thumbs.db
         gitignore_path = self.docs_dir / ".gitignore"
         gitignore_path.write_text(gitignore_content)
 
-    def update_docs(self, features: List[Feature], incremental: bool = True) -> None:
+    def update_docs(self, features: list[Feature], incremental: bool = True) -> None:
         """
         Update documentation from features.
 
@@ -173,7 +170,7 @@ Thumbs.db
         # Update index.md with features list
         self._update_index(processed_features, structure_type)
 
-    def _update_index(self, features: List[dict], structure_type: str) -> None:
+    def _update_index(self, features: list[dict], structure_type: str) -> None:
         """
         Update index.md with features list.
 

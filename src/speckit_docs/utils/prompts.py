@@ -1,8 +1,6 @@
 """Interactive prompts for CLI commands."""
 
-import os
 from pathlib import Path
-from typing import Optional
 
 
 def prompt_tool_selection(interactive: bool = True) -> str:
@@ -147,7 +145,7 @@ def prompt_language(interactive: bool = True) -> str:
     return language
 
 
-def get_all_config_interactive(tool: Optional[str] = None, interactive: bool = True) -> dict:
+def get_all_config_interactive(tool: str | None = None, interactive: bool = True) -> dict:
     """
     Get all configuration through interactive prompts.
 

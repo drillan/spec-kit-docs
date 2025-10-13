@@ -4,13 +4,14 @@ Validates that doc-update meets performance criteria per SC-006 and SC-008.
 Per Constitution C007: MVP success criteria must be validated.
 """
 
-import pytest
-from pathlib import Path
-import tempfile
+import os
 import shutil
 import subprocess
+import tempfile
 import time
-import os
+from pathlib import Path
+
+import pytest
 
 
 class TestDocUpdatePerformance:

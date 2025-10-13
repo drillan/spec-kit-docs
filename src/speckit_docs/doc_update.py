@@ -141,7 +141,7 @@ def main():
         print(f"✓ {feature_count}つの機能を発見しました ({mode_message})")
 
         # Step 5: Create generator and update docs
-        print(f"\n✓ ドキュメントを更新中...")
+        print("\n✓ ドキュメントを更新中...")
 
         # We need a minimal GeneratorConfig - read from existing config
         if tool == "sphinx":
@@ -191,7 +191,7 @@ def main():
         # Update documentation (always incremental=True since we already filtered features)
         generator.update_docs(features, incremental=True)
 
-        print(f"✓ ドキュメントを更新しました")
+        print("✓ ドキュメントを更新しました")
 
         # Step 6: Show generated files
         print("\n生成されたファイル:")
@@ -202,13 +202,13 @@ def main():
 
         # Step 7: Build HTML (unless --no-build)
         if not args.no_build:
-            print(f"\n✓ HTMLをビルド中...")
+            print("\n✓ HTMLをビルド中...")
             try:
                 build_result = generator.build_docs()
                 print(build_result.get_summary())
 
                 if build_result.success:
-                    print(f"\n✓ HTMLビルドが完了しました")
+                    print("\n✓ HTMLビルドが完了しました")
                     print(f"  出力ディレクトリ: {build_result.output_dir}")
 
                     # Show next steps
@@ -217,9 +217,9 @@ def main():
                         print(f"  ブラウザで {build_result.output_dir}/index.html を開く")
                     else:
                         print(f"  ブラウザで {build_result.output_dir}/index.html を開く")
-                        print(f"  または 'cd docs && mkdocs serve' でライブプレビュー")
+                        print("  または 'cd docs && mkdocs serve' でライブプレビュー")
                 else:
-                    print(f"\n⚠️  HTMLビルド中にエラーが発生しました")
+                    print("\n⚠️  HTMLビルド中にエラーが発生しました")
                     if build_result.errors:
                         print("\nエラー:")
                         for error in build_result.errors[:5]:  # Show first 5 errors

@@ -18,7 +18,7 @@ from speckit_docs.generators.mkdocs import MkDocsGenerator
 from speckit_docs.generators.sphinx import SphinxGenerator
 from speckit_docs.parsers.document_structure import DocumentStructure
 from speckit_docs.parsers.feature_scanner import FeatureScanner
-from speckit_docs.utils.prompts import confirm_overwrite, get_all_config_interactive
+from speckit_docs.utils.prompts import confirm_overwrite
 from speckit_docs.utils.validation import (
     GitValidationError,
     ProjectValidationError,
@@ -136,11 +136,11 @@ def main():
 
         # Import individual prompt functions
         from speckit_docs.utils.prompts import (
-            prompt_tool_selection,
-            prompt_project_name,
             prompt_author,
-            prompt_version,
             prompt_language,
+            prompt_project_name,
+            prompt_tool_selection,
+            prompt_version,
         )
 
         # Get each config value (CLI args take priority)

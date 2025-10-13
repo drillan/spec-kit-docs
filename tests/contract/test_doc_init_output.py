@@ -4,12 +4,12 @@ These tests validate that generated documentation files conform to their
 respective format specifications per file-formats.md.
 """
 
-import pytest
-from pathlib import Path
-import tempfile
-import shutil
-import subprocess
 import ast
+import shutil
+import tempfile
+from pathlib import Path
+
+import pytest
 import yaml
 
 
