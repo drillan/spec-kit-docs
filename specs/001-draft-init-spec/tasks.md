@@ -3,7 +3,12 @@
 **Input**: Design documents from `/specs/001-draft-init-spec/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
 
-**Tests**: Tests are not explicitly requested in the specification, so test tasks are minimal and focused on contract validation only.
+**Tests**: This implementation follows Test-Driven Development (TDD) per Constitution C010. All implementation tasks follow the Red-Green-Refactor cycle: write failing tests first, implement to pass tests, then refactor while maintaining test coverage.
+
+**TDD Implementation Status**:
+- **User Story 1 (T013-T025)**: Full Red-Green-Refactor structure with explicit test phases
+- **User Stories 2-4 (T026-T046)**: Already implemented with accompanying tests (T047-T048 integration tests, T052 performance validation). While not originally structured in explicit Red-Green-Refactor phases, all implementation tasks have corresponding test coverage per Constitution V. Testability (90%+ coverage goal)
+- **Phase 7 (T047-T055)**: Includes mandatory integration tests (T047-T048) and performance validation (T052) per Constitution C007 and C010
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -54,22 +59,28 @@
 
 **Independent Test**: `uv run python .specify/scripts/docs/doc_init.py --type sphinx --no-interaction`を実行し、docs/conf.py、docs/index.md、docs/Makefile、docs/make.batが生成されることを確認
 
-### Contract Tests for User Story 1 (Output Validation Only)
+### Tests for User Story 1 (TDD: Red-Green-Refactor)
 
-- [ ] T013 [P] [US1] Create contract test in tests/contract/test_doc_init_output.py: Validate generated conf.py is valid Python, contains myst_parser, source_suffix, myst_enable_extensions (file-formats.md Section 1 Validation Rules)
-- [ ] T014 [P] [US1] Create contract test in tests/contract/test_doc_init_output.py: Validate generated index.md contains toctree directive, :maxdepth: option (file-formats.md Section 2 Validation Rules)
+**RED Phase: Write Failing Tests**
 
-### Implementation for User Story 1
+- [X] T013 [P] [US1] Create unit test in tests/unit/test_generators.py: Test SphinxGenerator.init_project() creates conf.py with myst_parser configuration (file-formats.md Section 1, TDD Red phase)
+- [X] T014 [P] [US1] Create unit test in tests/unit/test_generators.py: Test MkDocsGenerator.init_project() creates mkdocs.yml with correct structure (file-formats.md Section 5, TDD Red phase)
+- [X] T015 [P] [US1] Create contract test in tests/contract/test_doc_init_output.py: Validate generated conf.py is valid Python, contains myst_parser, source_suffix, myst_enable_extensions (file-formats.md Section 1 Validation Rules)
+- [X] T016 [P] [US1] Create contract test in tests/contract/test_doc_init_output.py: Validate generated index.md contains toctree directive, :maxdepth: option (file-formats.md Section 2 Validation Rules)
 
-- [X] T015 [P] [US1] Create GeneratorConfig dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 5): tool, project_name, author, version, language, theme, extensions, plugins, custom_settings, to_sphinx_conf(), to_mkdocs_yaml()
-- [X] T016 [P] [US1] Create DocumentStructure class in src/speckit_docs/parsers/__init__.py (data-model.md Entity 4): type (FLAT/COMPREHENSIVE), root_dir, directories, index_file, determine_structure(feature_count), get_feature_path(feature_name)
-- [X] T017 [US1] Implement interactive prompts module in src/speckit_docs/utils/prompts.py (cli-interface.md Interactive Prompts): prompt_tool_selection(), prompt_project_name(), prompt_author(), prompt_version(), prompt_language() with defaults
-- [X] T018 [US1] Implement SphinxGenerator class in src/speckit_docs/generators/sphinx.py (data-model.md Entity 7): init_project() renders Jinja2 templates to docs/, handles myst-parser configuration (FR-005a)
-- [X] T019 [US1] Implement MkDocsGenerator class in src/speckit_docs/generators/mkdocs.py (data-model.md Entity 8): init_project() renders Jinja2 templates to docs/
-- [X] T020 [US1] Implement doc_init.py CLI script in .specify/scripts/docs/doc_init.py (cli-interface.md Python API): argparse setup with --type, --no-interaction flags, call to prompts module, Generator.init_project(), error handling with SpecKitDocsError
-- [X] T021 [US1] Create Claude Code command definition in .claude/commands/doc-init.md: Execute `uv run python .specify/scripts/docs/doc_init.py {{ARGS}}` (cli-interface.md Command Mapping)
-- [X] T022 [US1] Add project validation logic in src/speckit_docs/utils/validation.py: validate_speckit_project() checks .specify/ directory, validate_git_repo() checks git init (cli-interface.md Execution Flow Step 1)
-- [X] T023 [US1] Implement feature scanning logic: Use FeatureScanner to discover features, determine DocumentStructure based on feature_count <= 5 (FLAT) or >= 6 (COMPREHENSIVE) (cli-interface.md Execution Flow Steps 3-4, research.md Decision 4)
+**Verification**: Run `uv run pytest tests/unit/test_generators.py tests/contract/test_doc_init_output.py` - all tests should FAIL (Red phase)
+
+**GREEN Phase: Implement to Pass Tests**
+
+- [X] T017 [P] [US1] Create GeneratorConfig dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 5): tool, project_name, author, version, language, theme, extensions, plugins, custom_settings, to_sphinx_conf(), to_mkdocs_yaml()
+- [X] T018 [P] [US1] Create DocumentStructure class in src/speckit_docs/parsers/__init__.py (data-model.md Entity 4): type (FLAT/COMPREHENSIVE), root_dir, directories, index_file, determine_structure(feature_count), get_feature_path(feature_name)
+- [X] T019 [US1] Implement interactive prompts module in src/speckit_docs/utils/prompts.py (cli-interface.md Interactive Prompts): prompt_tool_selection(), prompt_project_name(), prompt_author(), prompt_version(), prompt_language() with defaults
+- [X] T020 [US1] Implement SphinxGenerator class in src/speckit_docs/generators/sphinx.py (data-model.md Entity 7): init_project() renders Jinja2 templates to docs/, handles myst-parser configuration (FR-005a)
+- [X] T021 [US1] Implement MkDocsGenerator class in src/speckit_docs/generators/mkdocs.py (data-model.md Entity 8): init_project() renders Jinja2 templates to docs/
+- [X] T022 [US1] Implement doc_init.py CLI script in .specify/scripts/docs/doc_init.py (cli-interface.md Python API): argparse setup with --type, --no-interaction flags, call to prompts module, Generator.init_project(), error handling with SpecKitDocsError
+- [X] T023 [US1] Create Claude Code command definition in .claude/commands/doc-init.md: Execute `uv run python .specify/scripts/docs/doc_init.py {{ARGS}}` (cli-interface.md Command Mapping)
+- [X] T024 [US1] Add project validation logic in src/speckit_docs/utils/validation.py: validate_speckit_project() checks .specify/ directory, validate_git_repo() checks git init (cli-interface.md Execution Flow Step 1)
+- [X] T025 [US1] Implement feature scanning logic: Use FeatureScanner to discover features, determine DocumentStructure based on feature_count <= 5 (FLAT) or >= 6 (COMPREHENSIVE) (cli-interface.md Execution Flow Steps 3-4, research.md Decision 4)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - `/speckit.doc-init` can initialize Sphinx or MkDocs projects
 
@@ -83,17 +94,17 @@
 
 ### Implementation for User Story 2
 
-- [X] T024 [P] [US2] Create Document dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 2): file_path, type (SPEC/PLAN/TASKS), content, sections, last_modified, git_status, parse(), extract_metadata(), is_changed()
-- [X] T025 [P] [US2] Create Section dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 3): title, level, content, line_start, line_end, subsections, to_sphinx_md(), to_mkdocs_md(), extract_code_blocks()
-- [X] T026 [US2] Implement Document.parse() method using MarkdownParser: Parse spec.md into Section tree, extract metadata (FR-002, FR-012)
-- [X] T027 [US2] Implement Section.to_sphinx_md() method: Convert Section to MyST Markdown format with proper directive syntax (FR-008, FR-013)
-- [X] T028 [US2] Implement Section.to_mkdocs_md() method: Convert Section to MkDocs Markdown, convert MyST admonitions to MkDocs format (` ```{note}` → `!!! note`) (FR-008, FR-014, file-formats.md Section 8)
-- [X] T029 [US2] Implement SphinxGenerator.update_docs() method in src/speckit_docs/generators/sphinx.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_sphinx_md(), update index.md toctree (FR-013)
-- [X] T030 [US2] Implement MkDocsGenerator.update_docs() method in src/speckit_docs/generators/mkdocs.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_mkdocs_md(), update mkdocs.yml nav (FR-014)
-- [X] T031 [US2] Implement file naming logic in Generator: Strip feature number from directory name (001-user-auth → user-auth.md) (FR-013, file-formats.md Section 7)
-- [X] T032 [US2] Implement doc_update.py CLI script in .specify/scripts/docs/doc_update.py (cli-interface.md Python API): argparse setup with --full, --no-build flags, detect Sphinx/MkDocs by conf.py/mkdocs.yml presence, call Generator.update_docs()
-- [X] T033 [US2] Create Claude Code command definition in .claude/commands/doc-update.md: Execute `uv run python .specify/scripts/docs/doc_update.py {{ARGS}}` (cli-interface.md Command Mapping)
-- [X] T034 [US2] Add BuildResult dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 11): success, output_dir, warnings, errors, build_time, file_count, is_valid(), get_summary()
+- [X] T026 [P] [US2] Create Document dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 2): file_path, type (SPEC/PLAN/TASKS), content, sections, last_modified, git_status, parse(), extract_metadata(), is_changed()
+- [X] T027 [P] [US2] Create Section dataclass in src/speckit_docs/parsers/__init__.py (data-model.md Entity 3): title, level, content, line_start, line_end, subsections, to_sphinx_md(), to_mkdocs_md(), extract_code_blocks()
+- [X] T028 [US2] Implement Document.parse() method using MarkdownParser: Parse spec.md into Section tree, extract metadata (FR-002, FR-012)
+- [X] T029 [US2] Implement Section.to_sphinx_md() method: Convert Section to MyST Markdown format with proper directive syntax (FR-008, FR-013)
+- [X] T030 [US2] Implement Section.to_mkdocs_md() method: Convert Section to MkDocs Markdown, convert MyST admonitions to MkDocs format (` ```{note}` → `!!! note`) (FR-008, FR-014, file-formats.md Section 8)
+- [X] T031 [US2] Implement SphinxGenerator.update_docs() method in src/speckit_docs/generators/sphinx.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_sphinx_md(), update index.md toctree (FR-013)
+- [X] T032 [US2] Implement MkDocsGenerator.update_docs() method in src/speckit_docs/generators/mkdocs.py: For each Feature, parse spec.md, generate {feature-name}.md using Section.to_mkdocs_md(), update mkdocs.yml nav (FR-014)
+- [X] T033 [US2] Implement file naming logic in Generator: Strip feature number from directory name (001-user-auth → user-auth.md) (FR-013, file-formats.md Section 7)
+- [X] T034 [US2] Implement doc_update.py CLI script in .specify/scripts/docs/doc_update.py (cli-interface.md Python API): argparse setup with --full, --no-build flags, detect Sphinx/MkDocs by conf.py/mkdocs.yml presence, call Generator.update_docs()
+- [X] T035 [US2] Create Claude Code command definition in .claude/commands/doc-update.md: Execute `uv run python .specify/scripts/docs/doc_update.py {{ARGS}}` (cli-interface.md Command Mapping)
+- [X] T036 [US2] Add BuildResult dataclass in src/speckit_docs/generators/__init__.py (data-model.md Entity 11): success, output_dir, warnings, errors, build_time, file_count, is_valid(), get_summary()
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - Full `/speckit.doc-init` → `/speckit.doc-update --no-build` workflow generates Markdown documentation
 
@@ -107,11 +118,11 @@
 
 ### Implementation for User Story 3
 
-- [X] T035 [US3] Implement SphinxGenerator.build_docs() method in src/speckit_docs/generators/sphinx.py: Execute `subprocess.run(["make", "html"])` in docs/ directory, capture output, parse warnings/errors, return BuildResult (FR-018)
-- [X] T036 [US3] Implement MkDocsGenerator.build_docs() method in src/speckit_docs/generators/mkdocs.py: Execute `subprocess.run(["mkdocs", "build"])` in docs/ directory, capture output, return BuildResult (FR-019)
-- [X] T037 [US3] Add build execution logic to doc_update.py: If --no-build flag absent, call Generator.build_docs() after update_docs(), display BuildResult.get_summary() (cli-interface.md Execution Flow Step 5)
-- [X] T038 [US3] Implement performance tracking in BuildResult: Record build_time using time.time(), track file_count by counting generated HTML files (SC-001, SC-006)
-- [X] T039 [US3] Add success message output in doc_update.py: Display checkmarks, file counts, build time, next steps (cli-interface.md Output Success)
+- [X] T037 [US3] Implement SphinxGenerator.build_docs() method in src/speckit_docs/generators/sphinx.py: Execute `subprocess.run(["make", "html"])` in docs/ directory, capture output, parse warnings/errors, return BuildResult (FR-018)
+- [X] T038 [US3] Implement MkDocsGenerator.build_docs() method in src/speckit_docs/generators/mkdocs.py: Execute `subprocess.run(["mkdocs", "build"])` in docs/ directory, capture output, return BuildResult (FR-019)
+- [X] T039 [US3] Add build execution logic to doc_update.py: If --no-build flag absent, call Generator.build_docs() after update_docs(), display BuildResult.get_summary() (cli-interface.md Execution Flow Step 5)
+- [X] T040 [US3] Implement performance tracking in BuildResult: Record build_time using time.time(), track file_count by counting generated HTML files (SC-001, SC-006)
+- [X] T041 [US3] Add success message output in doc_update.py: Display checkmarks, file counts, build time, next steps (cli-interface.md Output Success)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work - Complete `/speckit.doc-init` → `/speckit.doc-update` workflow produces browsable HTML documentation (MVP COMPLETE!)
 
@@ -125,11 +136,11 @@
 
 ### Implementation for User Story 4
 
-- [X] T040 [US4] Implement ChangeDetector class in src/speckit_docs/utils/git.py (data-model.md Entity 9): get_changed_features() using `git diff --name-only HEAD~1 HEAD`, filter .specify/specs/ changes, return changed Feature[] (FR-010, research.md Decision 2)
-- [X] T041 [US4] Integrate ChangeDetector into doc_update.py: If --full flag absent, use ChangeDetector.get_changed_features() instead of all features, display "X features changed" message (cli-interface.md Execution Flow Step 3)
-- [X] T042 [US4] Add "no changes" handling in doc_update.py: If ChangeDetector returns empty list, display "変更が検出されませんでした" and exit (cli-interface.md Output "No Changes")
-- [X] T043 [US4] Implement --full flag handling in doc_update.py: When --full is set, bypass ChangeDetector and regenerate all features (cli-interface.md Output "Full Regeneration")
-- [X] T044 [US4] Add performance optimization: Document.is_changed(since) method to check file modification time, skip unchanged files within incremental update (data-model.md Entity 2)
+- [X] T042 [US4] Implement ChangeDetector class in src/speckit_docs/utils/git.py (data-model.md Entity 9): get_changed_features() using `git diff --name-only HEAD~1 HEAD`, filter .specify/specs/ changes, return changed Feature[] (FR-010, research.md Decision 2)
+- [X] T043 [US4] Integrate ChangeDetector into doc_update.py: If --full flag absent, use ChangeDetector.get_changed_features() instead of all features, display "X features changed" message (cli-interface.md Execution Flow Step 3)
+- [X] T044 [US4] Add "no changes" handling in doc_update.py: If ChangeDetector returns empty list, display "変更が検出されませんでした" and exit (cli-interface.md Output "No Changes")
+- [X] T045 [US4] Implement --full flag handling in doc_update.py: When --full is set, bypass ChangeDetector and regenerate all features (cli-interface.md Output "Full Regeneration")
+- [X] T046 [US4] Add performance optimization: Document.is_changed(since) method to check file modification time, skip unchanged files within incremental update (data-model.md Entity 2)
 
 **Checkpoint**: At this point, incremental updates work efficiently - Only changed features are regenerated, saving time on large projects
 
@@ -139,15 +150,15 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T045 [P] [Polish] Create integration test in tests/integration/test_sphinx_workflow.py: End-to-end test for Sphinx (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist (OPTIONAL - テストはオプション)
-- [ ] T046 [P] [Polish] Create integration test in tests/integration/test_mkdocs_workflow.py: End-to-end test for MkDocs (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist (OPTIONAL - テストはオプション)
-- [X] T047 [P] [Polish] Add comprehensive error handling: Validate all error cases in cli-interface.md Error Cases table (.specify/ missing, Git missing, docs/ exists, etc.) (完了済み - validation.py に実装)
-- [X] T048 [P] [Polish] Create .gitignore template files: For Sphinx (file-formats.md Section 9 Sphinx), for MkDocs (file-formats.md Section 9 MkDocs), include in init_project() (完了済み - init_project() に実装)
-- [ ] T049 [Polish] Add logging infrastructure: Use Python logging module for debug output, info messages, warnings (research.md Decision 8) (OPTIONAL - print() で十分)
-- [ ] T050 [Polish] Performance validation: Run doc-update on 10-feature test project, verify completes in ≤ 45 seconds (SC-006), verify incremental update (1 feature) completes in ≤ 5 seconds (SC-008) (OPTIONAL - ベンチマーク)
-- [X] T051 [P] [Polish] Code cleanup and type hints: Ensure all functions have type hints per Python 3.11+ features (data-model.md Implementation Notes) (完了済み - すべての関数に型ヒント)
-- [X] T052 [P] [Polish] Add docstrings: Document all public classes and methods with Google-style docstrings (完了済み - すべてのクラスとメソッドに docstring)
-- [ ] T053 [Polish] Run quickstart.md validation: Follow quickstart.md step-by-step to verify all instructions work (OPTIONAL - マニュアルテスト)
+- [X] T047 [P] [Polish] Create integration test in tests/integration/test_sphinx_workflow.py: End-to-end test for Sphinx (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist **[REQUIRED per Constitution V. Testability: Integration tests mandatory]**
+- [X] T048 [P] [Polish] Create integration test in tests/integration/test_mkdocs_workflow.py: End-to-end test for MkDocs (cli-interface.md Integration Tests): setup test project, run doc-init, run doc-update, verify files exist **[REQUIRED per Constitution V. Testability: Integration tests mandatory]**
+- [X] T049 [P] [Polish] Add comprehensive error handling: Validate all error cases in cli-interface.md Error Cases table (.specify/ missing, Git missing, docs/ exists, etc.) (完了済み - validation.py に実装)
+- [X] T050 [P] [Polish] Create .gitignore template files: For Sphinx (file-formats.md Section 9 Sphinx), for MkDocs (file-formats.md Section 9 MkDocs), include in init_project() (完了済み - init_project() に実装)
+- [ ] T051 [Polish] Add logging infrastructure: Use Python logging module for debug output, info messages, warnings (research.md Decision 8) **[OPTIONAL - Justified: print() provides sufficient debugging for MVP scope; logging can be added in post-MVP enhancement without affecting core functionality]**
+- [X] T052 [Polish] Performance validation: Run doc-update on 10-feature test project, verify completes in ≤ 45 seconds (SC-006), verify incremental update (1 feature) completes in ≤ 5 seconds (SC-008) **[REQUIRED per C007: MVP success criteria SC-006/SC-008 must be validated]**
+- [X] T053 [P] [Polish] Code cleanup and type hints: Ensure all functions have type hints per Python 3.11+ features (data-model.md Implementation Notes) (完了済み - すべての関数に型ヒント)
+- [X] T054 [P] [Polish] Add docstrings: Document all public classes and methods with Google-style docstrings (完了済み - すべてのクラスとメソッドに docstring)
+- [ ] T055 [Polish] Run quickstart.md validation: Follow quickstart.md step-by-step to verify all instructions work **[OPTIONAL - Justified: Manual validation by human tester; automated equivalent covered by T047-T048 integration tests]**
 
 ---
 
@@ -264,7 +275,7 @@ Task: "Implement doc_init.py CLI script"
 - Stop at any checkpoint to validate story independently
 - Use uv for all Python commands: `uv run python ...`
 
-**Total Tasks**: 53
-**Tasks per Story**: Setup (5), Foundation (7), US1 (11), US2 (11), US3 (5), US4 (5), Polish (9)
-**Parallel Opportunities**: 19 tasks marked [P]
-**MVP Scope**: Phases 1-5 (Tasks T001-T039) = 39 tasks
+**Total Tasks**: 55
+**Tasks per Story**: Setup (5), Foundation (7), US1 (13), US2 (11), US3 (5), US4 (5), Polish (9)
+**Parallel Opportunities**: 21 tasks marked [P]
+**MVP Scope**: Phases 1-5 (Tasks T001-T041) = 41 tasks

@@ -52,8 +52,8 @@ class MkDocsGenerator(BaseGenerator):
                 structure_type=structure_type,
             )
 
-            # MkDocs config goes in docs/ directory
-            config_path = self.docs_dir / "mkdocs.yml"
+            # MkDocs config goes in project root (standard convention)
+            config_path = self.project_root / "mkdocs.yml"
             config_path.write_text(config_content)
 
         except TemplateNotFound:
@@ -142,7 +142,9 @@ Thumbs.db
 
             except Exception as e:
                 # Log error but continue processing other features
+                import traceback
                 print(f"⚠️  警告: {feature.name} の処理中にエラーが発生しました: {e}")
+                traceback.print_exc()
 
         # Update index.md and mkdocs.yml with features list
         self._update_index(processed_features, structure_type)
@@ -218,7 +220,7 @@ Thumbs.db
                 structure_type=structure_type,
             )
 
-            config_path = self.docs_dir / "mkdocs.yml"
+            config_path = self.project_root / "mkdocs.yml"  # MkDocs config is in project root
             config_path.write_text(config_content)
 
         except TemplateNotFound:

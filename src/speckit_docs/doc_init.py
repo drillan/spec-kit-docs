@@ -207,7 +207,7 @@ def main():
             print("  - docs/Makefile")
             print("  - docs/make.bat")
         else:
-            print("  - docs/mkdocs.yml")
+            print("  - mkdocs.yml")  # MkDocs config is in project root
             print("  - docs/index.md")
 
         # Step 9: Show next steps

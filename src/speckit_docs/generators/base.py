@@ -14,11 +14,13 @@ class GeneratorConfig:
 
     tool: str  # "sphinx" or "mkdocs"
     project_name: str
-    author: str
+    author: str = "Unknown Author"
     version: str = "0.1.0"
     language: str = "ja"
     theme: str = "alabaster"  # Default for Sphinx
     description: str = ""
+    site_name: Optional[str] = None  # For MkDocs
+    repo_url: Optional[str] = None  # For MkDocs
     extensions: List[str] = None  # Sphinx extensions
     plugins: List[str] = None  # MkDocs plugins
     custom_settings: Dict[str, Any] = None
@@ -181,15 +183,15 @@ class BaseGenerator(ABC):
         Returns:
             Path to the output Markdown file
         """
-        # FR-003b: File naming based on structure type
+        # FR-013, FR-014: File naming based on structure type
         if structure_type == "FLAT":
-            # FLAT: features/{feature-name}.md
-            return self.docs_dir / "features" / f"{feature.name}.md"
+            # FLAT: docs/{feature-name}.md (5 features or less)
+            return self.docs_dir / f"{feature.name}.md"
         else:
-            # COMPREHENSIVE: features/{feature-name}/index.md
-            feature_dir = self.docs_dir / "features" / feature.name
-            feature_dir.mkdir(parents=True, exist_ok=True)
-            return feature_dir / "index.md"
+            # COMPREHENSIVE: docs/features/{feature-name}.md (6+ features)
+            features_dir = self.docs_dir / "features"
+            features_dir.mkdir(parents=True, exist_ok=True)
+            return features_dir / f"{feature.name}.md"
 
     def determine_structure_type(self) -> str:
         """
