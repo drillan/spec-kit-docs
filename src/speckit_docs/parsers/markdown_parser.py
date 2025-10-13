@@ -1,79 +1,25 @@
 """Markdown parser using markdown-it-py."""
 
-from dataclasses import dataclass, field
+from typing import Any
 
 try:
     from markdown_it import MarkdownIt
     from markdown_it.tree import SyntaxTreeNode
+
+    MARKDOWN_IT_AVAILABLE = True
 except ImportError:
-    MarkdownIt = None
-    SyntaxTreeNode = None
+    MarkdownIt = None  # type: ignore[assignment,misc]
+    SyntaxTreeNode = None  # type: ignore[assignment,misc]
+    MARKDOWN_IT_AVAILABLE = False
 
-from ..utils.validation import MarkdownParseError
-
-
-@dataclass
-class Section:
-    """Represents a section in a Markdown document."""
-
-    title: str  # Section title (heading text)
-    level: int  # Heading level (1-6)
-    content: str  # Section body content (Markdown)
-    line_start: int  # Starting line number
-    line_end: int  # Ending line number
-    subsections: list["Section"] = field(default_factory=list)  # Child sections
-
-    def to_sphinx_md(self) -> str:
-        """
-        Convert section to Sphinx MyST Markdown format.
-
-        Returns:
-            Section content in MyST Markdown format
-        """
-        # MyST Markdown uses the same heading syntax as standard Markdown
-        heading = "#" * self.level + " " + self.title
-        return f"{heading}\n\n{self.content}"
-
-    def to_mkdocs_md(self) -> str:
-        """
-        Convert section to MkDocs Markdown format.
-
-        This includes converting MyST admonitions to MkDocs format.
-
-        Returns:
-            Section content in MkDocs Markdown format
-        """
-        heading = "#" * self.level + " " + self.title
-
-        # Convert MyST admonitions to MkDocs format
-        content = self.content
-
-        # Convert ```{note} to !!! note
-        import re
-        content = re.sub(r'```\{(note|warning|tip|important|caution)\}', r'!!! \1', content)
-        content = re.sub(r'```\n', '', content)  # Remove closing ```
-
-        return f"{heading}\n\n{content}"
-
-    def extract_code_blocks(self) -> list[str]:
-        """
-        Extract code blocks from section content.
-
-        Returns:
-            List of code block contents
-        """
-        import re
-
-        # Match fenced code blocks
-        pattern = r'```[\w]*\n(.*?)\n```'
-        matches = re.findall(pattern, self.content, re.DOTALL)
-        return matches
+from ..exceptions import SpecKitDocsError
+from ..models import Section
 
 
 class MarkdownParser:
     """Parser for Markdown documents using markdown-it-py."""
 
-    def __init__(self, enable_myst: bool = True):
+    def __init__(self, enable_myst: bool = True) -> None:
         """
         Initialize Markdown parser.
 
@@ -81,13 +27,15 @@ class MarkdownParser:
             enable_myst: Enable MyST Markdown syntax support
 
         Raises:
-            MarkdownParseError: If markdown-it-py is not installed
+            SpecKitDocsError: If markdown-it-py is not installed
         """
-        if MarkdownIt is None:
-            raise MarkdownParseError(
+        if not MARKDOWN_IT_AVAILABLE:
+            raise SpecKitDocsError(
                 "markdown-it-py がインストールされていません。",
                 "'uv pip install markdown-it-py' を実行してインストールしてください。",
             )
+
+        self.enable_myst = enable_myst  # Store enable_myst attribute
 
         # Initialize markdown-it parser
         self.md = MarkdownIt("commonmark")
@@ -105,37 +53,57 @@ class MarkdownParser:
         Returns:
             List of Section objects (top-level sections only)
         """
+        if not content.strip():
+            return []
+
         tokens = self.md.parse(content)
-        sections = []
-        current_section = None
-        section_stack = []
+        sections: list[Section] = []
+        section_stack: list[Section] = []
 
-        current_line = 0
-        content_buffer = []
+        pending_heading: dict[str, Any] | None = None
+        content_lines: list[str] = content.split("\n")
 
-        for token in tokens:
+        for i, token in enumerate(tokens):
             if token.type == "heading_open":
-                # Save previous section if exists
-                if current_section:
-                    current_section.content = "\n".join(content_buffer).strip()
-                    current_section.line_end = current_line
-                    content_buffer = []
-
-                # Create new section
                 level = int(token.tag[1])  # Extract level from h1, h2, etc.
-                current_line = token.map[0] if token.map else current_line
+                line_start = (token.map[0] + 1) if token.map else 1  # 1-based line numbers
 
-            elif token.type == "inline" and current_section is None:
-                # This is a heading text
-                title = token.content
-                level = int(tokens[tokens.index(token) - 1].tag[1])
+                # Get heading text from next inline token
+                title = ""
+                if i + 1 < len(tokens) and tokens[i + 1].type == "inline":
+                    title = tokens[i + 1].content
 
-                current_section = Section(
+                pending_heading = {
+                    "level": level,
+                    "title": title,
+                    "line_start": line_start,
+                }
+
+            elif token.type == "heading_close" and pending_heading:
+                # Create the section now
+                level = pending_heading["level"]
+                title = pending_heading["title"]
+                line_start = pending_heading["line_start"]
+
+                # Find content end (next heading or end of document)
+                line_end = len(content_lines)
+                for j in range(i + 1, len(tokens)):
+                    if tokens[j].type == "heading_open":
+                        token_map = tokens[j].map
+                        if token_map:
+                            line_end = token_map[0]
+                            break
+
+                # Extract section content
+                section_content = "\n".join(content_lines[line_start:line_end]).strip()
+
+                new_section = Section(
                     title=title,
                     level=level,
-                    content="",
-                    line_start=current_line,
-                    line_end=current_line,
+                    content=section_content,
+                    line_start=line_start,
+                    line_end=line_end,
+                    subsections=[],
                 )
 
                 # Handle section hierarchy
@@ -143,30 +111,16 @@ class MarkdownParser:
                     section_stack.pop()
 
                 if section_stack:
-                    section_stack[-1].subsections.append(current_section)
+                    section_stack[-1].subsections.append(new_section)
                 else:
-                    sections.append(current_section)
+                    sections.append(new_section)
 
-                section_stack.append(current_section)
-
-            elif token.type == "heading_close":
-                current_line += 1
-
-            elif current_section and token.type != "heading_open":
-                # Accumulate content for current section
-                if token.content:
-                    content_buffer.append(token.content)
-                if token.map:
-                    current_line = token.map[1]
-
-        # Save last section
-        if current_section and content_buffer:
-            current_section.content = "\n".join(content_buffer).strip()
-            current_section.line_end = current_line
+                section_stack.append(new_section)
+                pending_heading = None
 
         return sections
 
-    def extract_headings(self, content: str) -> list[dict[str, any]]:
+    def extract_headings(self, content: str) -> list[dict[str, Any]]:
         """
         Extract all headings from Markdown content.
 
@@ -174,7 +128,7 @@ class MarkdownParser:
             content: Markdown content string
 
         Returns:
-            List of dicts with 'level', 'title', and 'line' keys
+            List of dicts with 'level', 'text', and 'line' keys
         """
         tokens = self.md.parse(content)
         headings = []
@@ -182,12 +136,12 @@ class MarkdownParser:
         for i, token in enumerate(tokens):
             if token.type == "heading_open":
                 level = int(token.tag[1])
-                line = token.map[0] if token.map else 0
+                line = (token.map[0] + 1) if token.map else 1  # 1-based line numbers
 
                 # Get heading text from next inline token
                 if i + 1 < len(tokens) and tokens[i + 1].type == "inline":
-                    title = tokens[i + 1].content
-                    headings.append({"level": level, "title": title, "line": line})
+                    text = tokens[i + 1].content
+                    headings.append({"level": level, "text": text, "line": line})
 
         return headings
 
@@ -226,7 +180,8 @@ class MarkdownParser:
             return {}
 
         try:
-            import yaml
+            import yaml  # type: ignore[import-untyped]
+
             metadata = yaml.safe_load(match.group(1))
             return metadata if isinstance(metadata, dict) else {}
         except Exception:

@@ -1,13 +1,17 @@
 """Git integration utilities for speckit-docs."""
 
 from pathlib import Path
+from typing import Any
 
 try:
     from git import Repo
     from git.exc import InvalidGitRepositoryError
+
+    GIT_AVAILABLE = True
 except ImportError:
-    Repo = None
-    InvalidGitRepositoryError = Exception
+    Repo = None  # type: ignore[assignment,misc]
+    InvalidGitRepositoryError = Exception  # type: ignore[assignment,misc]
+    GIT_AVAILABLE = False
 
 from .validation import GitValidationError
 
@@ -15,7 +19,7 @@ from .validation import GitValidationError
 class GitRepository:
     """Wrapper for Git repository operations using GitPython."""
 
-    def __init__(self, repo_path: Path | None = None):
+    def __init__(self, repo_path: Path | None = None) -> None:
         """
         Initialize Git repository wrapper.
 
@@ -25,7 +29,7 @@ class GitRepository:
         Raises:
             GitValidationError: If GitPython is not installed or repo is invalid
         """
-        if Repo is None:
+        if not GIT_AVAILABLE:
             raise GitValidationError(
                 "GitPython がインストールされていません。",
                 "'uv pip install GitPython' を実行してインストールしてください。",
@@ -117,7 +121,8 @@ class GitRepository:
             Git user name, or "Unknown Author" if not configured
         """
         try:
-            return self.repo.config_reader().get_value("user", "name")
+            value: Any = self.repo.config_reader().get_value("user", "name")
+            return str(value)
         except Exception:
             return "Unknown Author"
 
@@ -129,7 +134,8 @@ class GitRepository:
             Git user email, or empty string if not configured
         """
         try:
-            return self.repo.config_reader().get_value("user", "email")
+            value: Any = self.repo.config_reader().get_value("user", "email")
+            return str(value)
         except Exception:
             return ""
 
@@ -156,7 +162,7 @@ def get_changed_features(repo_path: Path | None = None) -> list[Path]:
 class ChangeDetector:
     """Detect changed features in spec-kit project using Git diff."""
 
-    def __init__(self, repo_path: Path | None = None):
+    def __init__(self, repo_path: Path | None = None) -> None:
         """
         Initialize change detector.
 
@@ -168,7 +174,9 @@ class ChangeDetector:
         """
         self.git_repo = GitRepository(repo_path)
 
-    def get_changed_features(self, base_ref: str = "HEAD~1", target_ref: str = "HEAD"):
+    def get_changed_features(
+        self, base_ref: str = "HEAD~1", target_ref: str = "HEAD"
+    ) -> list[Any]:
         """
         Get list of features with changed spec.md files.
 

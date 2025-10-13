@@ -318,7 +318,7 @@ data-model.mdで定義されたコアエンティティをPythonデータクラ�
 
 ---
 
-### T006: MarkdownParserの実装
+### T006: MarkdownParserの実装 [X]
 **File**: `src/speckit_docs/parsers/markdown_parser.py`
 **Type**: Foundational
 **Story**: Foundational
@@ -389,7 +389,7 @@ markdown-it-pyを使用してMarkdownを解析し、Sectionツリーを生成す
 
 ---
 
-### T007: GitRepository & ChangeDetectorの実装
+### T007: GitRepository & ChangeDetectorの実装 [X]
 **File**: `src/speckit_docs/utils/git.py`
 **Type**: Foundational
 **Story**: Foundational
