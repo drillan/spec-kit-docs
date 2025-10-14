@@ -53,7 +53,7 @@ class MkDocsGenerator(BaseGenerator):
         # Render template with provided kwargs or use config
         render_params = {
             "project_name": kwargs.get("project_name", self.config.project_name),
-            "description": kwargs.get("description", self.config.description or ""),
+            "description": kwargs.get("description", getattr(self.config, "description", None) or ""),
             "author": kwargs.get("author", self.config.author),
             "repo_url": kwargs.get("repo_url", self.config.repo_url),
             "theme": kwargs.get("theme", self.config.theme),
@@ -83,7 +83,7 @@ class MkDocsGenerator(BaseGenerator):
         # Render template
         index_content = template.render(
             project_name=self.config.project_name,
-            description=self.config.description
+            description=getattr(self.config, "description", None)
             or "このプロジェクトは、spec-kitを使用して開発されています。",
             structure_type=(
                 self.structure_type.value
@@ -136,7 +136,7 @@ class MkDocsGenerator(BaseGenerator):
             config_content = template.render(
                 project_name=self.config.project_name,
                 author=self.config.author,
-                description=self.config.description or "A spec-kit project",
+                description=getattr(self.config, "description", None) or "A spec-kit project",
                 language=self.config.language,
                 theme=self.config.theme,
                 features=[],  # Will be populated by update_docs
@@ -158,7 +158,7 @@ class MkDocsGenerator(BaseGenerator):
             template = self.jinja_env.get_template("index.md.j2")
             index_content = template.render(
                 project_name=self.config.project_name,
-                description=self.config.description or "A spec-kit project",
+                description=getattr(self.config, "description", None) or "A spec-kit project",
                 features=[],  # Will be populated by update_docs
                 structure_type=structure_type,
             )
@@ -274,7 +274,7 @@ Thumbs.db
             template = self.jinja_env.get_template("index.md.j2")
             index_content = template.render(
                 project_name=self.config.project_name,
-                description=self.config.description or "A spec-kit project",
+                description=getattr(self.config, "description", None) or "A spec-kit project",
                 features=features,
                 structure_type=structure_type,
             )
@@ -323,7 +323,7 @@ Thumbs.db
             config_content = template.render(
                 project_name=self.config.project_name,
                 author=self.config.author,
-                description=self.config.description or "A spec-kit project",
+                description=getattr(self.config, "description", None) or "A spec-kit project",
                 language=self.config.language,
                 theme=self.config.theme,
                 features=features,
@@ -409,8 +409,8 @@ Thumbs.db
         warnings = []
         checked_items = []
 
-        # Check mkdocs.yml exists
-        mkdocs_yml = self.docs_dir / "mkdocs.yml"
+        # Check mkdocs.yml exists (should be in project root, not docs/)
+        mkdocs_yml = self.project_root / "mkdocs.yml"
         if not mkdocs_yml.exists():
             errors.append("mkdocs.yml が見つかりません")
         else:

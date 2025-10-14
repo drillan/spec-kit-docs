@@ -3,7 +3,6 @@
 {{ description | default("このプロジェクトは、spec-kitを使用して開発されています。") }}
 
 ## 機能一覧
-{% if features %}
 
 ```{toctree}
 :maxdepth: 2
@@ -13,8 +12,8 @@
 {{ feature.file }}
 {% endfor -%}
 ```
-{% else %}
 
+{% if not features %}
 プロジェクトに機能が追加されていません。`/speckit.doc-update` を実行してドキュメントを生成してください。
 {% endif %}
 {% if structure_type == "COMPREHENSIVE" %}

@@ -83,7 +83,7 @@ class SphinxGenerator(BaseGenerator):
         # Render template
         index_content = template.render(
             project_name=self.config.project_name,
-            description=self.config.description
+            description=getattr(self.config, "description", None)
             or "このプロジェクトは、spec-kitを使用して開発されています。",
             structure_type=(
                 self.structure_type.value
@@ -158,7 +158,7 @@ class SphinxGenerator(BaseGenerator):
             template = self.jinja_env.get_template("index.md.j2")
             index_content = template.render(
                 project_name=self.config.project_name,
-                description=self.config.description
+                description=getattr(self.config, "description", None)
                 or "このプロジェクトは、spec-kitを使用して開発されています。",
                 features=[],  # Will be populated by update_docs
                 structure_type=structure_type,
@@ -301,7 +301,7 @@ Thumbs.db
             template = self.jinja_env.get_template("index.md.j2")
             index_content = template.render(
                 project_name=self.config.project_name,
-                description=self.config.description
+                description=getattr(self.config, "description", None)
                 or "このプロジェクトは、spec-kitを使用して開発されています。",
                 features=features,
                 structure_type=structure_type,

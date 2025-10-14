@@ -188,3 +188,149 @@ class TestSphinxGenerator:
         docs_dir = tmp_path / "docs"
         assert (docs_dir / "conf.py").exists()
         assert (docs_dir / "index.md").exists()
+
+    def test_sphinx_generator_validate_project(self, tmp_path):
+        """Test validate_project() method."""
+        # Create generator
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Initialize project
+        generator.init_project()
+
+        # Validate project
+        result = generator.validate_project()
+
+        # Verify validation passes
+        assert result.is_valid
+        assert len(result.errors) == 0
+        assert "conf.py exists" in result.checked_items
+        assert "myst_parser configured" in result.checked_items
+
+    def test_sphinx_generator_validate_project_missing_files(self, tmp_path):
+        """Test validate_project() detects missing files."""
+        # Create generator without initializing
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Validate without creating files
+        result = generator.validate_project()
+
+        # Verify validation fails
+        assert not result.is_valid
+        assert len(result.errors) > 0
+
+    def test_sphinx_generator_update_docs_empty_features(self, tmp_path):
+        """Test update_docs() with empty features list."""
+
+        # Create generator
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Initialize project first
+        generator.init_project()
+
+        # Update with empty features list
+        generator.update_docs([], incremental=False)
+
+        # Verify index.md still exists
+        index_md = tmp_path / "docs" / "index.md"
+        assert index_md.exists()
+
+    def test_sphinx_generator_update_docs_with_features(self, tmp_path):
+        """Test update_docs() with actual features."""
+        from speckit_docs.models import Feature, FeatureStatus
+
+        # Create mock spec.md files
+        specs_dir = tmp_path / "specs"
+        specs_dir.mkdir()
+
+        feature_dir = specs_dir / "001-test-feature"
+        feature_dir.mkdir()
+        spec_file = feature_dir / "spec.md"
+        spec_file.write_text("# Test Feature\n\nThis is a test feature.")
+
+        # Create Feature object
+        feature = Feature(
+            id="001",
+            name="test-feature",
+            directory_path=feature_dir,
+            spec_file=spec_file,
+            status=FeatureStatus.DRAFT,
+        )
+
+        # Create generator
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Initialize project
+        generator.init_project()
+
+        # Update with feature
+        generator.update_docs([feature], incremental=False)
+
+        # Verify feature doc was created
+        feature_doc = tmp_path / "docs" / "test-feature.md"
+        assert feature_doc.exists()
+
+    def test_sphinx_generator_get_feature_doc_path_flat(self, tmp_path):
+        """Test get_feature_doc_path() for FLAT structure."""
+        from speckit_docs.models import Feature, FeatureStatus
+
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        feature = Feature(
+            id="001",
+            name="my-feature",
+            directory_path=tmp_path / "specs" / "001-my-feature",
+            spec_file=tmp_path / "specs" / "001-my-feature" / "spec.md",
+            status=FeatureStatus.DRAFT,
+        )
+
+        path = generator.get_feature_doc_path(feature, "FLAT")
+        assert path == tmp_path / "docs" / "my-feature.md"
+
+    def test_sphinx_generator_get_feature_doc_path_comprehensive(self, tmp_path):
+        """Test get_feature_doc_path() for COMPREHENSIVE structure."""
+        from speckit_docs.models import Feature, FeatureStatus
+
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        feature = Feature(
+            id="001",
+            name="my-feature",
+            directory_path=tmp_path / "specs" / "001-my-feature",
+            spec_file=tmp_path / "specs" / "001-my-feature" / "spec.md",
+            status=FeatureStatus.DRAFT,
+        )
+
+        path = generator.get_feature_doc_path(feature, "COMPREHENSIVE")
+        assert path == tmp_path / "docs" / "features" / "my-feature.md"
+
+    def test_sphinx_generator_build_docs_make_not_installed(self, tmp_path, monkeypatch):
+        """Test build_docs() when make is not installed."""
+        import subprocess
+
+        from speckit_docs.utils.validation import BuildError
+
+        config = GeneratorConfig(tool="sphinx", project_name="Test Project")
+        generator = SphinxGenerator(config, tmp_path)
+
+        # Initialize project first
+        generator.init_project()
+
+        # Mock subprocess.run to raise FileNotFoundError (make not found)
+        def mock_run(*args, **kwargs):
+            raise FileNotFoundError("make not found")
+
+        monkeypatch.setattr(subprocess, "run", mock_run)
+
+        # Should raise BuildError with helpful message about make
+        import pytest
+
+        with pytest.raises(BuildError) as exc_info:
+            generator.build_docs()
+
+        assert "makeコマンドが見つかりません" in str(exc_info.value)

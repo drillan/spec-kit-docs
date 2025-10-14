@@ -54,6 +54,14 @@
 - Q: コマンド名の標準化：仕様では `/speckit.doc-init` だが README.md では `/doc-init` となっている不整合を解決すべきか？ → A: **Option A (長い形式)** - `/speckit.doc-init`, `/speckit.doc-update` に統一する。理由：spec-kitの付属物という扱いをコマンド名に含めることで、spec-kit エコシステムとの統合を明確にし、他のspec-kitコマンド（`/speckit.specify`, `/speckit.plan`）との命名規則の一貫性を保つ
 - Q: インストールコマンドの推奨方法：README.mdに両方（CLIコマンドとPython API呼び出し）が記載されているが、どちらを推奨すべきか？ → A: **Option A (CLIコマンド)** - `speckit-docs install` を推奨する。理由：(1) 仕様（FR-021a, FR-022, FR-023）が前提としている標準的な方法、(2) ユーザーにとってシンプルで覚えやすい、(3) spec-kitの`specify init`パターンと一貫性がある、(4) Python API呼び出しはアドバンスドユーザー向けのフォールバックとして残す
 
+### Session 2025-10-13 (Code Quality & Architecture Details)
+
+- Q: ruffの設定：デフォルト設定のみ vs 一貫性のあるプリセット vs 厳格なルールセット？ → A: **Option B (一貫性のあるプリセット)** - `pyproject.toml`で`select = ["E", "F", "W", "I"]` + `line-length = 100` + `target-version = "py311"`を指定。理由：(1) エラー（E）、致命的エラー（F）、警告（W）、import順序（I）の基本ルールでツールプロジェクトには十分、(2) line-length=100はPython標準（PEP 8の88-100推奨）に準拠、(3) target-version指定により型ヒント構文の互換性を保証、(4) 過度に厳格なルール（docstring必須等）は開発速度を低下させる可能性を回避
+- Q: CI/CD環境でのruffエラー処理：Fail-fast vs Warning-only vs ブランチ別動作？ → A: **CI/CDパイプラインは構築しない** - ローカル開発環境でのみruffを手動実行する。理由：MVP段階ではCI/CD構築はスコープ外、開発者がローカルで`uv run ruff check .`を実行して品質を維持
+- Q: BaseGenerator抽象クラスのインターフェース：最小（1メソッド）vs 段階的（4メソッド）vs 詳細（7-8メソッド）？ → A: **Option B (段階的インターフェース)** - `initialize()`, `generate_feature_page(feature)`, `update_navigation()`, `validate()`の4メソッド。理由：(1) 単一責任原則に従い各メソッドが明確な役割を持つ、(2) initialize→個別ページ生成→ナビゲーション更新→検証と処理が分離されテスト容易、(3) 将来のDocusaurus等追加時も同じパターンを適用可能、(4) 最小インターフェースより構造化され、詳細インターフェースより保守しやすい
+- Q: specify-cli（本家spec-kit）からの再利用範囲：MVP段階でStepTracker/consoleも再利用 vs typerパターンのみ？ → A: **Option A (MVP範囲は最小限)** - typerの基本パターン（`typer.confirm()`, `typer.Option()`等）のみ再利用、StepTracker/consoleは将来フェーズ。理由：(1) MVPの焦点は「ドキュメント生成」でありCLI体験の高度化は二次的、(2) specify-cliコード調査コストをMVPで回避し開発スピード優先、(3) Phase 2でStepTracker再利用を計画済み（research.md記載）なので段階的アプローチが適切、(4) typerパターン再利用だけでもDRY原則とC012（一貫性）を満たす
+- Q: ログレベルとエラー出力の戦略：エラーのみ vs 構造化ログ（INFO/DEBUG/ERROR） vs 詳細ログ（常にDEBUG）？ → A: **Option B (構造化ログ)** - 標準出力にINFO以上、`--verbose`でDEBUG、`--quiet`でERRORのみ。理由：(1) ユーザーは通常実行で適切な進捗情報を得られる（「3機能を処理中...」等）、(2) `--verbose`フラグでトラブルシューティング時に詳細情報取得可能、(3) `--quiet`でCIやスクリプト組み込み時にエラーのみ出力、(4) Pythonの標準logging模块を使用し保守性が高い、(5) 本家spec-kitの他コマンドとの一貫性
+
 ## アーキテクチャと責務分担
 
 spec-kit-docs は、AI エージェント（Claude Code）とバックエンドスクリプトの協調によって動作します。このアーキテクチャは spec-kit の標準パターンに従います。
@@ -302,6 +310,8 @@ spec-kit-docs は、AI エージェント（Claude Code）とバックエンド�
 - **FR-033**: システムは、一般的な問題に対して明確なエラーメッセージを提供しなければならない：spec-kit プロジェクトではない、ドキュメントプロジェクトが初期化されていない、機能が見つからない、不正なファイル
 - **FR-034**: システムは、オフラインで表示でき、任意の Web サーバーでホストできる静的 HTML ファイルとしてドキュメントを生成しなければならない
 - **FR-035**: システムは、不正な markdown を適切に処理し、他のファイルの処理を継続し、特定のエラーを報告しなければならない。すべてのエラーは `SpecKitDocsError` 例外として発生させ、エラーメッセージには「ファイルパス」「エラーの種類」「ユーザーへの推奨アクション」を含める。AI エージェント（Claude Code）は、この構造化されたエラーメッセージをユーザーにわかりやすく提示する
+- **FR-036**: システムは、コードリント・フォーマットに**ruff**を使用しなければならない（blackは禁止）。`pyproject.toml`で以下の設定を指定する：`select = ["E", "F", "W", "I"]`（エラー、致命的エラー、警告、import順序）、`line-length = 100`、`target-version = "py311"`。開発者は`uv run ruff check .`でローカル実行する（CI/CDパイプラインは構築しない）
+- **FR-037**: システムは、Pythonの標準logging模块を使用した構造化ログを実装しなければならない。デフォルトでINFOレベル以上を標準出力に出力し、`--verbose`フラグでDEBUGレベル、`--quiet`フラグでERRORレベルのみを出力する。ログメッセージは進捗情報（「3機能を処理中...」等）とエラー詳細を含む
 
 ### 主要エンティティ *(機能がデータを含む場合に含める)*
 
@@ -313,6 +323,7 @@ spec-kit-docs は、AI エージェント（Claude Code）とバックエンド�
 - **Audience**: 関連するコンテンツフィルタリングルールを持つターゲットオーディエンス(enduser、developer、contributor)の列挙型
 - **SynthesisResult**: 機能間でマージした後のエンティティとAPIの統合ビュー
 - **FeatureStatus**: gitブランチステータスから派生した実装状態(implemented、in_progress、planned)の列挙型
+- **BaseGenerator**: ドキュメントジェネレーターの抽象ベースクラス。以下の4つの必須メソッドを定義：(1) `initialize()` - ドキュメントプロジェクトの初期化と設定ファイル生成、(2) `generate_feature_page(feature: Feature) -> None` - 単一機能のページ生成、(3) `update_navigation() -> None` - 目次（toctree/nav）の更新、(4) `validate() -> bool` - ビルド前検証。SphinxGeneratorとMkDocsGeneratorがこのインターフェースを実装する
 
 ## 成功基準 *(必須)*
 

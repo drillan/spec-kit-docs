@@ -34,16 +34,28 @@ class TestSphinxOutputContract:
 
         TDD Red phase: This test should FAIL until conf.py generation is correct.
         """
-        # Run doc_init.py to generate Sphinx project
-        docs_dir = temp_project_dir / "docs"
-        docs_dir.mkdir()
+        from speckit_docs.generators.sphinx import SphinxGenerator
+        from speckit_docs.models import GeneratorConfig, GeneratorTool
 
-        # Simulate generated conf.py (this will be replaced by actual generator)
-        conf_py_path = docs_dir / "conf.py"
+        # Create generator config
+        config = GeneratorConfig(
+            tool=GeneratorTool.SPHINX,
+            project_name="Test Project",
+            author="Test Author",
+            version="0.1.0",
+        )
 
-        # For now, test will fail because file doesn't exist
+        # Initialize generator
+        generator = SphinxGenerator(config, project_root=temp_project_dir)
+
+        # Run init_project to generate files
+        generator.init_project(structure_type="FLAT")
+
+        # Check that conf.py was generated
+        conf_py_path = temp_project_dir / "docs" / "conf.py"
+
         if not conf_py_path.exists():
-            pytest.skip("doc_init.py not yet generating conf.py")
+            pytest.fail("SphinxGenerator.init_project() did not generate conf.py")
 
         # Validate Python syntax by parsing AST
         conf_content = conf_py_path.read_text()
@@ -68,12 +80,23 @@ class TestSphinxOutputContract:
 
         TDD Red phase: This test should FAIL until myst_enable_extensions is correctly set.
         """
-        docs_dir = temp_project_dir / "docs"
-        docs_dir.mkdir()
-        conf_py_path = docs_dir / "conf.py"
+        from speckit_docs.generators.sphinx import SphinxGenerator
+        from speckit_docs.models import GeneratorConfig, GeneratorTool
+
+        # Create generator and initialize project
+        config = GeneratorConfig(
+            tool=GeneratorTool.SPHINX,
+            project_name="Test Project",
+            author="Test Author",
+            version="0.1.0",
+        )
+        generator = SphinxGenerator(config, project_root=temp_project_dir)
+        generator.init_project(structure_type="FLAT")
+
+        conf_py_path = temp_project_dir / "docs" / "conf.py"
 
         if not conf_py_path.exists():
-            pytest.skip("doc_init.py not yet generating conf.py")
+            pytest.fail("SphinxGenerator.init_project() did not generate conf.py")
 
         conf_content = conf_py_path.read_text()
 
@@ -91,12 +114,23 @@ class TestSphinxOutputContract:
 
         TDD Red phase: This test should FAIL until index.md generation is correct.
         """
-        docs_dir = temp_project_dir / "docs"
-        docs_dir.mkdir()
-        index_md_path = docs_dir / "index.md"
+        from speckit_docs.generators.sphinx import SphinxGenerator
+        from speckit_docs.models import GeneratorConfig, GeneratorTool
+
+        # Create generator and initialize project
+        config = GeneratorConfig(
+            tool=GeneratorTool.SPHINX,
+            project_name="Test Project",
+            author="Test Author",
+            version="0.1.0",
+        )
+        generator = SphinxGenerator(config, project_root=temp_project_dir)
+        generator.init_project(structure_type="FLAT")
+
+        index_md_path = temp_project_dir / "docs" / "index.md"
 
         if not index_md_path.exists():
-            pytest.skip("doc_init.py not yet generating index.md")
+            pytest.fail("SphinxGenerator.init_project() did not generate index.md")
 
         index_content = index_md_path.read_text()
 
@@ -128,12 +162,23 @@ class TestMkDocsOutputContract:
 
         TDD Red phase: This test should FAIL until mkdocs.yml generation is correct.
         """
-        docs_dir = temp_project_dir / "docs"
-        docs_dir.mkdir()
+        from speckit_docs.generators.mkdocs import MkDocsGenerator
+        from speckit_docs.models import GeneratorConfig, GeneratorTool
+
+        # Create generator and initialize project
+        config = GeneratorConfig(
+            tool=GeneratorTool.MKDOCS,
+            project_name="Test Project",
+            author="Test Author",
+            version="0.1.0",
+        )
+        generator = MkDocsGenerator(config, project_root=temp_project_dir)
+        generator.init_project(structure_type="FLAT")
+
         mkdocs_yml_path = temp_project_dir / "mkdocs.yml"
 
         if not mkdocs_yml_path.exists():
-            pytest.skip("doc_init.py not yet generating mkdocs.yml")
+            pytest.fail("MkDocsGenerator.init_project() did not generate mkdocs.yml")
 
         # Validate YAML syntax
         try:
@@ -154,14 +199,24 @@ class TestMkDocsOutputContract:
 
         TDD Red phase: This test should FAIL until index.md is created in correct location.
         """
-        docs_subdir = temp_project_dir / "docs" / "docs"
-        index_md_path = docs_subdir / "index.md"
+        from speckit_docs.generators.mkdocs import MkDocsGenerator
+        from speckit_docs.models import GeneratorConfig, GeneratorTool
+
+        # Create generator and initialize project
+        config = GeneratorConfig(
+            tool=GeneratorTool.MKDOCS,
+            project_name="Test Project",
+            author="Test Author",
+            version="0.1.0",
+        )
+        generator = MkDocsGenerator(config, project_root=temp_project_dir)
+        generator.init_project(structure_type="FLAT")
+
+        # Check for index.md in docs/ directory
+        index_md_path = temp_project_dir / "docs" / "index.md"
 
         if not index_md_path.exists():
-            # Try alternative location (root docs/)
-            alt_index_path = temp_project_dir / "docs" / "index.md"
-            if not alt_index_path.exists():
-                pytest.skip("doc_init.py not yet generating index.md")
+            pytest.fail("MkDocsGenerator.init_project() did not generate index.md")
 
         # MkDocs expects docs/index.md structure
         assert (temp_project_dir / "docs" / "docs" / "index.md").exists() or (

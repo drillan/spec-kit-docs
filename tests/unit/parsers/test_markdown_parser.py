@@ -242,3 +242,91 @@ Implementation notes here."""
         requirements = main.subsections[1]
         assert requirements.title == "Requirements"
         assert len(requirements.subsections) == 2  # FR-001, FR-002
+
+
+class TestMarkdownParserCodeBlocks:
+    """Tests for extracting code blocks."""
+
+    def test_extract_code_blocks_single(self):
+        """Test extracting a single code block."""
+        parser = MarkdownParser()
+        content = """# Title
+
+Some text
+
+```python
+print("Hello")
+```
+"""
+        code_blocks = parser.extract_code_blocks(content)
+
+        assert len(code_blocks) == 1
+        assert 'print("Hello")' in code_blocks[0]
+
+    def test_extract_code_blocks_multiple(self):
+        """Test extracting multiple code blocks."""
+        parser = MarkdownParser()
+        content = """# Title
+
+```python
+code1
+```
+
+Text
+
+```javascript
+code2
+```
+"""
+        code_blocks = parser.extract_code_blocks(content)
+
+        assert len(code_blocks) == 2
+        assert "code1" in code_blocks[0]
+        assert "code2" in code_blocks[1]
+
+    def test_extract_code_blocks_none(self):
+        """Test extracting code blocks when there are none."""
+        parser = MarkdownParser()
+        content = "# Title\n\nNo code blocks here"
+        code_blocks = parser.extract_code_blocks(content)
+
+        assert len(code_blocks) == 0
+
+
+class TestMarkdownParserMetadata:
+    """Tests for extracting YAML frontmatter metadata."""
+
+    def test_extract_metadata_with_frontmatter(self):
+        """Test extracting metadata from YAML frontmatter."""
+        parser = MarkdownParser()
+        content = """---
+title: Test Document
+author: Test Author
+---
+
+# Content"""
+        metadata = parser.extract_metadata(content)
+
+        assert metadata["title"] == "Test Document"
+        assert metadata["author"] == "Test Author"
+
+    def test_extract_metadata_no_frontmatter(self):
+        """Test extracting metadata when there is no frontmatter."""
+        parser = MarkdownParser()
+        content = "# Title\n\nNo frontmatter"
+        metadata = parser.extract_metadata(content)
+
+        assert metadata == {}
+
+    def test_extract_metadata_invalid_yaml(self):
+        """Test extracting metadata with invalid YAML."""
+        parser = MarkdownParser()
+        content = """---
+invalid: [yaml
+---
+
+# Content"""
+        metadata = parser.extract_metadata(content)
+
+        # Should return empty dict on parse error
+        assert isinstance(metadata, dict)

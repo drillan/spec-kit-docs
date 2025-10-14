@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-10-13
 
 ## Active Technologies
+- Python 3.11+（spec-kitの前提条件と互換性を保つ） (001-draft-init-spec)
+- ファイルシステム（ドキュメントプロジェクトとspec-kitメタデータの読み書き） (001-draft-init-spec)
 
 **Language**: Python 3.11+ （spec-kit前提条件との互換性）
 
@@ -85,20 +87,21 @@ speckit-docs install
 - **エラーハンドリング**: すべてのエラーは`SpecKitDocsError`例外として発生させ、エラーメッセージに「ファイルパス」「エラー種類」「推奨アクション」を含める（C002準拠）
 - **DRY原則**: 重複実装を避け、既存のユーティリティ、ライブラリ、抽象ベースクラスを確認する。**特に本家spec-kitのtyperパターン（`typer.confirm()`、`typer.Option()`等）を再利用する**（C012準拠）
 - **TDD必須**: 実装前にテストを書き、Red-Green-Refactorサイクルに従う（C010準拠）
+- **リント・フォーマット**: **ruffを使用する（blackは禁止）**。`pyproject.toml`設定：`select = ["E", "F", "W", "I"]`、`line-length = 100`、`target-version = "py311"`。ローカルで`uv run ruff check .`を実行
 
 ## Architecture Patterns
 
-**Strategy Pattern (Generator)**: Sphinx/MkDocsの実装に使用。`BaseGenerator`抽象ベースクラスを定義し、`SphinxGenerator`と`MkDocsGenerator`を実装（Extensibility & Modularity原則）
+**Strategy Pattern (Generator)**: Sphinx/MkDocsの実装に使用。`BaseGenerator`抽象ベースクラスは以下の4つの必須メソッドを定義：(1) `initialize()` - ドキュメントプロジェクト初期化と設定ファイル生成、(2) `generate_feature_page(feature: Feature) -> None` - 単一機能ページ生成、(3) `update_navigation() -> None` - 目次（toctree/nav）更新、(4) `validate() -> bool` - ビルド前検証。`SphinxGenerator`と`MkDocsGenerator`がこのインターフェースを実装（Extensibility & Modularity原則）
 
 **Parser Separation**: パーサー（読み取り）、ジェネレーター（書き込み）、エンティティ（データ保持）を明確に分離（Separation of Concerns原則）
 
 **Non-Interactive Execution**: バックエンドスクリプト（doc_init.py、doc_update.py）は標準入力（stdin）を使用せず、コマンドライン引数のみで動作（II. Non-Interactive Execution原則）
 
 ## Recent Changes
+- 001-draft-init-spec: Added Python 3.11+（spec-kitの前提条件と互換性を保つ）
 - 001-draft-init-spec: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 - 2025-10-13: **CLIフレームワーク変更決定（argparse → typer）**: Core Principle I（spec-kit Integration First）準拠のため、本家spec-kitとの一貫性を優先。Session 2025-10-13 Clarificationで記録、plan.md、research.md、CLAUDE.mdを更新（001-draft-init-spec）
-- 2025-10-13: Constitution Check完了（再評価）、typer採用により C004/C012/C013/C014 への準拠が強化された（001-draft-init-spec）
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
