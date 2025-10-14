@@ -1,0 +1,38 @@
+site_name: {{ project_name }}
+site_author: {{ author }}
+site_description: {{ description | default("A spec-kit project") }}
+
+theme:
+  name: {{ theme | default("material") }}
+  language: {{ language }}
+
+nav:
+  - Home: index.md
+{%- if structure_type == "FLAT" %}
+{% for feature in features %}
+  - {{ feature.title }}: {{ feature.file }}
+{%- endfor %}
+{%- else %}
+  - Features:
+{%- for feature in features %}
+      - {{ feature.title }}: {{ feature.file }}
+{%- endfor %}
+  - Guides:
+      - Getting Started: guides/getting-started.md
+      - Configuration: guides/configuration.md
+  - API:
+      - Reference: api/reference.md
+  - Architecture:
+      - Overview: architecture/overview.md
+{%- endif %}
+
+markdown_extensions:
+  - admonition          # Note, Warning等のブロック
+  - codehilite          # シンタックスハイライト
+  - toc:
+      permalink: true   # 見出しアンカー
+  - def_list            # 定義リスト
+  - tables              # テーブル
+
+plugins:
+  - search              # 検索機能
