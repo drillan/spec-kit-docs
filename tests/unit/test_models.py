@@ -278,6 +278,72 @@ class TestSection:
         assert len(level1_section.subsections[0].subsections) == 1
         assert level1_section.subsections[0].subsections[0].title == "Level 3"
 
+    def test_section_to_sphinx_md_basic(self):
+        """Test that Section can convert to Sphinx Markdown (MyST)."""
+        section = Section(
+            title="Introduction",
+            level=2,
+            content="This is an introduction.",
+            line_start=1,
+            line_end=5,
+        )
+        result = section.to_sphinx_md()
+        assert result == "## Introduction\n\nThis is an introduction."
+
+    def test_section_to_mkdocs_md_basic(self):
+        """Test that Section can convert to MkDocs Markdown."""
+        section = Section(
+            title="Introduction",
+            level=2,
+            content="This is an introduction.",
+            line_start=1,
+            line_end=5,
+        )
+        result = section.to_mkdocs_md()
+        assert result == "## Introduction\n\nThis is an introduction."
+
+    def test_section_to_sphinx_md_with_subsections(self):
+        """Test that Section with subsections converts to Sphinx Markdown."""
+        subsection = Section(
+            title="Subsection",
+            level=3,
+            content="Subsection content.",
+            line_start=5,
+            line_end=8,
+        )
+        parent = Section(
+            title="Parent",
+            level=2,
+            content="Parent content.",
+            line_start=1,
+            line_end=10,
+            subsections=[subsection],
+        )
+        result = parent.to_sphinx_md()
+        expected = "## Parent\n\nParent content.\n\n### Subsection\n\nSubsection content."
+        assert result == expected
+
+    def test_section_to_mkdocs_md_with_subsections(self):
+        """Test that Section with subsections converts to MkDocs Markdown."""
+        subsection = Section(
+            title="Subsection",
+            level=3,
+            content="Subsection content.",
+            line_start=5,
+            line_end=8,
+        )
+        parent = Section(
+            title="Parent",
+            level=2,
+            content="Parent content.",
+            line_start=1,
+            line_end=10,
+            subsections=[subsection],
+        )
+        result = parent.to_mkdocs_md()
+        expected = "## Parent\n\nParent content.\n\n### Subsection\n\nSubsection content."
+        assert result == expected
+
 
 class TestGeneratorConfig:
     """Tests for GeneratorConfig dataclass."""

@@ -167,7 +167,7 @@ User can test the system.
 
         try:
             # Initialize
-            subprocess.run(
+            init_result = subprocess.run(
                 [
                     "uv",
                     "run",
@@ -186,21 +186,34 @@ User can test the system.
                 text=True,
                 timeout=30,
             )
+            print(f"\nInit stdout:\n{init_result.stdout}")
+            print(f"\nInit stderr:\n{init_result.stderr}")
+            print(f"\nInit returncode: {init_result.returncode}")
+
+            # Check if mkdocs.yml was created (it should be in project root, not in docs/)
+            mkdocs_yml_root = temp_project / "mkdocs.yml"
+            mkdocs_yml_docs = temp_project / "docs" / "mkdocs.yml"
+            print(f"\nmkdocs.yml in root: {mkdocs_yml_root.exists()}")
+            print(f"mkdocs.yml in docs/: {mkdocs_yml_docs.exists()}")
+            if mkdocs_yml_root.exists():
+                print("mkdocs.yml content:")
+                print(mkdocs_yml_root.read_text())
 
             # Update
-            subprocess.run(
+            update_result = subprocess.run(
                 ["uv", "run", "python", "-m", "speckit_docs.doc_update"],
                 capture_output=True,
                 text=True,
                 timeout=60,
             )
+            print(f"\nUpdate stdout:\n{update_result.stdout}")
+            print(f"\nUpdate stderr:\n{update_result.stderr}")
+            print(f"\nUpdate returncode: {update_result.returncode}")
 
-            # Verify HTML was built
-            html_index = temp_project / "docs" / "site" / "index.html"
-            if not html_index.exists():
-                pytest.skip("Build not yet producing HTML (implementation incomplete)")
+            # Verify HTML was built (MkDocs outputs to project_root/site, not docs/site)
+            html_index = temp_project / "site" / "index.html"
 
-            assert html_index.exists(), "Build should produce docs/site/index.html"
+            assert html_index.exists(), f"Build should produce site/index.html at {html_index}"
 
         finally:
             os.chdir(original_dir)

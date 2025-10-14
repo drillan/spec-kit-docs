@@ -57,16 +57,11 @@ For more details, see the [spec-kit documentation](https://github.com/github/spe
 
 ### 1. Install spec-kit-docs
 
-Once you have a spec-kit project, install spec-kit-docs:
+Once you have a spec-kit project, install spec-kit-docs as a CLI tool:
 
 ```bash
-# Install spec-kit-docs package
-uv pip install -e git+https://github.com/driller/spec-kit-docs.git#egg=speckit-docs
-
-# Or clone and install locally
-git clone https://github.com/driller/spec-kit-docs.git
-cd spec-kit-docs
-uv pip install -e .
+# Install spec-kit-docs CLI tool (recommended)
+uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git
 ```
 
 Then install the slash commands and scripts in your project:
@@ -75,10 +70,7 @@ Then install the slash commands and scripts in your project:
 # In your spec-kit project directory
 cd your-spec-kit-project
 
-# Run the install handler (via Python API or CLI)
-uv run python -c "from speckit_docs.cli.install_handler import install_handler; install_handler()"
-
-# Or if using the CLI tool
+# Install slash commands and scripts
 speckit-docs install
 ```
 

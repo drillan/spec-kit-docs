@@ -348,3 +348,92 @@ class TestMkDocsGenerator:
             generator.build_docs()
 
         assert "mkdocsコマンドが見つかりません" in str(exc_info.value)
+
+    def test_mkdocs_generator_build_timeout(self, tmp_path, monkeypatch):
+        """Test build_docs() when build times out."""
+        import subprocess
+        from speckit_docs.utils.validation import BuildError
+        
+        config = GeneratorConfig(tool="mkdocs", project_name="Test")
+        generator = MkDocsGenerator(config, tmp_path)
+        generator.init_project()
+        
+        # Mock subprocess.run to raise TimeoutExpired
+        def mock_run(*args, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=args[0], timeout=300)
+        
+        monkeypatch.setattr(subprocess, "run", mock_run)
+        
+        # Should raise BuildError about timeout
+        import pytest
+        with pytest.raises(BuildError) as exc_info:
+            generator.build_docs()
+        
+        assert "タイムアウト" in str(exc_info.value)
+
+    def test_mkdocs_generator_build_generic_error(self, tmp_path, monkeypatch):
+        """Test build_docs() when unexpected error occurs."""
+        import subprocess
+        from speckit_docs.utils.validation import BuildError
+        
+        config = GeneratorConfig(tool="mkdocs", project_name="Test")
+        generator = MkDocsGenerator(config, tmp_path)
+        generator.init_project()
+        
+        # Mock subprocess.run to raise generic exception
+        def mock_run(*args, **kwargs):
+            raise RuntimeError("Unexpected build error")
+        
+        monkeypatch.setattr(subprocess, "run", mock_run)
+        
+        # Should raise BuildError
+        import pytest
+        with pytest.raises(BuildError) as exc_info:
+            generator.build_docs()
+        
+        assert "エラーが発生しました" in str(exc_info.value)
+
+    def test_mkdocs_generator_build_mkdocs_not_found(self, tmp_path, monkeypatch):
+        """Test build_docs() when mkdocs command is not found."""
+        import subprocess
+        from speckit_docs.utils.validation import BuildError
+        
+        config = GeneratorConfig(tool="mkdocs", project_name="Test")
+        generator = MkDocsGenerator(config, tmp_path)
+        generator.init_project()
+        
+        # Mock subprocess.run to raise FileNotFoundError
+        def mock_run(*args, **kwargs):
+            raise FileNotFoundError("mkdocs not found")
+        
+        monkeypatch.setattr(subprocess, "run", mock_run)
+        
+        # Should raise BuildError with message about mkdocs
+        import pytest
+        with pytest.raises(BuildError) as exc_info:
+            generator.build_docs()
+        
+        assert "mkdocs" in str(exc_info.value).lower()
+
+    def test_mkdocs_generator_template_not_found(self, tmp_path, monkeypatch):
+        """Test generate_config() when template is not found."""
+        from jinja2 import TemplateNotFound
+        from speckit_docs.utils.validation import DocumentationProjectError
+        
+        config = GeneratorConfig(tool="mkdocs", project_name="Test")
+        generator = MkDocsGenerator(config, tmp_path)
+        
+        # Mock jinja_env.get_template to raise TemplateNotFound
+        def mock_get_template(name):
+            raise TemplateNotFound(name)
+        
+        monkeypatch.setattr(generator.jinja_env, "get_template", mock_get_template)
+        
+        # Should raise SpecKitDocsError
+        import pytest
+        with pytest.raises(DocumentationProjectError):
+            generator.generate_config(
+                project_name="Test",
+                author="Test",
+                version="1.0.0"
+            )

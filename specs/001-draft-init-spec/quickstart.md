@@ -1,19 +1,17 @@
-# Quickstart Guide: spec-kit-docs
+# クイックスタートガイド: spec-kit-docs
 
-**Feature**: spec-kit-docs - AI駆動型ドキュメント生成システム
-**Date**: 2025-10-12
-**Phase**: 1 - Quickstart Documentation
+**Branch**: `001-draft-init-spec` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)
 **Audience**: spec-kitユーザー（開発者、プロジェクトマネージャー）
 
-## Overview
+## 概要
 
-spec-kit-docsは、spec-kitプロジェクトのMarkdown仕様（spec.md、plan.md、tasks.md）から、SphinxまたはMkDocsを使用して統一されたドキュメントサイトを自動生成するツールです。このガイドでは、インストールから基本的な使用方法までを10分で学べます。
+spec-kit-docsは、spec-kitプロジェクトのMarkdown仕様（spec.md、plan.md、tasks.md）から、SphinxまたはMkDocsを使用して統一されたドキュメントサイトを自動生成するツールです。このガイドでは、インストールから基本的な使用方法までを学べます。
 
 **主な機能**:
 - spec-kit仕様からのドキュメント自動生成
 - SphinxまたはMkDocsのサポート
 - Git diffによるインクリメンタル更新
-- Claude Codeスラッシュコマンドとの統合
+- Claude Codeスラッシュコマンド（`/speckit.doc-init`、`/speckit.doc-update`）との統合
 
 ---
 
@@ -46,39 +44,53 @@ spec-kit-docsを使用する前に、以下の前提条件を満たしている�
 
 ---
 
-## Installation
+## インストール
 
-### Step 1: パッケージのインストール
+### ステップ1: spec-kit-docs CLIツールのインストール
 
-spec-kit-docsをインストールします（将来的にpip経由でインストール可能になります）:
-
-```bash
-# 開発版のインストール（現在）
-uv pip install -e .
-
-# または、リリース版のインストール（将来）
-uv pip install speckit-docs
-```
-
-### Step 2: インストール確認
-
-インストールが成功したことを確認します:
+`uv tool install`コマンドを使用して、spec-kit-docsをグローバルCLIツールとしてインストールします：
 
 ```bash
-uv run python -c "import speckit_docs; print(speckit_docs.__version__)"
-# 出力例: 0.1.0
+uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git
 ```
 
-### Step 3: Claude Codeコマンドの確認
+これにより、`speckit-docs`コマンドがシステム全体で利用可能になります。
 
-Claude Code内で以下のコマンドが利用可能であることを確認します:
+**注**: この方法は本家spec-kitの`uv tool install specify-cli`パターンと一貫性があり、プロジェクト環境を汚染しません（Session 2025-10-14決定、FR-021）。
+
+### ステップ2: spec-kitプロジェクトへのコマンド追加
+
+既存のspec-kitプロジェクトのルートディレクトリに移動し、`speckit-docs install`を実行します：
+
+```bash
+# プロジェクトルートに移動
+cd your-spec-kit-project
+
+# spec-kit-docsコマンドをプロジェクトにインストール
+speckit-docs install
+```
+
+これにより、以下のファイルがプロジェクトに追加されます：
+- `.claude/commands/speckit.doc-init.md` - `/speckit.doc-init`コマンド定義
+- `.claude/commands/speckit.doc-update.md` - `/speckit.doc-update`コマンド定義
+- `.specify/scripts/docs/doc_init.py` - ドキュメント初期化スクリプト
+- `.specify/scripts/docs/doc_update.py` - ドキュメント更新スクリプト
+
+インストール成功のメッセージが表示されます：
 
 ```
-/speckit.doc-init
-/speckit.doc-update
+✓ Commands installed to .claude/commands/
+✓ Scripts installed to .specify/scripts/docs/
+✓ spec-kit-docs installation complete!
+
+Next steps:
+1. Open Claude Code in this project
+2. Run /speckit.doc-init to initialize documentation
 ```
 
-**Expected Time**: 2-3分
+**注**: 既にインストールされている場合、上書き確認が表示されます。`--force`フラグを使用すると確認をスキップできます（FR-023b）。
+
+**所要時間**: 2-3分
 
 ---
 
@@ -128,7 +140,7 @@ Claude Code内で以下のコマンドを実行します:
   3. docs/_build/html/index.html をブラウザで開く
 ```
 
-**Expected Time**: 1分
+**所要時間**: 1分（対話的入力時間を除く）
 
 ---
 
@@ -164,7 +176,7 @@ Claude Code内で以下のコマンドを実行します:
   1. docs/_build/html/index.html をブラウザで開く
 ```
 
-**Expected Time**: 10-45秒（機能数による）
+**所要時間**: 10-45秒（機能数による、5機能の場合は約45秒、SC-006）
 
 ---
 
@@ -187,7 +199,7 @@ make.bat html
 start _build/html/index.html
 ```
 
-**Expected Time**: 1分
+**所要時間**: 1分（対話的入力時間を除く）
 
 ---
 
@@ -237,7 +249,7 @@ mkdocs serve
 
 ブラウザで `http://127.0.0.1:8000` を開くと、ドキュメントが表示されます。
 
-**Expected Time**: 3-5分
+**所要時間**: 3-5分
 
 ---
 
@@ -276,7 +288,7 @@ git commit -m "Update user-auth spec"
   - 生成ファイル: 15個
 ```
 
-**Expected Time**: 5-10秒
+**所要時間**: 5秒以内（インクリメンタル更新）
 
 ---
 
@@ -306,7 +318,7 @@ git commit -m "Update user-auth spec"
   - 生成ファイル: 15個
 ```
 
-**Expected Time**: 10-45秒
+**所要時間**: 10-45秒（機能数による）
 
 ---
 
@@ -335,7 +347,7 @@ HTMLビルドをスキップして、Markdownファイルのみを生成する�
 HTMLビルドはスキップされました。
 ```
 
-**Expected Time**: 3-5秒
+**所要時間**: 3-5秒
 
 ---
 
@@ -349,7 +361,7 @@ CI/CD環境やスクリプトで使用する場合、対話モードを無効化
 
 デフォルト値が自動的に使用されます（プロジェクト名、著者名、バージョン等）。
 
-**Expected Time**: 10-30秒
+**所要時間**: 10-30秒
 
 ---
 
@@ -587,18 +599,18 @@ git commit -m "Update documentation"
 
 ---
 
-## Summary
+## まとめ
 
 このクイックスタートガイドでは、以下の内容をカバーしました:
 
-- **前提条件の確認**: spec-kit、Git、Python 3.11+
-- **インストール**: `uv pip install speckit-docs`
+- **前提条件の確認**: spec-kit、Git、Python 3.11+、uv
+- **インストール**: `uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`、`speckit-docs install`
 - **Sphinx初期化**: `/speckit.doc-init --type sphinx`
 - **ドキュメント生成**: `/speckit.doc-update`
-- **一般的なユースケース**: インクリメンタル更新、全再生成、ビルドスキップ
+- **一般的なユースケース**: インクリメンタル更新、全再生成、ビルドスキップ、非対話モード
 - **トラブルシューティング**: 5つの一般的な問題と解決方法
 - **ベストプラクティス**: 定期的な更新、CI/CD統合、ドキュメントレビュー
 
-**Total Time**: 10-15分
+**所要時間合計**: 10-15分
 
-spec-kit-docsを使用することで、spec-kit仕様から統一されたドキュメントサイトを簡単に生成できます。質問がある場合は、[GitHub Issues](https://github.com/your-repo/spec-kit-docs/issues)を参照してください。
+spec-kit-docsを使用することで、spec-kit仕様から統一されたドキュメントサイトを簡単に生成できます。さらに詳しい情報は、[spec.md](./spec.md)と[plan.md](./plan.md)を参照してください。

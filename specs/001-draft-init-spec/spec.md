@@ -62,6 +62,10 @@
 - Q: specify-cli（本家spec-kit）からの再利用範囲：MVP段階でStepTracker/consoleも再利用 vs typerパターンのみ？ → A: **Option A (MVP範囲は最小限)** - typerの基本パターン（`typer.confirm()`, `typer.Option()`等）のみ再利用、StepTracker/consoleは将来フェーズ。理由：(1) MVPの焦点は「ドキュメント生成」でありCLI体験の高度化は二次的、(2) specify-cliコード調査コストをMVPで回避し開発スピード優先、(3) Phase 2でStepTracker再利用を計画済み（research.md記載）なので段階的アプローチが適切、(4) typerパターン再利用だけでもDRY原則とC012（一貫性）を満たす
 - Q: ログレベルとエラー出力の戦略：エラーのみ vs 構造化ログ（INFO/DEBUG/ERROR） vs 詳細ログ（常にDEBUG）？ → A: **Option B (構造化ログ)** - 標準出力にINFO以上、`--verbose`でDEBUG、`--quiet`でERRORのみ。理由：(1) ユーザーは通常実行で適切な進捗情報を得られる（「3機能を処理中...」等）、(2) `--verbose`フラグでトラブルシューティング時に詳細情報取得可能、(3) `--quiet`でCIやスクリプト組み込み時にエラーのみ出力、(4) Pythonの標準logging模块を使用し保守性が高い、(5) 本家spec-kitの他コマンドとの一貫性
 
+### Session 2025-10-14 (Installation Method Standardization)
+
+- Q: インストール方法の標準化：spec-kitと同様に`uv tool install`方式を推奨インストール方法とすべきか、それとも`uv pip install -e`(編集可能インストール)を維持すべきか？ → A: **Option A (uv tool install)** - `uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`を標準インストール方法とする。理由：(1) **Core Principle I (spec-kit Integration First)への準拠** - spec-kitと同じインストールパターンでユーザー体験を統一、(2) **ツール分離** - `uv tool`は独立したCLIツールのインストール専用で、プロジェクト環境を汚染しない、(3) **シンプルな依存関係管理** - グローバルツールとして管理され、複数プロジェクトから利用可能、(4) **本家spec-kitとの対称性** - `uv tool install specify-cli`と`uv tool install speckit-docs`で対になる。開発者向けのコントリビューション時には`uv pip install -e .`も引き続きサポートするが、エンドユーザー向けドキュメント（README.md）では`uv tool install`を唯一の推奨方法として記載する
+
 ## アーキテクチャと責務分担
 
 spec-kit-docs は、AI エージェント（Claude Code）とバックエンドスクリプトの協調によって動作します。このアーキテクチャは spec-kit の標準パターンに従います。
@@ -282,7 +286,7 @@ spec-kit-docs は、AI エージェント（Claude Code）とバックエンド�
 
 #### インストールとプロジェクト構造
 
-- **FR-021**: `speckit-docs`CLIツールは、独立したPythonパッケージとしてGitHubから配布され（`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`）、spec-kitエコシステムと一貫したコマンド体系を提供しなければならない。PyPI公開は将来のフェーズで検討する
+- **FR-021**: `speckit-docs`CLIツールは、独立したPythonパッケージとしてGitHubから配布され、**エンドユーザー向けの推奨インストール方法は`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`とする**。この方法は本家spec-kitの`uv tool install specify-cli`パターンと一貫性を保ち、グローバルCLIツールとしてプロジェクト環境を汚染せずに管理される。開発者向けのコントリビューション時には`uv pip install -e .`（編集可能インストール）も引き続きサポートするが、README.mdなどのエンドユーザー向けドキュメントでは`uv tool install`方式を唯一の推奨方法として記載する。PyPI公開は将来のフェーズで検討する
 - **FR-021a**: `speckit-docs install`コマンドは、カレントディレクトリがspec-kitプロジェクトであることを確認し（`.specify/`ディレクトリと`.claude/`ディレクトリの存在確認）、そうでない場合は明確なエラーメッセージを表示しなければならない
 - **FR-021b**: `speckit-docs install`コマンドは、カレントディレクトリに自動的にインストールし、明示的なディレクトリ指定引数を要求してはならない（`cd my-project && speckit-docs install`パターン）
 - **FR-022**: `speckit-docs install`コマンドは、インストール時に `.claude/commands/speckit.doc-init.md` と `.claude/commands/speckit.doc-update.md` の2つのコマンド定義を作成しなければならない（Claude Codeが `/speckit.doc-init` と `/speckit.doc-update` として認識し、spec-kitの他のコマンドとの命名規則の一貫性を保つ）

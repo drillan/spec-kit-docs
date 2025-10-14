@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 ## Active Technologies
 - Python 3.11+（spec-kitの前提条件と互換性を保つ） (001-draft-init-spec)
 - ファイルシステム（ドキュメントプロジェクトとspec-kitメタデータの読み書き） (001-draft-init-spec)
+- Python 3.11+（spec-kit前提条件との互換性） (001-draft-init-spec)
+- N/A（ファイルシステムのみ使用、データベース不要） (001-draft-init-spec)
 
 **Language**: Python 3.11+ （spec-kit前提条件との互換性）
 
@@ -98,10 +100,10 @@ speckit-docs install
 **Non-Interactive Execution**: バックエンドスクリプト（doc_init.py、doc_update.py）は標準入力（stdin）を使用せず、コマンドライン引数のみで動作（II. Non-Interactive Execution原則）
 
 ## Recent Changes
+- 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
 - 001-draft-init-spec: Added Python 3.11+（spec-kitの前提条件と互換性を保つ）
 - 001-draft-init-spec: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
-- 2025-10-13: **CLIフレームワーク変更決定（argparse → typer）**: Core Principle I（spec-kit Integration First）準拠のため、本家spec-kitとの一貫性を優先。Session 2025-10-13 Clarificationで記録、plan.md、research.md、CLAUDE.mdを更新（001-draft-init-spec）
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
