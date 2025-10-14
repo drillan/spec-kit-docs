@@ -206,3 +206,32 @@ nav:
         assert (docs_dir / "feature-1.md").exists()
         assert (docs_dir / "feature-2.md").exists()
         assert (docs_dir / "feature-3.md").exists()
+
+    def test_doc_update_no_docs_dir(self, tmp_path, monkeypatch):
+        """Test doc_update when docs/ directory doesn't exist."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".specify").mkdir()
+        (tmp_path / "specs" / "001-test").mkdir(parents=True)
+        (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
+        
+        # Run without docs/ directory
+        result = main(incremental=False)
+        
+        # Should return error
+        assert result != 0
+
+    def test_doc_update_cannot_detect_tool(self, tmp_path, monkeypatch):
+        """Test doc_update when documentation tool cannot be detected."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".specify").mkdir()
+        (tmp_path / "specs" / "001-test").mkdir(parents=True)
+        (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
+        
+        # Create docs/ but no conf.py or mkdocs.yml
+        (tmp_path / "docs").mkdir()
+        
+        # Run doc_update (should fail to detect tool)
+        result = main(incremental=False)
+        
+        # Should return error
+        assert result != 0

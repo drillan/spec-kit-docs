@@ -42,10 +42,13 @@ Before contributing, please:
    cd spec-kit-docs
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies and package in editable mode**:
    ```bash
    # Install all dependencies including dev dependencies
    uv sync --all-extras --dev
+
+   # Or install in editable mode for active development
+   uv pip install -e .
    ```
 
 3. **Verify installation**:

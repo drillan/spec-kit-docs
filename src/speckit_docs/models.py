@@ -135,6 +135,52 @@ class Section:
     line_end: int
     subsections: list["Section"] = field(default_factory=list)
 
+    def to_sphinx_md(self) -> str:
+        """Convert section to Sphinx Markdown (MyST) format.
+
+        Generates Markdown with heading and content, recursively including
+        all subsections.
+
+        Returns:
+            Sphinx-compatible Markdown string
+        """
+        # Generate heading with appropriate number of # symbols
+        heading = "#" * self.level + " " + self.title
+
+        # Start with heading and content
+        parts = [heading]
+        if self.content.strip():
+            parts.append(self.content.strip())
+
+        # Add subsections recursively
+        for subsection in self.subsections:
+            parts.append(subsection.to_sphinx_md())
+
+        return "\n\n".join(parts)
+
+    def to_mkdocs_md(self) -> str:
+        """Convert section to MkDocs Markdown format.
+
+        Generates Markdown with heading and content, recursively including
+        all subsections. Currently identical to Sphinx format as both use
+        standard Markdown for basic sections.
+
+        Returns:
+            MkDocs-compatible Markdown string
+        """
+        # For basic sections, MkDocs uses the same Markdown as Sphinx
+        # Differences mainly appear in admonitions and special directives
+        heading = "#" * self.level + " " + self.title
+
+        parts = [heading]
+        if self.content.strip():
+            parts.append(self.content.strip())
+
+        for subsection in self.subsections:
+            parts.append(subsection.to_mkdocs_md())
+
+        return "\n\n".join(parts)
+
 
 @dataclass
 class Document:

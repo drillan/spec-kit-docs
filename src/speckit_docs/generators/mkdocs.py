@@ -347,17 +347,18 @@ Thumbs.db
         start_time = time.time()
 
         try:
-            # Run mkdocs build
+            # Run mkdocs build from project root (mkdocs.yml is in project root, not docs/)
             result = subprocess.run(
                 ["mkdocs", "build"],
-                cwd=str(self.docs_dir),
+                cwd=str(self.project_root),
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minutes
             )
 
             build_time = time.time() - start_time
-            output_dir = self.docs_dir / "site"
+            # MkDocs builds to project_root/site by default
+            output_dir = self.project_root / "site"
 
             # Parse output for warnings and errors
             warnings = []

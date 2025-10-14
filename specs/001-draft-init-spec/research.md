@@ -1,1101 +1,780 @@
-# Research: spec-kit-docs
+# Technical Research: spec-kit-docs - AI駆動型ドキュメント生成システム
 
-**作成日**: 2025-10-13
-**機能**: 001-draft-init-spec
-**フェーズ**: Phase 0 - Research
+**Branch**: `001-draft-init-spec` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)
 
-## Overview
+## 概要
 
-本調査は、spec-kit-docs機能の実装計画（plan.md）を策定する前に、技術的決定事項について業界標準とベストプラクティスを調査し、Constitution（憲章）の原則に沿った理想的な設計アプローチを明確にすることを目的としています。
-
-調査対象:
-- Python CLI Tool Distribution（パッケージング、typer選択）
-- Template System Design（Jinja2、importlib.resources）
-- Sphinx MyST Integration（MyST Markdown構文、conf.py設定）
-- MkDocs Configuration（Material theme、nav構造）
-- Git Change Detection（git diff戦略、インクリメンタル更新）
-- spec-kit Integration Pattern（本家spec-kitのパターン分析）
-- Testing Strategy（TDD、pytest、カバレッジ目標）
+このドキュメントは、spec-kit-docs機能の開発プロセスで行われた8回のClarificationセッション（2025-10-12から2025-10-14）で確定した技術的決定を記録します。各決定は、Constitution（憲章）の原則、特に**Core Principle I: spec-kit Integration First**に基づいて行われました。
 
 ---
 
-## R001: Python CLI Tool Distribution
+## 1. ドキュメント構造とファイル形式の決定
 
-### 調査内容
+### Session 2025-10-12
 
-- **pyproject.toml + src-layout**: Pythonパッケージング業界標準（2025年現在）
-- **Typer CLI Framework**: 本家spec-kitと同じフレームワーク
-- **uv tool install**: Git URLからの直接インストール戦略
-- **importlib.resources**: テンプレートファイルの配布方法
+#### 決定1: ディレクトリ構造（包括的構造 vs フラット構造）
 
-### Decision
+**決定**: 5機能以下の小規模プロジェクトはフラット構造（`docs/` 直下に機能ページ）、6機能以上は包括的構造（`docs/features/`、`docs/guides/`、`docs/api/`、`docs/architecture/`）を採用する。
 
-**選択したアプローチ**: Typer + pyproject.toml + src-layout + importlib.resources
+**根拠**:
+- 小規模プロジェクトではシンプルなフラット構造が適切（学習コストとメンテナンスコストの削減）
+- 大規模プロジェクトでは、カテゴリごとに整理された包括的構造が必要（情報整理とナビゲーション向上）
+- 機能数による自動判定により、プロジェクトの成長に対応
 
-### Rationale
+**検討された代替案**:
+- 常にフラット構造を使用 → 大規模プロジェクトで情報が散乱する
+- 常に包括的構造を使用 → 小規模プロジェクトで過度に複雑になる
+- ユーザーが手動で構造を選択 → ユーザーの判断負担が増加
 
-#### Typer採用理由
+**トレードオフ**:
+- 自動判定により、ユーザーの選択の自由度は失われるが、判断負担が軽減される
+- 5機能という閾値は経験的な値であり、プロジェクトによって最適値が異なる可能性がある
 
-1. **Constitution I準拠（spec-kit Integration First）**: 本家spec-kitがTyperを使用しており、`specify-cli`に依存することで既にTyperが依存ツリーに存在。新たな依存関係追加なし
-2. **型ヒントのネイティブサポート**: Python 3.11+の型ヒント（`int`、`str`、`bool`等）を直接使用でき、mypy互換（Constitution C006: 堅牢コード品質に準拠）
-3. **DRY原則（Constitution C012）**: 本家spec-kitのTyperパターン（`typer.confirm()`、`typer.Option()`等）を再利用可能
-4. **Phase 2計画との整合**: `specify-cli`から`StepTracker`/`console`再利用を計画しており、Typer前提で一貫性を保つ
-
-#### パッケージング戦略
-
-- **src-layout**: 業界標準パターン（`src/speckit_docs/`）でテスト分離を明確化
-- **pyproject.toml**: PEP 621準拠のメタデータ定義（setuptools/hatchling使用）
-- **entry point**: `[project.scripts]`で`speckit-docs = "speckit_docs.cli:app"`を定義
-- **Git URL直接指定**: PyPI公開はMVP範囲外。`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`で配布（本家spec-kitと一貫）
-
-#### テンプレート配布
-
-- **importlib.resources.files() API（Python 3.9+）**: レガシーAPI（`read_text`、`open_binary`等）ではなく、モダンな`files()`を使用
-- **パッケージ内配置**: `src/speckit_docs/commands/`および`src/speckit_docs/scripts/`に配置
-- **オフライン動作**: パッケージに含まれるためネットワーク不要（CI/CD環境対応）
-
-### Implementation Example
-
-```python
-# pyproject.toml
-[project]
-name = "speckit-docs"
-version = "0.1.0"
-requires-python = ">=3.11"
-dependencies = [
-    "typer>=0.9.0",
-    "specify-cli @ git+https://github.com/github/spec-kit.git",
-    "sphinx>=7.0",
-    "myst-parser>=2.0",
-    "mkdocs>=1.5",
-    "jinja2>=3.1",
-    "GitPython>=3.1",
-]
-
-[project.scripts]
-speckit-docs = "speckit_docs.cli:app"
-
-# src/speckit_docs/cli.py
-import typer
-from pathlib import Path
-
-app = typer.Typer()
-
-@app.command()
-def install(
-    force: bool = typer.Option(False, "--force", help="Overwrite existing files"),
-):
-    """Install spec-kit-docs extension to current spec-kit project."""
-    from importlib.resources import files
-
-    # spec-kitプロジェクト検証
-    if not Path(".specify").is_dir():
-        typer.echo("Error: Not a spec-kit project.")
-        raise typer.Exit(code=1)
-
-    # テンプレートコピー
-    commands = files('speckit_docs.commands')
-    for cmd in ['speckit.doc-init.md', 'speckit.doc-update.md']:
-        source = commands.joinpath(cmd).read_text()
-        target = Path(".claude/commands") / cmd
-
-        if target.exists() and not force:
-            if not typer.confirm(f"{cmd} exists. Overwrite?"):
-                continue
-
-        target.write_text(source)
-        typer.echo(f"✓ Installed {cmd}")
-```
-
-### Alternatives Considered
-
-- **argparse**: Python標準ライブラリだが、型ヒントサポートが弱く、本家spec-kitとの一貫性がない（却下理由: Constitution I違反）
-- **Click**: Typerの基盤ライブラリだが、型ヒント不要。本家spec-kitがTyperを選択した理由（型安全性）と矛盾（却下理由: 一貫性・型安全性）
-- **GitHubからのダウンロード方式**: spec-kitが使用するが、大量ファイル配布向け。spec-kit-docsは少数ファイル（2コマンド定義+スクリプト）でimportlib.resourcesが適切（却下理由: 過剰、オフライン動作、パッケージング標準）
-
-### Constitution Alignment
-
-- **C001（ルール遵守）**: 本家spec-kitパターンを歪曲せず忠実に再現
-- **C004（理想実装ファースト）**: Typerの型安全性を最初から活用、段階的移行なし
-- **C012（DRY原則）**: 本家spec-kitの既存パターンを再利用
-- **Core Principle I（spec-kit Integration First）**: 本家spec-kitとの完全一貫性を最優先
+**実装ノート**:
+- 初期化時（`/speckit.doc-init`）に `specs/` ディレクトリ内の機能数をカウント
+- 更新時（`/speckit.doc-update`）にも機能数を再チェックし、フラット→包括的への自動移行をサポート（逆方向の移行は破壊的変更を避けるため実施しない）
 
 ---
 
-## R002: Template System Design
+#### 決定2: 変更検出方法（Git diff vs ファイルタイムスタンプ）
 
-### 調査内容
+**決定**: Git diff を使用して、前回のコミットから変更されたファイルのみを検出する。
 
-- **Jinja2 Templating Engine**: Pythonエコシステムで業界標準のテンプレートエンジン
-- **importlib.resources.files() API**: モダンなパッケージデータアクセス方法
-- **Template Organization**: ファイルシステムローダー vs パッケージローダー
+**根拠**:
+- spec-kitプロジェクトは常にGitリポジトリであることが前提
+- Git diffは信頼性が高く、コミット履歴に基づいた正確な変更検出が可能
+- ファイルタイムスタンプは、ファイルコピーやチェックアウト時に変更される可能性があり、信頼性が低い
 
-### Decision
+**検討された代替案**:
+- ファイルタイムスタンプを比較 → ファイルコピー時に誤検出の可能性
+- すべてのファイルを常に再処理 → パフォーマンスが低下
+- ハッシュ値を保存して比較 → 追加のメタデータ管理が必要
 
-**選択したアプローチ**: Jinja2 + importlib.resources.files() + PackageLoaderパターン
+**トレードオフ**:
+- Git依存により、Gitリポジトリ外での使用ができない（前提条件として明記）
+- 未コミットの変更は検出されない（ユーザーは意図的にコミット後に更新を実行する）
 
-### Rationale
-
-#### Jinja2採用理由
-
-1. **業界標準**: Sphinx、MkDocs、Flaskなど主要プロジェクトで広く採用
-2. **セキュリティ**: XSS攻撃に対する自動エスケープ機能を標準装備
-3. **柔軟性**: テンプレート継承、マクロ、フィルター、条件分岐・ループをサポート
-4. **ドキュメント生成実績**: Sphinx自身がJinja2を内部使用しており、ドキュメント生成タスクに最適
-
-#### テンプレート配置戦略
-
-```python
-from importlib.resources import files
-from jinja2 import Environment, PackageLoader
-
-# モダンAPI使用例（Python 3.9+）
-templates_path = files('speckit_docs.templates')
-conf_py_template = templates_path.joinpath('sphinx_conf.py.j2').read_text()
-
-# Jinja2統合
-env = Environment(
-    loader=PackageLoader('speckit_docs', 'templates'),
-    autoescape=True,  # セキュリティ: 自動エスケープ有効
-    trim_blocks=True,
-    lstrip_blocks=True
-)
-template = env.get_template('sphinx/conf.py.j2')
-rendered = template.render(
-    project_name="My Project",
-    author="Author Name",
-    version="1.0.0"
-)
-```
-
-#### テンプレートファイル構造
-
-```
-src/speckit_docs/
-├── templates/
-│   ├── sphinx/
-│   │   ├── conf.py.j2
-│   │   ├── index.md.j2
-│   │   └── Makefile.j2
-│   ├── mkdocs/
-│   │   ├── mkdocs.yml.j2
-│   │   └── index.md.j2
-│   └── features/
-│       └── feature_page.md.j2
-├── commands/
-│   ├── speckit.doc-init.md
-│   └── speckit.doc-update.md
-└── scripts/
-    ├── doc_init.py
-    └── doc_update.py
-```
-
-### Implementation Example
-
-```python
-# Jinja2テンプレート例: sphinx/conf.py.j2
-project = "{{ project_name }}"
-copyright = "{{ year }}, {{ author }}"
-author = "{{ author }}"
-version = "{{ version }}"
-
-extensions = [
-    "myst_parser",
-]
-
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
-}
-
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
-    "tasklist",
-    "attrs_inline",
-]
-
-# Jinja2テンプレート使用例
-from jinja2 import Environment, PackageLoader
-from datetime import datetime
-
-env = Environment(loader=PackageLoader('speckit_docs', 'templates'))
-template = env.get_template('sphinx/conf.py.j2')
-
-conf_content = template.render(
-    project_name="spec-kit-docs",
-    author="Author Name",
-    version="0.1.0",
-    year=datetime.now().year
-)
-
-(Path("docs") / "conf.py").write_text(conf_content)
-```
-
-### Alternatives Considered
-
-- **string.Template**: Python標準だが機能が貧弱。複雑なロジック（条件分岐、ループ）が困難（却下理由: 機能不足）
-- **f-strings**: シンプルだがテンプレート外部化が困難。コードとテンプレートの分離原則に反する（却下理由: 保守性低下）
-- **Mako**: 高速だがセキュリティリスク。Pythonコード直接埋め込み可能で危険（却下理由: Constitution C006違反）
-
-### Constitution Alignment
-
-- **C006（堅牢コード品質）**: Jinja2の自動エスケープでセキュリティ確保
-- **C011（データ正確性）**: テンプレート変数の型安全性をJinja2で検証
-- **Core Principle III（Extensibility & Modularity）**: テンプレートを外部化し、新しいドキュメントツール追加を容易化
+**実装ノート**:
+- GitPython 3.1+ を使用してGit操作を実行
+- `git diff --name-only HEAD~1 HEAD` で変更されたファイルリストを取得
+- インクリメンタル更新により、1機能のみ変更時は5秒以内に更新完了（SC-008）
 
 ---
 
-## R003: Sphinx MyST Integration
+#### 決定3: 欠落ファイルの注記形式（アドモニション）
 
-### 調査内容
+**決定**: plan.md や tasks.md が欠落している場合、視覚的に明確なアドモニション（MyST構文の ````{note}` や MkDocs の `!!! note`）を使用して注記を表示する。
 
-- **MyST Markdown**: reStructuredTextの代替として業界標準化しつつあるMarkdown拡張
-- **myst-parser**: SphinxでMyST Markdownをサポートする公式拡張
-- **Optional Syntax Extensions**: MyST独自の高度な機能（admonitions、toctree等）
+**根拠**:
+- アドモニションは視覚的に目立ち、ユーザーが欠落情報に気づきやすい
+- Sphinx（MyST Markdown）とMkDocsの両方でサポートされる標準的な構文
+- 単なるテキストメモよりも、ドキュメントツールのネイティブ機能を活用する方が適切
 
-### Decision
+**検討された代替案**:
+- 単純なテキストメモ（例：`[このセクションはまだ利用できません]`） → 視覚的に目立たない
+- セクション自体を省略 → ユーザーが欠落に気づかない可能性
+- エラーとして処理 → 欠落ファイルは正当なケース（plan.mdがまだ作成されていない機能など）であり、エラーではない
 
-**選択したアプローチ**: Sphinx + myst-parser + Optional Extensions有効化
+**トレードオフ**:
+- アドモニション構文はツールごとに異なるため、ジェネレータごとに実装が必要
+- アドモニションの過度な使用は、ドキュメントが煩雑に見える可能性
 
-### Rationale
+**実装ノート**:
+- Sphinx: ````{note}` MyST構文
+- MkDocs: `!!! note` 構文
+- メッセージ例：「このセクションはまだ利用できません。plan.mdを作成後、`/speckit.doc-update`を再実行してください。」
 
-#### MyST Markdown採用理由（spec.mdで明確化済み）
+---
 
-1. **spec-kitとの形式統一**: すべてのソースファイル（spec.md、plan.md、tasks.md）がMarkdownであり、変換ロジック不要
-2. **学習コスト削減**: reStructuredText構文の習得が不要
-3. **手動編集の利便性**: 生成後のドキュメントをユーザーが編集する際の利便性向上
+#### 決定4: 機能ページのファイル命名規則
+
+**決定**: 説明的な名前のみ（`user-auth.md`, `api-integration.md`、番号なし）を使用する。
+
+**根拠**:
+- 番号付きファイル名（`001-user-auth.md`）は、機能ディレクトリ名から継承されるが、ドキュメントページのURLには不要
+- 説明的な名前により、URLが読みやすくなる（例：`/docs/features/user-auth.html`）
+- 時系列順序は機能ディレクトリの番号付けで管理され、ドキュメントページ名には反映しない
+
+**検討された代替案**:
+- 番号付きファイル名（`001-user-auth.md`） → URLが冗長になる（`/docs/features/001-user-auth.html`）
+- 連番のみ（`001.md`） → ファイル名から内容が推測できない
+
+**トレードオフ**:
+- 機能ディレクトリ名（`001-user-auth`）とドキュメントページ名（`user-auth.md`）の不一致により、マッピングロジックが必要
+- ファイル名の重複を避けるため、同じ説明的名前を持つ機能が存在しないことを前提とする
+
+**実装ノート**:
+- 変換ロジック: `001-user-auth` → `user-auth.md`（番号とハイフンを削除）
+- 重複チェック: 同じ説明的名前が既に存在する場合は、番号を保持（例：`002-user-auth.md`）
+
+---
+
+#### 決定5: Sphinxのデフォルトファイル形式（Markdown vs reStructuredText）
+
+**決定**: Markdown (.md) + myst-parser をデフォルト形式にする。
+
+**根拠**:
+1. **フォーマット統一**: spec-kitのすべてのソースファイル（spec.md、plan.md、tasks.md）がMarkdownであり、変換ロジックが不要
+2. **学習コスト削減**: ユーザーがreStructuredText構文の習得不要
+3. **手動編集の利便性**: 生成後のドキュメントをユーザーが手動編集する際、既に慣れているMarkdown形式の方が編集しやすい
 4. **業界標準化**: MyST Markdownは業界標準となりつつあり、Sphinxのほぼ全機能をサポート
 
-#### conf.py設定（理想実装）
+**検討された代替案**:
+- reStructuredText (.rst) → Sphinxの伝統的な形式だが、学習コストが高い
+- reStructuredTextとMarkdownの混在 → フォーマットの不統一により保守性が低下
 
-```python
-# conf.py
-project = "{{ project_name }}"
-copyright = "{{ year }}, {{ author }}"
-author = "{{ author }}"
-version = "{{ version }}"
-release = "{{ version }}"
+**トレードオフ**:
+- reStructuredTextのいくつかの高度な機能（例：`.. only::` ディレクティブ）は、MyST Markdownで完全にサポートされていない可能性がある
+- myst-parserという追加の依存関係が必要
 
-# MyST Parser設定
-extensions = [
-    "myst_parser",
-]
-
-# ファイル形式サポート
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
-}
-
-# MyST拡張機能有効化
-myst_enable_extensions = [
-    "colon_fence",    # :::構文でディレクティブ
-    "deflist",        # 定義リスト
-    "tasklist",       # [ ] チェックボックス
-    "attrs_inline",   # {#id .class}属性指定
-    "dollarmath",     # $数式$
-    "fieldlist",      # :field: value
-]
-
-# 見出しアンカー自動生成
-myst_heading_anchors = 3  # h1-h3まで自動ID付与
-
-# toctreeの深さ
-master_doc = 'index'
-```
-
-#### MyST Markdown構文（主要パターン）
-
-```markdown
-# MyST Admonition（注記）
-:::{note}
-これは注記です。欠落ファイルの警告に使用します。
-:::
-
-:::{warning}
-これは警告です。破壊的変更の通知に使用します。
-:::
-
-# MyST toctree（目次）
-```{toctree}
-:maxdepth: 2
-:caption: Features
-
-features/user-auth.md
-features/api-integration.md
-```
-
-# MyST Cross-reference（相互参照）
-{doc}`/features/user-auth` でリンク（拡張子なし）
-
-# MyST Directive（汎用）
-```{admonition} カスタムタイトル
-:class: tip
-
-カスタムアドモニションの内容
-```
-```
-
-### Implementation Example
-
-```python
-# Sphinx初期化時のconf.py生成
-from jinja2 import Environment, PackageLoader
-from datetime import datetime
-
-env = Environment(loader=PackageLoader('speckit_docs', 'templates'))
-template = env.get_template('sphinx/conf.py.j2')
-
-conf_content = template.render(
-    project_name="My Documentation",
-    author="Author Name",
-    version="1.0.0",
-    year=datetime.now().year,
-    language="ja"
-)
-
-conf_py_path = Path("docs") / "conf.py"
-conf_py_path.write_text(conf_content)
-```
-
-### Alternatives Considered
-
-- **reStructuredText (.rst)**: Sphinx標準だが、spec-kitのソースファイル（.md）と形式が異なる。変換ロジック追加が必要（却下理由: Constitution C004違反、仕様でMarkdownに決定済み）
-- **CommonMark Markdown**: 基本的なMarkdown。Sphinxディレクティブがサポートされない（却下理由: 機能不足）
-
-### Constitution Alignment
-
-- **C004（理想実装ファースト）**: 最初からMyST拡張機能を全て有効化、段階的追加なし
-- **C008（ドキュメント整合性）**: spec-kit仕様ファイルと同じMarkdown形式で一貫性確保
-- **Core Principle I（spec-kit Integration First）**: spec-kitのMarkdownエコシステムと完全統合
+**実装ノート**:
+- `conf.py` で myst-parser を有効化：`extensions = ['myst_parser']`
+- `source_suffix` に `.md` を含める：`source_suffix = {'.rst': 'restructuredtext', '.md': 'markdown'}`
+- MyST Markdownの拡張機能（colon_fence、deflist、tasklist、attrs_inline等）を有効化
 
 ---
 
-## R004: MkDocs Configuration
+### Session 2025-10-12 (Correction)
 
-### 調査内容
+#### 修正1: 機能仕様ディレクトリの場所（`.specify/specs/` → `specs/`）
 
-- **Material for MkDocs**: 最も人気のあるMkDocsテーマ（2025年時点でv9.6.21）
-- **Navigation Structure**: YAML形式のnav設定とプログラマティック更新
-- **mkdocs.yml Configuration**: 推奨設定パターン
+**決定**: 機能仕様ディレクトリは、ルート直下の `specs/` とする（`.specify/specs/` ではない）。
 
-### Decision
+**根拠**:
+- spec-kitの公式仕様に基づき、`scripts/bash/create-new-feature.sh` は `SPECS_DIR="$REPO_ROOT/specs"` を使用
+- `.specify/` は spec-kit 自身の内部ディレクトリ（scripts, templates, memory）であり、ユーザーの機能仕様を配置する場所ではない
+- ユーザー向けの機能仕様はルート直下の `specs/` に配置するのが標準パターン
 
-**選択したアプローチ**: MkDocs + Material theme + YAMLベースnav + ruamel.yamlでプログラマティック更新
-
-### Rationale
-
-#### Material theme採用理由
-
-1. **業界標準**: GitHub、Microsoft、Googleなど大手企業が採用
-2. **豊富な機能**: 検索、ダークモード、多言語対応、ナビゲーション拡張を標準装備
-3. **メンテナンス**: 活発な開発（最新版9.6.21、2025年9月30日リリース）
-4. **カスタマイズ性**: CSS/JavaScript追加や`custom_dir`でテーマ拡張可能
-
-#### mkdocs.yml設定（理想実装）
-
-```yaml
-site_name: "{{ project_name }}"
-site_url: "{{ site_url }}"
-repo_url: "{{ repo_url }}"  # Git remote origin URLから自動取得
-repo_name: "{{ repo_name }}"
-
-theme:
-  name: material
-  language: ja
-  features:
-    - navigation.tabs          # タブナビゲーション
-    - navigation.sections      # セクション折りたたみ
-    - navigation.expand        # 自動展開
-    - navigation.top           # トップへ戻るボタン
-    - search.suggest           # 検索サジェスト
-    - search.highlight         # 検索結果ハイライト
-    - content.code.copy        # コードコピーボタン
-  palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: ダークモードに切り替え
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: ライトモードに切り替え
-
-nav:
-  - Home: index.md
-  - Features:
-    - User Auth: features/user-auth.md
-    - API Integration: features/api-integration.md
-
-markdown_extensions:
-  - admonition        # 注記ブロック
-  - pymdownx.details  # 折りたたみ可能な詳細
-  - pymdownx.superfences  # コードブロック拡張
-  - pymdownx.tabbed   # タブ
-  - attr_list         # 属性リスト
-  - md_in_html        # HTML内Markdown
-```
-
-#### プログラマティック更新戦略
-
-```python
-from ruamel.yaml import YAML
-from pathlib import Path
-
-yaml = YAML()
-yaml.preserve_quotes = True
-yaml.default_flow_style = False
-
-def update_mkdocs_nav(mkdocs_yml: Path, new_features: list[dict]):
-    """
-    mkdocs.ymlのnavセクションを更新
-
-    Args:
-        mkdocs_yml: mkdocs.ymlのパス
-        new_features: 新しい機能のリスト [{"title": "...", "path": "..."}]
-    """
-    with open(mkdocs_yml, 'r') as f:
-        config = yaml.load(f)
-
-    if 'nav' not in config:
-        config['nav'] = []
-
-    # Featuresセクションを取得または作成
-    features_section = next(
-        (item for item in config['nav'] if 'Features' in item),
-        None
-    )
-
-    if features_section is None:
-        config['nav'].append({'Features': []})
-        features_section = config['nav'][-1]
-
-    # 新しい機能を追加
-    for feature in new_features:
-        features_section['Features'].append({
-            feature['title']: feature['path']
-        })
-
-    # 保存
-    with open(mkdocs_yml, 'w') as f:
-        yaml.dump(config, f)
-```
-
-### Implementation Example
-
-```python
-# MkDocs初期化
-from jinja2 import Environment, PackageLoader
-
-env = Environment(loader=PackageLoader('speckit_docs', 'templates'))
-template = env.get_template('mkdocs/mkdocs.yml.j2')
-
-mkdocs_content = template.render(
-    project_name="My Project",
-    site_url="https://example.com",
-    repo_url="https://github.com/user/repo",
-    repo_name="user/repo",
-    features=[
-        {"title": "User Auth", "path": "features/user-auth.md"},
-        {"title": "API Integration", "path": "features/api-integration.md"},
-    ]
-)
-
-mkdocs_yml = Path("mkdocs.yml")
-mkdocs_yml.write_text(mkdocs_content)
-```
-
-### Alternatives Considered
-
-- **readthedocs theme**: MkDocsデフォルトテーマだが機能が限定的（却下理由: ユーザー体験低下）
-- **mkdocs-literate-nav plugin**: Markdownでナビゲーション定義。小規模プロジェクト向けで、大規模プロジェクトでは複雑化（却下理由: MVP範囲でYAML更新で十分）
-- **mkdocs-awesome-nav plugin**: Glob パターンサポート。追加依存関係が必要（却下理由: MVP範囲でYAML更新で十分、依存増加）
-
-### Constitution Alignment
-
-- **C004（理想実装ファースト）**: Material themeの全機能を最初から有効化
-- **C012（DRY原則）**: ruamel.yamlで既存構造を保持し、手動編集とプログラマティック更新の両立
-- **Core Principle III（Extensibility & Modularity）**: YAMLベース設定でカスタマイズ容易
+**影響範囲**:
+- すべてのパーサー（`spec_parser.py`、`plan_parser.py`、`tasks_parser.py`）のファイルパス解決ロジック
+- ドキュメント更新スクリプト（`doc_update.py`）の機能ディレクトリ探索ロジック
 
 ---
 
-## R005: Git Change Detection
+#### 修正2: Sphinxのデフォルトファイル形式の不整合解消
 
-### 調査内容
+**決定**: すべての参照を `index.rst` から `index.md` に変更し、Sphinx で生成されるすべてのファイルが Markdown 形式（.md）であることを明確化する。
 
-- **GitPython Library**: PythonからGitリポジトリを操作するライブラリ
-- **git diff Strategy**: HEAD比較、Index比較、Working Directory比較の選択
-- **Incremental Build**: 変更検出とファイルスキップロジック
+**根拠**:
+- Session 2025-10-12 の決定（「Markdown (.md) + myst-parser をデフォルトにする」）に基づく
+- spec-kit のソースファイル（spec.md、plan.md、tasks.md）との形式統一を実現
 
-### Decision
-
-**選択したアプローチ**: GitPython + HEAD比較（`repo.index.diff("HEAD")`）+ ファイルハッシュキャッシュ
-
-### Rationale
-
-#### GitPython採用理由
-
-1. **Pythonネイティブ**: subprocess経由のgitコマンド実行より型安全で保守性高い
-2. **豊富なAPI**: コミット、ブランチ、diff、blame等の全Git操作をサポート
-3. **テスタビリティ**: モック可能で単体テスト容易（Constitution C010: TDD必須に準拠）
-
-#### git diff戦略
-
-```python
-from git import Repo
-from pathlib import Path
-
-def detect_changed_specs(repo_path: Path) -> list[Path]:
-    """
-    前回の更新以降に変更されたspec.md/plan.md/tasks.mdを検出
-
-    戦略:
-    1. HEAD（最新コミット）と現在のインデックス（staged + unstaged）を比較
-    2. specs/ディレクトリ配下の.mdファイルのみフィルタリング
-    3. 変更タイプ（Added, Modified, Deleted）を判定
-    """
-    repo = Repo(repo_path)
-
-    # staged + unstaged変更を全て取得
-    diff_index = repo.index.diff("HEAD")
-
-    changed_specs = []
-    for diff_item in diff_index:
-        file_path = Path(diff_item.a_path)
-
-        # specs/配下の.mdファイルのみ対象
-        if file_path.parts[0] == 'specs' and file_path.suffix == '.md':
-            if diff_item.change_type in ['A', 'M']:  # Added or Modified
-                changed_specs.append(file_path)
-
-    return changed_specs
-```
-
-#### インクリメンタル更新ロジック
-
-```python
-import hashlib
-import json
-from pathlib import Path
-
-def compute_file_hash(file_path: Path) -> str:
-    """ファイルのSHA256ハッシュを計算"""
-    return hashlib.sha256(file_path.read_bytes()).hexdigest()
-
-def load_cache(cache_file: Path) -> dict[str, str]:
-    """前回実行時のファイルハッシュキャッシュを読み込み"""
-    if cache_file.exists():
-        return json.loads(cache_file.read_text())
-    return {}
-
-def save_cache(cache_file: Path, cache: dict[str, str]):
-    """現在のファイルハッシュキャッシュを保存"""
-    cache_file.write_text(json.dumps(cache, indent=2))
-
-def incremental_update(specs_dir: Path, cache_file: Path) -> list[Path]:
-    """
-    インクリメンタル更新: ハッシュ比較で変更検出
-
-    利点:
-    - Git履歴不要（新規プロジェクトでも動作）
-    - 高速（ファイル内容のハッシュ比較のみ）
-    - 確実（ファイル内容の変更を確実に検出）
-    """
-    cache = load_cache(cache_file)
-    changed_files = []
-    new_cache = {}
-
-    for spec_file in specs_dir.rglob('*.md'):
-        current_hash = compute_file_hash(spec_file)
-        relative_path = str(spec_file.relative_to(specs_dir))
-
-        if cache.get(relative_path) != current_hash:
-            changed_files.append(spec_file)
-
-        new_cache[relative_path] = current_hash
-
-    save_cache(cache_file, new_cache)
-    return changed_files
-```
-
-#### パフォーマンス最適化
-
-- **ハッシュキャッシュ**: `.specify/cache/doc_update_hashes.json`にファイルハッシュを保存
-- **Git diffフォールバック**: キャッシュがない場合はGit diff使用
-- **並列処理**: 将来的に`concurrent.futures`でファイル解析を並列化可能
-
-### Implementation Example
-
-```python
-from git import Repo
-from pathlib import Path
-
-class ChangeDetector:
-    def __init__(self, repo_path: Path):
-        self.repo = Repo(repo_path)
-        self.specs_dir = repo_path / "specs"
-
-    def get_changed_features(self, base_ref="HEAD", target_ref=None) -> list[Path]:
-        """
-        変更された機能ディレクトリを取得
-
-        Args:
-            base_ref: 比較元（デフォルトは最新コミット）
-            target_ref: 比較先（Noneの場合はWorking Directory）
-
-        Returns:
-            変更された機能ディレクトリのリスト
-        """
-        diff_index = self.repo.commit(base_ref).diff(target_ref)
-
-        changed_features = set()
-        for diff_item in diff_index:
-            file_path = Path(diff_item.a_path or diff_item.b_path)
-
-            # specs/ディレクトリ配下のみ
-            if file_path.parts[0] == "specs" and len(file_path.parts) >= 2:
-                feature_dir = self.specs_dir / file_path.parts[1]
-                if feature_dir.is_dir():
-                    changed_features.add(feature_dir)
-
-        return list(changed_features)
-```
-
-### Alternatives Considered
-
-- **subprocessでgit diff実行**: シェル依存でテスト困難（却下理由: Constitution C010違反、テスタビリティ低下）
-- **os.path.getmtime()比較**: タイムスタンプは信頼性が低い（Gitチェックアウトで変更）（却下理由: 信頼性不足）
-- **全ファイル毎回処理**: シンプルだが大規模プロジェクトで遅い（却下理由: NFR違反、インクリメンタル更新要件）
-
-### Constitution Alignment
-
-- **C004（理想実装ファースト）**: 最初から高速なハッシュキャッシュ戦略を採用、「とりあえず全更新」なし
-- **C010（TDD必須）**: GitPythonでモック容易、単体テスト可能
-- **NFR（パフォーマンス）**: インクリメンタル更新で変更ファイルのみ処理、フル更新比で約90%削減
+**影響範囲**:
+- `doc_init.py` の初期ファイル生成ロジック（`index.rst` → `index.md`）
+- `SphinxGenerator.initialize()` メソッド
+- すべてのSphinx関連ドキュメントとテストケース
 
 ---
 
-## R006: spec-kit Integration Pattern
+## 2. アーキテクチャと責務分担の決定
 
-### 調査内容
+### Session 2025-10-12 (Architecture Clarifications)
 
-- **本家spec-kit CLI構造**: Typer + `specify init` + `--here`/`--force`フラグ
-- **Slash Command Integration**: `.claude/commands/*.md`ファイルとClaude Code連携
-- **Installation Pattern**: GitHubからのダウンロード vs パッケージ内配置
+#### 決定6: 対話的設定収集の責務分担（AI エージェント vs Python スクリプト）
 
-### Decision
+**決定**: AI エージェント（Claude Code）が対話的に設定を収集し、スクリプト（doc_init.py）は引数のみを受け取る非対話的実行とする。
 
-**選択したアプローチ**: spec-kit `specify init --here`パターン準拠 + importlib.resourcesでファイル配置
+**根拠**:
+1. **非対話的環境での動作**: Python スクリプトの `input()` は CI/CD などの非対話的環境で EOFError を起こす
+2. **spec-kitとの一貫性**: `/speckit.specify`、`/speckit.plan` などの他のコマンドと同じパターン
+3. **拡張性とテスト容易性**: スクリプトは決定的な入力（コマンドライン引数）を受け取り、単体テストが容易
 
-### Rationale
+**検討された代替案**:
+- オプション B: スクリプトが対話的に設定を収集 → CI/CD環境で動作せず、テストが困難
+- オプション C: 設定ファイルを事前に作成 → ユーザーの手動作業が増加
 
-#### spec-kit initパターン分析
+**トレードオフ**:
+- AIエージェントとスクリプトの明確な責務分担により、実装が複雑になる
+- コマンド定義（`.claude/commands/speckit.doc-init.md`）のプロンプトが長くなる
 
-本家spec-kitの`specify init`コマンド実装から抽出したパターン:
-
-```python
-# 本家spec-kitのパターン（参考）
-@app.command()
-def init(
-    project_name: str = typer.Argument(..., help="Project name"),
-    here: bool = typer.Option(False, "--here", help="Initialize in current directory"),
-    force: bool = typer.Option(False, "--force", help="Overwrite existing files"),
-    ai: str = typer.Option("claude", "--ai", help="AI assistant (claude/gemini/copilot)"),
-):
-    if here:
-        # カレントディレクトリに初期化
-        project_path = Path.cwd()
-        if list(project_path.iterdir()) and not force:
-            # ファイルが存在する場合は確認
-            if not typer.confirm("Directory not empty. Continue?"):
-                raise typer.Abort()
-    else:
-        # 新規ディレクトリ作成
-        project_path = Path(project_name)
-        project_path.mkdir(exist_ok=True)
-
-    # GitHubからテンプレートダウンロード
-    download_template(ai_assistant=ai, target_path=project_path)
-```
-
-#### spec-kit-docsへの適用
-
-```python
-# spec-kit-docsのinstallコマンド
-@app.command()
-def install(
-    force: bool = typer.Option(False, "--force", help="Overwrite existing files without confirmation"),
-):
-    """
-    Install spec-kit-docs extension to current spec-kit project.
-
-    本家spec-kitの`specify init --here`パターンに従う:
-    1. カレントディレクトリがspec-kitプロジェクトか検証
-    2. 既存ファイル確認（--forceなしの場合）
-    3. importlib.resourcesからファイルコピー
-    4. ベストエフォート方式（部分的成功を許容）
-    """
-    project_path = Path.cwd()
-
-    # spec-kitプロジェクト検証
-    if not (project_path / ".specify").is_dir():
-        typer.echo("Error: Not a spec-kit project. Run 'specify init' first.")
-        raise typer.Exit(code=1)
-
-    if not (project_path / ".claude" / "commands").is_dir():
-        typer.echo("Error: .claude/commands directory not found.")
-        raise typer.Exit(code=1)
-
-    # 既存ファイル確認（本家パターン）
-    commands_dir = project_path / ".claude" / "commands"
-    existing_files = [
-        commands_dir / "speckit.doc-init.md",
-        commands_dir / "speckit.doc-update.md",
-    ]
-
-    if any(f.exists() for f in existing_files) and not force:
-        if not typer.confirm("spec-kit-docs files already exist. Overwrite?"):
-            typer.echo("Installation cancelled.")
-            raise typer.Exit(code=0)
-
-    # importlib.resourcesからファイルコピー
-    from importlib.resources import files
-
-    templates = files('speckit_docs.commands')
-    for file_name in ['speckit.doc-init.md', 'speckit.doc-update.md']:
-        source = templates.joinpath(file_name).read_text()
-        target = commands_dir / file_name
-        target.write_text(source)
-        typer.echo(f"✓ Installed {file_name}")
-
-    # スクリプトコピー
-    scripts_src = files('speckit_docs.scripts')
-    scripts_dir = project_path / ".specify" / "scripts" / "docs"
-    scripts_dir.mkdir(parents=True, exist_ok=True)
-
-    for script in ['doc_init.py', 'doc_update.py']:
-        source = scripts_src.joinpath(script).read_text()
-        target = scripts_dir / script
-        target.write_text(source)
-        typer.echo(f"✓ Installed {script}")
-
-    typer.echo("\n✓ Installation complete!")
-    typer.echo("Available commands: /speckit.doc-init, /speckit.doc-update")
-```
-
-#### スラッシュコマンド定義パターン
-
-```markdown
-<!-- .claude/commands/speckit.doc-init.md -->
-# /speckit.doc-init - Initialize documentation project
-
-本家spec-kitの`/speckit.specify`パターンに従う:
-1. ユーザーと対話的に情報収集
-2. コマンドライン引数を構築
-3. バックエンドスクリプトを非対話的に実行
-4. 結果をユーザーにフィードバック
-
-## Workflow
-
-1. **Pre-check**: Verify `.specify/` directory exists
-2. **Interactive Input**:
-   - Ask: "Which documentation tool? (sphinx/mkdocs)"
-   - If sphinx: Ask project name, author, version, language
-   - If mkdocs: Ask project name, site name, repo URL
-3. **Existing docs/ check**:
-   - If exists: Ask "docs/ already exists. Overwrite? (yes/no)"
-   - If no: Abort
-   - If yes: Add --force flag
-4. **Execute**: Run `uv run python .specify/scripts/docs/doc_init.py` with args
-5. **Feedback**: Show success message and next steps
-
-## Error Handling
-
-- Not a spec-kit project: "Run 'specify init' first"
-- Script error: Show error message and suggest checking logs
-```
-
-### Implementation Example
-
-```python
-# インタラクティブ確認パターン（typer使用）
-import typer
-from pathlib import Path
-
-def doc_init(
-    doc_type: str = typer.Option(None, "--type", help="Documentation tool (sphinx/mkdocs)"),
-    force: bool = typer.Option(False, "--force", help="Overwrite existing docs/"),
-):
-    """Initialize documentation project."""
-    docs_dir = Path("docs")
-
-    if docs_dir.exists():
-        typer.echo(f"[yellow]Warning:[/yellow] docs/ already exists")
-
-        if force:
-            typer.echo("[cyan]--force supplied: skipping confirmation[/cyan]")
-        else:
-            if not typer.confirm("Do you want to continue?"):
-                typer.echo("[yellow]Operation cancelled[/yellow]")
-                raise typer.Exit(0)
-
-    # ドキュメントツール選択
-    if not doc_type:
-        doc_type = typer.prompt(
-            "Which documentation tool?",
-            type=typer.Choice(["sphinx", "mkdocs"])
-        )
-
-    # 設定収集
-    if doc_type == "sphinx":
-        project_name = typer.prompt("Project name", default=Path.cwd().name)
-        author = typer.prompt("Author name")
-        version = typer.prompt("Version", default="0.1.0")
-        language = typer.prompt("Language", default="ja")
-
-        # スクリプト実行
-        run_doc_init_script(
-            doc_type="sphinx",
-            project_name=project_name,
-            author=author,
-            version=version,
-            language=language
-        )
-```
-
-### Alternatives Considered
-
-- **独立したCLI構造（`speckit-docs init`）**: spec-kitとの一貫性がない（却下理由: Constitution I違反）
-- **Pythonスクリプト直接実行**: `uv run python install.py`。CLIツールとしてのユーザビリティ低下（却下理由: 使いやすさ）
-- **環境変数設定**: インストール時に環境変数を設定。複雑で非標準（却下理由: Constitution C011違反）
-
-### Constitution Alignment
-
-- **C001（ルール遵守）**: 本家spec-kitの`specify init --here --force`パターンを忠実に再現
-- **Core Principle I（spec-kit Integration First）**: spec-kitの標準パターンと完全一貫
-- **Core Principle II（Non-Interactive Execution）**: バックエンドスクリプトは非対話的、対話はAIエージェント担当
+**実装ノート**:
+- AIエージェントの責務: 対話的質問→情報収集→引数構築→スクリプト呼び出し→結果フィードバック
+- スクリプトの責務: コマンドライン引数から設定を受け取り→非対話的実行→エラーを構造化された終了コードとメッセージで返す
+- **Core Principle II: Non-Interactive Execution** に準拠
 
 ---
 
-## R007: Testing Strategy
+#### 決定7: `.claude/commands/speckit.doc-init.md` コマンド定義の役割
 
-### 調査内容
+**決定**: コマンド定義は、対話的質問→情報収集→引数構築→スクリプト呼び出し→結果フィードバックの一連のプロンプトを記述する。
 
-- **Test-Driven Development (TDD)**: Red-Green-Refactorサイクル
-- **pytest Framework**: Python標準のテストフレームワーク
-- **Test Coverage**: 業界標準のカバレッジ目標
-- **File System Mocking**: pyfakefs、tmp_path、pytest-mockの選択
+**根拠**:
+1. **spec-kitとの一貫性**: 他のコマンド定義（`/speckit.specify`、`/speckit.plan`）と同じパターン
+2. **自然言語プロンプト**: Claude Code が自然言語プロンプトからタスクを実行できる
+3. **エラーハンドリング**: AIエージェントがエラーメッセージを解釈し、ユーザーフィードバックを担当
 
-### Decision
+**検討された代替案**:
+- オプション B: コマンド定義にシェルスクリプトを埋め込む → プロンプトの柔軟性が失われる
+- オプション C: コマンド定義なしで、AIエージェントが直接スクリプトを呼び出す → spec-kitのコマンドパターンから逸脱
 
-**選択したアプローチ**: pytest + TDD (Red-Green-Refactor) + 90%カバレッジ目標 + pyfakefs + pytest-mock
+**トレードオフ**:
+- プロンプトの保守性が課題（プロンプトの変更はコード変更と同等の注意が必要）
+- プロンプトのテストは、契約テスト（`tests/contract/`）で実施
 
-### Rationale
-
-#### TDD必須（Constitution C010）
-
-```python
-# Red-Green-Refactor cycle example
-
-# 1. RED: テストを書き、失敗することを確認
-def test_detect_changed_specs_should_return_modified_files():
-    """
-    Changed spec files should be detected by git diff.
-    """
-    repo_path = Path("/fake/repo")
-    # Setup: Create fake git repo with modified spec.md
-    # ... (setup code)
-
-    changed = detect_changed_specs(repo_path)
-
-    assert len(changed) == 1
-    assert changed[0] == Path("specs/001-feature/spec.md")
-    # → 実装前なので失敗（RED）
-
-# 2. GREEN: テストを通過する最小限の実装
-def detect_changed_specs(repo_path: Path) -> list[Path]:
-    # 最小実装（ハードコード）
-    return [Path("specs/001-feature/spec.md")]
-    # → テスト通過（GREEN）
-
-# 3. REFACTOR: 実装を改善、テストは通過し続ける
-def detect_changed_specs(repo_path: Path) -> list[Path]:
-    repo = Repo(repo_path)
-    diff_index = repo.index.diff("HEAD")
-    changed = []
-    for item in diff_index:
-        if Path(item.a_path).parts[0] == 'specs':
-            changed.append(Path(item.a_path))
-    return changed
-    # → テスト通過、かつ汎用実装（REFACTOR）
-```
-
-#### pytest採用理由
-
-1. **業界標準**: Python テスティングのデファクトスタンダード
-2. **豊富なプラグイン**: pytest-cov、pytest-mock、pyfakefs等のエコシステム
-3. **fixtures**: セットアップ/ティアダウンの自動管理
-4. **パラメトライズ**: 複数入力パターンを効率的にテスト
-
-#### カバレッジ目標（90%）
-
-```bash
-# pytest-covでカバレッジ測定
-pytest --cov=src/speckit_docs --cov-report=html --cov-report=term
-
-# 目標:
-# - Unit tests: 主要コードパス90%以上
-# - Integration tests: エンドツーエンドワークフロー
-# - Edge cases: エラーハンドリング、境界値
-```
-
-業界標準（80%）より高い90%を目標とする理由:
-- ドキュメント生成は多様なプロジェクト構造に対応する必要がある
-- ファイルシステム操作のバグは検出が困難
-- spec-kit統合の信頼性確保
-
-#### ファイルシステムモック戦略
-
-```python
-# pyfakefs: ファイルシステム全体をモック
-def test_doc_init_creates_sphinx_structure(fs):  # fs = fake filesystem fixture
-    """
-    Sphinx initialization should create standard directory structure.
-    """
-    fs.create_dir("/project")
-
-    doc_init(
-        project_path=Path("/project"),
-        doc_type="sphinx",
-        project_name="Test",
-        author="Author",
-        version="1.0.0"
-    )
-
-    assert Path("/project/docs/conf.py").exists()
-    assert Path("/project/docs/index.md").exists()
-    assert Path("/project/docs/Makefile").exists()
-
-# tmp_path: 実際の一時ディレクトリ（統合テスト）
-def test_full_workflow_with_real_files(tmp_path):
-    """
-    Full workflow: init -> update -> build should work end-to-end.
-    """
-    project_dir = tmp_path / "test_project"
-    project_dir.mkdir()
-
-    # Real file operations
-    doc_init(project_dir, "sphinx", "Test", "Author", "1.0.0")
-    doc_update(project_dir)
-
-    # Verify actual files
-    assert (project_dir / "docs" / "_build" / "html" / "index.html").exists()
-
-# pytest-mock: GitPython等の外部依存をモック
-def test_detect_changed_specs_calls_git_diff(mocker):
-    """
-    detect_changed_specs should call git diff with correct arguments.
-    """
-    mock_repo = mocker.Mock()
-    mock_diff = mocker.Mock()
-    mock_repo.index.diff.return_value = mock_diff
-    mocker.patch('git.Repo', return_value=mock_repo)
-
-    detect_changed_specs(Path("/project"))
-
-    mock_repo.index.diff.assert_called_once_with("HEAD")
-```
-
-#### テスト構造（Testing Pyramid）
-
-```
-tests/
-├── unit/                      # 50% - 単体テスト
-│   ├── test_parsers.py
-│   ├── test_generators.py
-│   └── test_git_utils.py
-├── integration/               # 30% - 統合テスト
-│   ├── test_doc_init.py
-│   ├── test_doc_update.py
-│   └── test_install.py
-└── e2e/                       # 20% - エンドツーエンド
-    └── test_full_workflow.py
-```
-
-### Implementation Example
-
-```python
-# tests/unit/test_change_detector.py
-import pytest
-from pathlib import Path
-from unittest.mock import Mock
-from speckit_docs.utils.git import ChangeDetector
-
-def test_get_changed_features_filters_specs_directory(mocker):
-    """
-    ChangeDetector should only return features from specs/ directory.
-    """
-    # Arrange
-    mock_repo = mocker.Mock()
-    mock_diff_item1 = Mock(a_path="specs/001-feature/spec.md", change_type="M")
-    mock_diff_item2 = Mock(a_path="README.md", change_type="M")
-    mock_diff_item3 = Mock(a_path="specs/002-feature/plan.md", change_type="M")
-
-    mock_repo.commit.return_value.diff.return_value = [
-        mock_diff_item1,
-        mock_diff_item2,
-        mock_diff_item3,
-    ]
-    mocker.patch('git.Repo', return_value=mock_repo)
-
-    detector = ChangeDetector(Path("/project"))
-
-    # Act
-    changed = detector.get_changed_features()
-
-    # Assert
-    assert len(changed) == 2
-    assert Path("/project/specs/001-feature") in changed
-    assert Path("/project/specs/002-feature") in changed
-```
-
-### Alternatives Considered
-
-- **unittest**: Python標準だがpytestより冗長（却下理由: 生産性低下）
-- **nose2**: レガシー、メンテナンス停止（却下理由: 保守性リスク）
-- **100%カバレッジ目標**: 過度な負担、価値の低いテスト増加（却下理由: 実用性低下）
-
-### Constitution Alignment
-
-- **C010（TDD必須）**: Red-Green-Refactorサイクル強制
-- **C006（堅牢コード品質）**: 90%カバレッジで品質保証
-- **Core Principle V（Testability）**: pyfakefs、pytest-mockでモック容易
+**実装ノート**:
+- プロンプト構成: (1) ユーザーに質問、(2) 回答を引数に変換、(3) `uv run python .specify/scripts/docs/doc_init.py --type sphinx --project-name "My Project" ...` を実行、(4) 結果を解釈してフィードバック
 
 ---
 
-## Summary: Research-Driven Decisions
+#### 決定8: 既存 `docs/` ディレクトリの上書き確認（AI エージェント vs スクリプト）
 
-本調査により、以下の技術スタックが**理想実装（Constitution C004）**として決定されました:
+**決定**: AI エージェントが事前に `docs/` の存在を確認し、存在する場合はユーザーに上書き確認を取り、確認が取れた場合のみ `--force` フラグ付きでスクリプトを実行する。
 
-| 領域 | 選択技術 | 根拠 |
-|------|---------|------|
-| CLI Framework | Typer | spec-kit統合（Constitution I）、型安全性（C006） |
-| Template Engine | Jinja2 + importlib.resources | 業界標準、オフライン動作、セキュリティ（C006） |
-| Sphinx Integration | myst-parser + Optional Extensions | spec-kit Markdown統一（C008）、学習コスト削減 |
-| MkDocs Configuration | Material theme + YAML nav | 業界標準、豊富な機能、プログラマティック更新 |
-| Git Change Detection | GitPython + ハッシュキャッシュ | 高速（NFR）、テスト容易（C010）、信頼性 |
-| spec-kit Pattern | `specify init --here` + importlib.resources | spec-kit完全一貫（Constitution I） |
-| Testing Strategy | pytest + TDD + 90%カバレッジ + pyfakefs | TDD必須（C010）、品質保証（C006） |
+**根拠**:
+1. **非対話的環境での動作**: スクリプトが `input()` を使用しないため、CI/CD環境でも動作可能
+2. **一貫したアーキテクチャ**: ユーザーとの対話は AI エージェントが担当
+3. **テスト容易性**: スクリプトは `--force` の有無で動作を制御でき、テストが容易
 
-これらの決定は、すべて**Constitution（憲章）の原則に準拠**しており、次のPhase 1（Implementation Plan）で詳細設計に落とし込まれます。
+**検討された代替案**:
+- オプション B: スクリプトが対話的に上書き確認を求める → CI/CD環境で動作せず
+- オプション C: 常に上書き（`--force` を自動適用） → ユーザーのデータ損失リスク
 
-**次のステップ**: `/speckit.plan`コマンドでplan.mdを生成し、アーキテクチャ設計とタスク分解を行います。
+**トレードオフ**:
+- AIエージェントがファイルシステムの状態を確認する責務を持つ（追加ロジック）
+- `--force` フラグのセマンティクスをspec-kitと一貫させる必要がある
+
+**実装ノート**:
+- スクリプト（doc_init.py）: `--force` フラグがない場合、`docs/` 存在時にエラー終了コード 1 を返す
+- AIエージェント: `docs/` 存在時に `typer.confirm("docs/ ディレクトリは既に存在します。上書きしますか？")` で確認
 
 ---
 
-**作成完了日**: 2025-10-13
+#### 決定9: MkDocs 初期化時のデフォルト値
+
+**決定**: サイト名はプロジェクト名と同じ、リポジトリURLはGit remote origin URL（取得できない場合は空文字列）とする。
+
+**根拠**:
+1. **Sphinxとの一貫性**: Sphinx初期化と同じデフォルト値ルールを適用
+2. **Git情報の活用**: Gitから自動取得可能な情報を活用し、ユーザーの入力負担を軽減
+3. **必須でない項目**: リポジトリURLは必須でないため、空でも問題なし
+
+**検討された代替案**:
+- すべて手動入力を要求 → ユーザーの入力負担が増加
+- リポジトリURLを必須とする → Gitリポジトリでない場合にエラー
+
+**トレードオフ**:
+- Git情報の取得に失敗した場合、デフォルト値（空文字列）を使用（例外を発生させない）
+- サイト名とプロジェクト名が同じという前提は、すべてのプロジェクトに適しているわけではない
+
+**実装ノート**:
+- プロジェクト名: `os.path.basename(os.getcwd())`
+- サイト名: プロジェクト名と同じ
+- リポジトリURL: `git remote get-url origin`（失敗時は空文字列）
+
+---
+
+#### 決定10: ディレクトリ構造決定（フラット vs 包括的）の自動移行
+
+**決定**: 初期化時に現在の機能数を検出して構造を決定し、さらに `/doc-update` 実行時にも機能数を再チェックして、フラット構造から包括的構造への移行が必要な場合（機能数が6以上になった場合）は自動的に移行する。
+
+**根拠**:
+1. **プロジェクトの成長に自動適応**: ユーザーがドキュメント構造を手動で再編成する必要がない
+2. **小規模プロジェクトのシンプルさ**: 小規模プロジェクトは常にシンプルなフラット構造で開始
+3. **破壊的変更の回避**: 逆方向の移行（包括的→フラット）は行わず、一度包括的構造に移行したプロジェクトは維持
+
+**検討された代替案**:
+- 初期化時のみ構造を決定し、後から変更しない → プロジェクトの成長に対応できない
+- ユーザーが手動で構造を変更 → 手動作業が増加し、ドキュメントの整合性が保てない可能性
+
+**トレードオフ**:
+- 自動移行により、ユーザーが意図しないタイミングでドキュメント構造が変わる可能性
+- 逆方向の移行を行わないため、機能数が減少しても包括的構造が維持される
+
+**実装ノート**:
+- 機能数のカウント: `len([d for d in os.listdir('specs/') if os.path.isdir(d) and d.startswith('0')])`
+- 移行時の処理: 既存の機能ページを `docs/` から `docs/features/` に移動、インデックスとナビゲーションを更新
+- 移行メッセージ: 「フラット構造から包括的構造に移行しました（6機能以上検出）」
+
+---
+
+## 3. インストールとCLI設計の決定
+
+### Session 2025-10-13 (Install Command Clarifications)
+
+#### 決定11: pyproject.tomlでのspecify-cliの依存関係指定方法
+
+**決定**: Git URL直接指定（`dependencies = ["specify-cli @ git+https://github.com/github/spec-kit.git"]`）を使用する。
+
+**根拠**:
+- specify-cliは公開リポジトリであり、Git URL直接指定で問題なくインストール可能
+- PyPIに公開されていないパッケージでも、Git URLを使用すれば依存関係として指定できる
+
+**検討された代替案**:
+- PyPI公開を待つ → 本家spec-kitがPyPI公開していない現状では不適切
+- ローカルパスで指定 → ポータビリティが低下
+
+**トレードオフ**:
+- Git URLによる依存は、PyPIのような信頼性の高いレジストリに比べて可用性が低い
+- GitHubのAPIレート制限により、インストール時に失敗する可能性がある
+
+**実装ノート**:
+- pyproject.toml: `dependencies = ["specify-cli @ git+https://github.com/github/spec-kit.git"]`
+- uvは自動的にGitリポジトリをクローンしてインストール
+
+---
+
+### Session 2025-10-13 (CLI Design Clarifications)
+
+#### 決定12: CLIツールの設計（独立したCLIツール vs spec-kitとの統合）
+
+**決定**: `speckit-docs`コマンドを独立したCLIツールとして実装し、spec-kitの`specify`コマンドとは別に提供する（統合は名目上のみ）。
+
+**根拠**:
+1. **開発スピード優先**: spec-kitリポジトリへのPRは承認が必要で開発スピードが遅くなる可能性
+2. **柔軟なリリースサイクル**: 独立したリポジトリで、spec-kit-docs固有の機能やリリースサイクルを柔軟に管理できる
+3. **コマンド体系の一貫性**: `speckit-docs install`というコマンド名は、spec-kitとの一貫性を保ちつつ、独立性を維持
+
+**検討された代替案**:
+- オプション B: `specify add-docs`のようなサブコマンドとして本家spec-kitに統合 → 開発スピードが遅くなる、spec-kitメンテナーの承認が必要
+- オプション C: 完全に独立したコマンド体系（`spec-docs init`など） → spec-kitとの命名規則の不一貫性
+
+**トレードオフ**:
+- 独立したCLIツールにより、ユーザーは2つのツール（`specify`と`speckit-docs`）をインストールする必要がある
+- spec-kitとの統合が「名目上のみ」であるため、将来的に本家spec-kitと統合する際に移行パスが必要
+
+**実装ノート**:
+- CLIツール名: `speckit-docs`
+- インストールコマンド: `speckit-docs install`（spec-kitの`specify init --here`パターンに従う）
+- スラッシュコマンド名: `/speckit.doc-init`、`/speckit.doc-update`（spec-kitの命名規則に一貫）
+
+---
+
+#### 決定13: 配布方法（PyPI vs GitHub）
+
+**決定**: GitHubのみで配布（`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`）、PyPI公開は将来のフェーズで検討する。
+
+**根拠**:
+1. **MVP段階のシンプルさ**: 開発とリリースプロセスをシンプルに保つ
+2. **spec-kitとの一貫性**: spec-kit自体もGitHubから配布されており、ユーザーは既にこのパターンに慣れている
+3. **保守負担の軽減**: PyPI公開は追加の保守負担（バージョン管理、リリースプロセス、パッケージメタデータ）があり初期段階では不要
+
+**検討された代替案**:
+- PyPIに公開 → MVP段階では過剰、保守負担が増加
+- GitHub Releasesで配布 → ユーザーは手動でダウンロードする必要がある
+
+**トレードオフ**:
+- GitHub配布により、ユーザーは`uv tool install`時にGit URLを指定する必要がある（PyPIより煩雑）
+- PyPI公開していないため、依存関係解決がやや不安定（GitHub APIレート制限）
+
+**実装ノート**:
+- インストールコマンド: `uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`
+- README.mdに明記：「PyPI公開は将来検討」
+
+---
+
+#### 決定14: スラッシュコマンドの生成方法
+
+**決定**: `speckit-docs install`コマンドがPythonパッケージ内のテンプレートファイル（`src/speckit_docs/commands/speckit.doc-init.md`, `speckit.doc-update.md`）をユーザープロジェクトの`.claude/commands/`にコピーする。
+
+**根拠**:
+1. **spec-kitとの一貫性**: `specify init`と同じパターンに従う
+2. **透明性**: ユーザーはコピー後のファイルをカスタマイズ可能
+3. **オフライン動作**: importlib.resourcesでパッケージ内テンプレートにアクセスするため、オフライン環境でも動作
+4. **更新可能性**: `--force`オプションで上書き更新が可能
+
+**検討された代替案**:
+- オプション B: GitHub URLからテンプレートをダウンロード → ネットワーク依存、オフライン環境で動作しない
+- オプション C: テンプレートをプログラム的に生成 → プロンプトの柔軟性が失われる
+
+**トレードオフ**:
+- テンプレートファイルはPythonパッケージに含まれるため、パッケージサイズが若干増加
+- テンプレートの更新は、spec-kit-docs自体の再インストールが必要
+
+**実装ノート**:
+- テンプレート配置: `src/speckit_docs/commands/speckit.doc-init.md`, `speckit.doc-update.md`
+- コピー先: `.claude/commands/speckit.doc-init.md`, `.claude/commands/speckit.doc-update.md`
+- importlib.resources使用: `importlib.resources.files('speckit_docs.commands').joinpath('speckit.doc-init.md').read_text()`
+
+---
+
+#### 決定15: 既存プロジェクトへのインストール（`--here`フラグ）
+
+**決定**: カレントディレクトリに自動的にインストール（`cd my-project && speckit-docs install`）、明示的なディレクトリ指定は不要とする。
+
+**根拠**:
+1. **spec-kitとの一貫性**: spec-kitの`specify init --here`パターンに従う
+2. **シンプルなコマンド**: ユーザーは既にプロジェクトルートにいることが前提
+3. **混乱の回避**: 新しいディレクトリを作成することはなく、常に既存プロジェクトへの追加
+
+**検討された代替案**:
+- `--here`フラグを要求 → spec-kitの最新パターンに従わない
+- ディレクトリ引数を要求（`speckit-docs install /path/to/project`） → コマンドが煩雑
+
+**トレードオフ**:
+- カレントディレクトリがspec-kitプロジェクトでない場合、エラーメッセージを表示する必要がある
+- ユーザーが間違ったディレクトリで実行した場合、意図しない場所にファイルがコピーされる可能性
+
+**実装ノート**:
+- インストール前チェック: `.specify/` と `.claude/` ディレクトリの存在を確認
+- エラーメッセージ: 「spec-kit プロジェクトではありません。最初に 'specify init' を実行してください。」
+
+---
+
+#### 決定16: 既存ファイルの上書き動作
+
+**決定**: インタラクティブ確認（全体）+ --forceで確認スキップとする。
+
+**根拠**:
+1. **spec-kitとの一貫性**: 本家`specify init --here`パターンと一貫
+2. **デフォルトの安全性**: 確認を求めることで、ユーザーのカスタマイズを保護
+3. **自動化対応**: `--force`フラグで、CI/CDなどの自動化時に対応可能
+
+**検討された代替案**:
+- 常に上書き → ユーザーのカスタマイズが失われる
+- 常にエラー → ユーザーが手動で削除する必要がある
+- ファイルごとに確認 → 複数ファイル存在時に煩雑
+
+**トレードオフ**:
+- インタラクティブ確認により、自動化時に`--force`フラグが必須
+- 確認プロンプトのメッセージがユーザーフレンドリーである必要がある
+
+**実装ノート**:
+- typer.confirm()を使用: `typer.confirm("既存のコマンド定義を上書きしますか？", default=False)`
+- `--force`フラグ指定時は確認をスキップ
+
+---
+
+#### 決定17: インストール失敗時の動作
+
+**決定**: ベストエフォート（エラー発生時もそこまでのファイルは残す）とする。
+
+**根拠**:
+1. **spec-kitとの一貫性**: 既存ディレクトリへの追加時は部分的な状態を残す
+2. **リスクの低さ**: spec-kit-docsは既存プロジェクトにファイルを追加するだけなので、プロジェクト全体を壊すリスクは低い
+3. **手動修正可能**: ユーザーが手動で修正可能（失敗したファイルを削除して再実行）
+
+**検討された代替案**:
+- トランザクション型（全成功または全失敗） → MVP段階では実装が複雑で、過剰
+- 失敗時にすべてロールバック → 部分的に成功したファイルも削除され、ユーザーの手間が増加
+
+**トレードオフ**:
+- 部分的な状態が残るため、ユーザーがどのファイルが成功し、どのファイルが失敗したかを把握する必要がある
+- 失敗時のエラーメッセージが明確でなければ、ユーザーが修正方法を理解できない
+
+**実装ノート**:
+- エラー発生時: エラーメッセージを表示し、終了コード 1 を返す
+- 成功したファイルはそのまま残す
+- エラーメッセージ例: 「.specify/scripts/docs/ の作成に失敗しました。既存のファイルが残っています。手動で確認してください。」
+
+---
+
+#### 決定18: アンインストール・アップグレード機能
+
+**決定**: 機能は提供しない（MVP範囲外）とする。
+
+**根拠**:
+1. **spec-kitとの一貫性**: 本家spec-kitもuninstall/upgrade機能を提供していない
+2. **MVPの焦点**: ドキュメント生成であり、ライフサイクル管理は二次的
+3. **手動削除の容易性**: 少数のファイルなので手動削除も容易
+4. **アップグレードの代替**: `speckit-docs install --force`で代替可能
+
+**検討された代替案**:
+- uninstallコマンドを提供 → MVP範囲を超え、開発コストが増加
+- upgradeコマンドを提供 → `install --force`で代替可能
+
+**トレードオフ**:
+- アンインストールは手動削除が必要（`.claude/commands/speckit.doc-*.md`、`.specify/scripts/docs/`を削除）
+- アップグレードは`speckit-docs install --force`を実行する必要がある
+
+**実装ノート**:
+- README.mdに記載：「アンインストールは手動削除、アップグレードは `speckit-docs install --force` で可能」
+- 将来のフェーズで、ユーザーの要望に応じて追加検討
+
+---
+
+## 4. CLIフレームワークとコマンド命名の標準化
+
+### Session 2025-10-13 (CLI Framework Re-evaluation)
+
+#### 決定19: CLIフレームワーク選択の再検討（argparse vs typer）
+
+**決定**: **typerに変更する**。
+
+**根拠**:
+1. **Core Principle I (spec-kit Integration First)への準拠**: 「spec-kitの標準パターンと完全に一貫していなければならない」という憲章要件を満たす
+2. **実質的な追加依存なし**: specify-cli経由で既にtyperに間接依存しているため、新しい外部依存は増えない
+3. **型ヒントのネイティブサポート**: Python 3.11+の型ヒント（`int`, `str`, `bool`等）を直接使用でき、mypy互換（C006準拠）
+4. **DRY原則**: 本家spec-kitのtyperパターン（`typer.confirm()`、`typer.Option()`等）を再利用できる（C012準拠）
+5. **Phase 2計画との整合**: research.mdでPhase 2に計画されている「specify-cliからStepTracker/console再利用」がtyper前提であり、一貫性が保たれる
+
+**検討された代替案**:
+- argparseを使用 → spec-kitとの一貫性が失われる、型ヒントのネイティブサポートがない
+- clickを使用 → typerの基盤であり、typerより低レベルで冗長
+
+**トレードオフ**:
+- typerの依存ツリー（click、rich等）が追加されるが、既にspecify-cli経由で存在するため実質的な増加はない
+- argparseよりも学習コストがやや高い（ただし、本家spec-kitのパターンを再利用できるため軽減）
+
+**実装ノート**:
+- エントリポイント: `src/speckit_docs/cli/main.py`で`typer.Typer()`アプリケーションを定義
+- コマンド定義: `@app.command()`デコレータで`install`コマンドを実装
+- 型ヒント: 関数引数に型ヒントを付け、typerが自動的にCLI引数として認識
+
+**影響範囲**:
+- すべてのCLI関連コード（`cli/main.py`、`cli/install_handler.py`）
+- pyproject.tomlの依存関係（specify-cliは既に存在、typerは自動的に含まれる）
+- README.mdのインストール手順とコマンド例
+
+---
+
+### Session 2025-10-13 (Command Naming & Installation Method)
+
+#### 決定20: コマンド名の標準化（`/doc-init` vs `/speckit.doc-init`）
+
+**決定**: **長い形式（`/speckit.doc-init`、`/speckit.doc-update`）に統一する**。
+
+**根拠**:
+- spec-kitの付属物という扱いをコマンド名に含めることで、spec-kit エコシステムとの統合を明確にする
+- 他のspec-kitコマンド（`/speckit.specify`, `/speckit.plan`）との命名規則の一貫性を保つ
+
+**検討された代替案**:
+- 短い形式（`/doc-init`、`/doc-update`） → spec-kitコマンドとの命名規則が不一貫
+
+**トレードオフ**:
+- コマンド名が長くなり、タイプ量が増加
+- spec-kit固有の接頭辞により、他のドキュメントツールとの混同を避けられる
+
+**実装ノート**:
+- コマンド定義ファイル名: `.claude/commands/speckit.doc-init.md`、`.claude/commands/speckit.doc-update.md`
+- Claude Codeでの認識: `/speckit.doc-init`、`/speckit.doc-update`
+- すべてのドキュメント（README.md、spec.md、plan.md）で長い形式を使用
+
+---
+
+#### 決定21: インストールコマンドの推奨方法（CLIコマンド vs Python API呼び出し）
+
+**決定**: **CLIコマンド（`speckit-docs install`）を推奨する**。
+
+**根拠**:
+1. **仕様との整合**: FR-021a, FR-022, FR-023 が前提としている標準的な方法
+2. **ユーザーフレンドリー**: シンプルで覚えやすい
+3. **spec-kitとの一貫性**: `specify init`パターンと一貫
+4. **Python API呼び出しの位置付け**: アドバンスドユーザー向けのフォールバックとして残す
+
+**検討された代替案**:
+- Python API呼び出しを推奨（`uv run python -m speckit_docs.cli.main install`） → 煩雑でユーザーフレンドリーでない
+
+**トレードオフ**:
+- CLIコマンドは、uvツールとしてインストールされている前提が必要
+- Python API呼び出しは、開発者向けの柔軟性を提供するが、エンドユーザーには推奨しない
+
+**実装ノート**:
+- README.mdで強調：「推奨インストール方法: `speckit-docs install`」
+- Python API呼び出しは、開発者向けドキュメント（CONTRIBUTING.md）に記載
+
+---
+
+## 5. コード品質とアーキテクチャの詳細決定
+
+### Session 2025-10-13 (Code Quality & Architecture Details)
+
+#### 決定22: ruffの設定（デフォルト vs プリセット vs 厳格）
+
+**決定**: **一貫性のあるプリセット** - `pyproject.toml`で`select = ["E", "F", "W", "I"]` + `line-length = 100` + `target-version = "py311"`を指定する。
+
+**根拠**:
+1. **基本ルールの網羅**: エラー（E）、致命的エラー（F）、警告（W）、import順序（I）でツールプロジェクトには十分
+2. **Python標準準拠**: line-length=100はPEP 8の88-100推奨に準拠
+3. **型ヒント互換性**: target-version指定により型ヒント構文の互換性を保証
+4. **過度な厳格さの回避**: docstring必須等の厳格なルールは開発速度を低下させる可能性を回避
+
+**検討された代替案**:
+- デフォルト設定のみ → 一貫性が保証されない、プロジェクトごとに設定が異なる
+- 厳格なルールセット（docstring必須、複雑度チェック等） → MVP段階では過剰、開発速度が低下
+
+**トレードオフ**:
+- 一貫性のあるプリセットにより、すべてのコントリビューターが同じルールに従う
+- 一部の高度なルール（例：複雑度チェック）は含まれず、手動レビューが必要
+
+**実装ノート**:
+- pyproject.toml設定:
+  ```toml
+  [tool.ruff]
+  line-length = 100
+  target-version = "py311"
+
+  [tool.ruff.lint]
+  select = ["E", "F", "W", "I"]
+  ```
+- ローカル実行: `uv run ruff check .`
+- CI/CDパイプラインは構築しない（MVP範囲外）
+
+---
+
+#### 決定23: CI/CD環境でのruffエラー処理
+
+**決定**: **CI/CDパイプラインは構築しない** - ローカル開発環境でのみruffを手動実行する。
+
+**根拠**:
+- MVP段階ではCI/CD構築はスコープ外
+- 開発者がローカルで`uv run ruff check .`を実行して品質を維持
+
+**検討された代替案**:
+- Fail-fast（ruffエラーでビルド失敗） → CI/CDパイプラインがMVP範囲外
+- Warning-only（ruffエラーを警告として表示） → CI/CDパイプラインがMVP範囲外
+
+**トレードオフ**:
+- CI/CDパイプラインがないため、コントリビューターがローカルでruffを実行する責任がある
+- 将来のフェーズでCI/CDを追加する際、設定の移行が必要
+
+**実装ノート**:
+- CONTRIBUTING.mdに記載：「コミット前に `uv run ruff check .` を実行してください」
+- Phase 2以降でGitHub Actionsを追加検討
+
+---
+
+#### 決定24: BaseGenerator抽象クラスのインターフェース
+
+**決定**: **段階的インターフェース** - `initialize()`, `generate_feature_page(feature)`, `update_navigation()`, `validate()`の4メソッドを定義する。
+
+**根拠**:
+1. **単一責任原則**: 各メソッドが明確な役割を持つ
+2. **処理の分離**: initialize→個別ページ生成→ナビゲーション更新→検証と処理が分離され、テスト容易
+3. **将来の拡張性**: Docusaurus等追加時も同じパターンを適用可能
+4. **保守性**: 最小インターフェースより構造化され、詳細インターフェースより保守しやすい
+
+**検討された代替案**:
+- 最小インターフェース（1メソッド：`generate()`） → 各ツールの実装が大きくなり、テストが困難
+- 詳細インターフェース（7-8メソッド） → 過度に細分化され、実装負担が増加
+
+**トレードオフ**:
+- 4メソッドは適度な粒度だが、将来的に新しいステップが必要になった場合、インターフェースの拡張が必要
+- すべてのジェネレータ（Sphinx、MkDocs）が同じ4メソッドを実装する必要がある
+
+**実装ノート**:
+- BaseGeneratorクラス（`generators/base.py`）:
+  ```python
+  from abc import ABC, abstractmethod
+
+  class BaseGenerator(ABC):
+      @abstractmethod
+      def initialize(self) -> None:
+          """ドキュメントプロジェクト初期化と設定ファイル生成"""
+          pass
+
+      @abstractmethod
+      def generate_feature_page(self, feature: Feature) -> None:
+          """単一機能のページ生成"""
+          pass
+
+      @abstractmethod
+      def update_navigation(self) -> None:
+          """目次（toctree/nav）更新"""
+          pass
+
+      @abstractmethod
+      def validate(self) -> bool:
+          """ビルド前検証"""
+          pass
+  ```
+
+---
+
+#### 決定25: specify-cli（本家spec-kit）からの再利用範囲
+
+**決定**: **MVP範囲は最小限** - typerの基本パターン（`typer.confirm()`, `typer.Option()`等）のみ再利用、StepTracker/consoleは将来フェーズとする。
+
+**根拠**:
+1. **MVPの焦点**: ドキュメント生成であり、CLI体験の高度化は二次的
+2. **コード調査コストの回避**: specify-cliコード調査コストをMVPで回避し開発スピード優先
+3. **段階的アプローチ**: Phase 2でStepTracker再利用を計画済み（research.md記載）
+4. **DRY原則の遵守**: typerパターン再利用だけでもC012（一貫性）を満たす
+
+**検討された代替案**:
+- MVP段階でStepTracker/consoleも再利用 → コード調査コストが増加し、MVPのリリースが遅れる
+- typerパターンも独自実装 → DRY原則に違反、spec-kitとの一貫性が失われる
+
+**トレードオフ**:
+- MVP段階ではCLI体験が基本的なものになる（進捗表示なし）
+- Phase 2でStepTrackerを追加する際、既存コードのリファクタリングが必要
+
+**実装ノート**:
+- MVP段階の再利用パターン:
+  - `typer.confirm()`: 上書き確認
+  - `typer.Option()`: コマンドラインオプション定義
+  - `typer.echo()`: メッセージ出力
+- Phase 2でStepTracker/console追加（研究ノート記録）
+
+---
+
+#### 決定26: ログレベルとエラー出力の戦略
+
+**決定**: **構造化ログ** - 標準出力にINFO以上、`--verbose`でDEBUG、`--quiet`でERRORのみを出力する。
+
+**根拠**:
+1. **適切な進捗情報**: ユーザーは通常実行で適切な進捗情報を得られる（「3機能を処理中...」等）
+2. **トラブルシューティング**: `--verbose`フラグで詳細情報取得可能
+3. **自動化対応**: `--quiet`でCIやスクリプト組み込み時にエラーのみ出力
+4. **保守性**: Pythonの標準logging模块を使用し保守性が高い
+5. **spec-kitとの一貫性**: 他のコマンドとの一貫性
+
+**検討された代替案**:
+- エラーのみ → ユーザーが進捗状況を把握できない
+- 詳細ログ（常にDEBUG） → 過度な情報でユーザーが混乱する可能性
+
+**トレードオフ**:
+- `--verbose`フラグのデフォルト値により、トラブルシューティング時に再実行が必要
+- ログメッセージの日本語対応により、国際化が必要な場合に追加作業が発生
+
+**実装ノート**:
+- logging設定（`utils/`モジュール）:
+  ```python
+  import logging
+
+  def setup_logging(verbose: bool = False, quiet: bool = False):
+      level = logging.DEBUG if verbose else (logging.ERROR if quiet else logging.INFO)
+      logging.basicConfig(level=level, format='%(levelname)s: %(message)s')
+  ```
+- ログメッセージ例:
+  - INFO: 「3機能を処理中...」
+  - DEBUG: 「spec.md解析: /path/to/specs/001-user-auth/spec.md」
+  - ERROR: 「ドキュメント初期化に失敗しました: docs/ ディレクトリが既に存在します」
+
+---
+
+## 6. インストール方法の標準化
+
+### Session 2025-10-14 (Installation Method Standardization)
+
+#### 決定27: インストール方法の標準化（`uv tool install` vs `uv pip install -e`）
+
+**決定**: **`uv tool install`方式を標準インストール方法とする** - `uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`をエンドユーザー向けの唯一の推奨方法として記載する。
+
+**根拠**:
+1. **Core Principle I (spec-kit Integration First)への準拠**: spec-kitと同じインストールパターンでユーザー体験を統一
+2. **ツール分離**: `uv tool`は独立したCLIツールのインストール専用で、プロジェクト環境を汚染しない
+3. **シンプルな依存関係管理**: グローバルツールとして管理され、複数プロジェクトから利用可能
+4. **本家spec-kitとの対称性**: `uv tool install specify-cli`と`uv tool install speckit-docs`で対になる
+
+**検討された代替案**:
+- `uv pip install -e .`（編集可能インストール）を推奨 → 開発者向けの方法であり、エンドユーザーには煩雑
+
+**トレードオフ**:
+- `uv tool install`により、ツールは独立した仮想環境にインストールされ、プロジェクトの依存関係と干渉しない
+- 開発者向けのコントリビューション時には`uv pip install -e .`も引き続きサポートするが、README.mdでは言及しない
+
+**実装ノート**:
+- README.mdで強調：「推奨インストール方法: `uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`」
+- 開発者向けのコントリビューションガイド（CONTRIBUTING.md）では`uv pip install -e .`を記載
+- インストール後の確認: `speckit-docs --version`
+
+---
+
+## まとめ
+
+この研究ドキュメントは、spec-kit-docs機能開発における27の主要な技術的決定を記録しました。すべての決定は、**Constitution（憲章）のCore PrincipleとCritical Rules**、特に**Core Principle I: spec-kit Integration First**と**C012: DRY Principle**に基づいて行われました。
+
+### 主要な決定のカテゴリ:
+
+1. **ドキュメント構造とファイル形式** (決定1-5): Markdown形式統一、機能数による構造自動決定、Git diff変更検出
+2. **アーキテクチャと責務分担** (決定6-10): 非対話的実行、AIエージェントとスクリプトの責務分離、自動構造移行
+3. **インストールとCLI設計** (決定11-18): Git URL依存、独立したCLIツール、テンプレートコピー方式、ベストエフォート動作
+4. **CLIフレームワークとコマンド命名** (決定19-21): typer採用、`/speckit.*`命名規則、CLIコマンド推奨
+5. **コード品質とアーキテクチャ** (決定22-26): ruffプリセット、BaseGenerator 4メソッド、typerパターン再利用、構造化ログ
+6. **インストール方法の標準化** (決定27): `uv tool install`方式の標準化
+
+これらの決定により、spec-kit-docsはspec-kitエコシステムとの完全な一貫性を保ちながら、拡張性、保守性、テスト容易性を実現します。
+
+---
+
+**Version**: 1.0.0 | **Last Updated**: 2025-10-14 | **Contributor**: AI Agent (Claude Code)

@@ -1,482 +1,803 @@
-# Data Model: spec-kit-docs - AI駆動型ドキュメント生成システム
+# データモデル: spec-kit-docs - AI駆動型ドキュメント生成システム
 
-**Feature**: spec-kit-docs
-**Date**: 2025-10-12
-**Phase**: 1 - Data Model Definition
-**Source**: [spec.md](spec.md) | [research.md](research.md)
+**Branch**: `001-draft-init-spec` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)
 
-## Overview
+このドキュメントでは、spec-kit-docsプロジェクトで使用されるすべての主要エンティティのデータモデルを定義します。すべてのエンティティはPython 3.11+の型ヒントを使用し、不変性（immutability）を保証するために`@dataclass(frozen=True)`で実装されます（CLAUDE.md C006準拠）。
 
-このドキュメントは、spec-kit-docs実装における主要なエンティティとその関係を定義します。実装言語に依存しない論理モデルとして記述し、Pythonでの実装時にクラス、データクラス、または辞書として具体化されます。
+## 設計原則
 
-## Core Entities
+### 不変性（Immutability）
+すべてのエンティティは`@dataclass(frozen=True)`で定義され、一度作成されたインスタンスは変更できません。これにより：
+- 予測可能な動作を保証
+- 並列処理での安全性を確保
+- デバッグとテストを容易化
 
-### 1. Feature
+### 型安全性（Type Safety）
+すべてのフィールドは明示的な型ヒントを持ち、mypy互換です。Optionalフィールドは`Optional[T]`または`T | None`（Python 3.10+）で表現されます。
 
-spec-kitプロジェクトにおける1つの機能仕様を表現します。`.specify/specs/###-feature-name/`ディレクトリに対応します。
+### 検証ルール
+`__post_init__`メソッドで不正な状態を検出し、`ValueError`を発生させます。すべてのエラーは`SpecKitDocsError`例外（またはそのサブクラス）として伝播されます。
 
-**Attributes**:
-- `id` (str): 機能番号（例：`"001"`、`"002"`）
-- `name` (str): 機能名（例：`"user-auth"`、`"draft-init-spec"`）
-- `directory_path` (Path): 機能ディレクトリへの絶対パス（例：`.specify/specs/001-user-auth/`）
-- `spec_file` (Path | None): spec.mdファイルへのパス（必須）
-- `plan_file` (Path | None): plan.mdファイルへのパス（オプション）
-- `tasks_file` (Path | None): tasks.mdファイルへのパス（オプション）
-- `status` (FeatureStatus): 機能のステータス（enum: `DRAFT`, `PLANNED`, `IN_PROGRESS`, `COMPLETED`）
-- `priority` (str | None): 優先度（例：`"P1"`, `"P2"`, `"P3"`）- spec.md内のメタデータから抽出
-- `metadata` (dict): その他のメタデータ（作成日、更新日、タグ等）
+## エンティティ定義
 
-**Relationships**:
-- `documents`: Document[] - この機能に含まれるドキュメント（spec.md、plan.md、tasks.md）
+このセクションでは、spec.md「主要エンティティ」セクション(line 320-330)で定義されたすべてのエンティティを詳細に記述します。
 
-**Validation Rules**:
-- `spec_file`は必須（存在しない場合はFeatureとして認識しない - FR-001）
-- `directory_path`は`.specify/specs/`配下である必要がある
-- `id`は3桁の数字である必要がある
+### SpecKitProject
 
-**Source Requirements**: FR-001, FR-002, FR-004
+spec-kitプロジェクト全体を表すエンティティです。ルートディレクトリ、`.specify/`設定、`specs/`ディレクトリを含みます。
 
----
+```python
+from dataclasses import dataclass
+from pathlib import Path
 
-### 2. Document
+@dataclass(frozen=True)
+class SpecKitProject:
+    """spec-kitプロジェクトを表すエンティティ"""
 
-Feature内の個別Markdownドキュメント（spec.md、plan.md、tasks.md）を表現します。
+    root_dir: Path
+    """プロジェクトルートディレクトリの絶対パス"""
 
-**Attributes**:
-- `file_path` (Path): ドキュメントファイルへの絶対パス
-- `type` (DocumentType): ドキュメント種別（enum: `SPEC`, `PLAN`, `TASKS`）
-- `content` (str): ドキュメントの生コンテンツ（Markdown）
-- `sections` (List[Section]): 解析されたセクションのリスト
-- `last_modified` (datetime): ファイルの最終更新日時
-- `git_status` (GitStatus): Gitステータス（enum: `UNTRACKED`, `MODIFIED`, `STAGED`, `COMMITTED`）
+    specify_dir: Path
+    """.specify/ディレクトリの絶対パス（root_dir/.specify/）"""
 
-**Relationships**:
-- `feature`: Feature - 所属する機能
+    specs_dir: Path
+    """specs/ディレクトリの絶対パス（root_dir/specs/）"""
 
-**Methods**:
-- `parse()`: Markdown内容を解析して`sections`を生成
-- `extract_metadata()`: フロントマターまたはメタデータセクションから情報を抽出
-- `is_changed(since: datetime)`: 指定日時以降に変更されたか判定
+    git_repo: bool
+    """Gitリポジトリかどうか"""
 
-**Source Requirements**: FR-002, FR-012
-
----
-
-### 3. Section
-
-Document内の1つのMarkdownセクション（見出しとその配下の内容）を表現します。
-
-**Attributes**:
-- `title` (str): セクションタイトル（見出しテキスト）
-- `level` (int): 見出しレベル（1-6、`#`の数）
-- `content` (str): セクション本体のMarkdown（見出し除く）
-- `line_start` (int): ドキュメント内の開始行番号
-- `line_end` (int): ドキュメント内の終了行番号
-- `subsections` (List[Section]): 子セクション（再帰構造）
-
-**Methods**:
-- `to_sphinx_md()`: Sphinx MyST Markdown形式に変換（必要に応じてディレクティブ追加）
-- `to_mkdocs_md()`: MkDocs Markdown形式に変換
-- `extract_code_blocks()`: コードブロックのリストを抽出
-
-**Source Requirements**: FR-008, FR-013
-
----
-
-### 4. DocumentStructure
-
-生成するドキュメントサイトの全体構造を表現します。機能数に応じて動的に決定されます（research.md Decision 4）。
-
-**Attributes**:
-- `type` (StructureType): 構造タイプ（enum: `FLAT`, `COMPREHENSIVE`）
-- `root_dir` (Path): ドキュメントルートディレクトリ（`docs/`）
-- `directories` (List[str]): 生成するディレクトリのリスト
-- `index_file` (Path): インデックスファイルのパス（`index.md`）
-
-**Flat Structure** (5機能以下):
-```
-docs/
-├── index.md
-├── feature-a.md
-├── feature-b.md
-└── ...
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not self.root_dir.is_dir():
+            raise ValueError(f"Project root directory does not exist: {self.root_dir}")
+        if not self.specify_dir.is_dir():
+            raise ValueError(f".specify/ directory does not exist: {self.specify_dir}")
+        if not self.specs_dir.is_dir():
+            raise ValueError(f"specs/ directory does not exist: {self.specs_dir}")
 ```
 
-**Comprehensive Structure** (6機能以上):
+**関係性**:
+- 1つのSpecKitProjectは0個以上のFeatureを持つ（`specs/`ディレクトリ内）
+- 1つのSpecKitProjectは0または1つのDocumentationSiteを持つ（`docs/`ディレクトリ）
+
+**検証ルール**:
+- `root_dir`、`specify_dir`、`specs_dir`は実際に存在するディレクトリでなければならない（FR-001）
+- `specify_dir`は`root_dir/.specify/`と一致しなければならない
+- `specs_dir`は`root_dir/specs/`と一致しなければならない
+
+**対応する要件**: FR-001, FR-021a
+
+---
+
+### Feature
+
+単一の機能仕様を表すエンティティです（例：`001-user-auth`）。markdownファイルのコレクション、コントラクト、実装ステータスを含みます。
+
+```python
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+from enum import Enum
+
+@dataclass(frozen=True)
+class Feature:
+    """spec-kit機能仕様を表すエンティティ"""
+
+    id: str
+    """機能ID（ディレクトリ名、例：001-user-auth）"""
+
+    number: int
+    """機能番号（例：001 → 1）、時系列順を表す"""
+
+    name: str
+    """機能名（例：user-auth）、番号を除いた説明的な名前"""
+
+    directory: Path
+    """機能ディレクトリの絶対パス（specs/001-user-auth/）"""
+
+    spec_file: Optional[Path]
+    """spec.mdファイルの絶対パス（必須）"""
+
+    plan_file: Optional[Path]
+    """plan.mdファイルの絶対パス（任意）"""
+
+    tasks_file: Optional[Path]
+    """tasks.mdファイルの絶対パス（任意）"""
+
+    data_model_file: Optional[Path]
+    """data-model.mdファイルの絶対パス（任意、P2で使用）"""
+
+    contracts_dir: Optional[Path]
+    """contracts/ディレクトリの絶対パス（任意、P2で使用）"""
+
+    status: "FeatureStatus"
+    """実装ステータス（P3で使用、MVP段階ではPLANNED固定）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not self.directory.is_dir():
+            raise ValueError(f"Feature directory does not exist: {self.directory}")
+        if self.spec_file is None or not self.spec_file.is_file():
+            raise ValueError(f"spec.md is required but not found: {self.directory}/spec.md")
+        if self.number <= 0:
+            raise ValueError(f"Feature number must be positive: {self.number}")
+
+    @property
+    def has_plan(self) -> bool:
+        """plan.mdが存在するか"""
+        return self.plan_file is not None and self.plan_file.is_file()
+
+    @property
+    def has_tasks(self) -> bool:
+        """tasks.mdが存在するか"""
+        return self.tasks_file is not None and self.tasks_file.is_file()
 ```
-docs/
-├── index.md
-├── features/
-│   ├── feature-a.md
-│   ├── feature-b.md
-│   └── ...
-├── guides/
-│   └── getting-started.md
-├── api/
-│   └── reference.md
-└── architecture/
-    └── overview.md
+
+**関係性**:
+- 1つのFeatureは1つのSpecKitProjectに属する
+- 1つのFeatureは0個以上のEntityを定義する（data-model.md内、P2）
+- 1つのFeatureは0個以上のAPIEndpointを定義する（contracts/内、P2）
+
+**検証ルール**:
+- `directory`は実際に存在するディレクトリでなければならない
+- `spec_file`は必須で、存在しなければならない（FR-011）
+- `number`は1以上でなければならない
+- `id`は「{number}-{name}」形式（例：001-user-auth）でなければならない
+
+**状態遷移** (P3):
+```
+PLANNED → IN_PROGRESS → IMPLEMENTED
+         ↓
+       ABANDONED
 ```
 
-**Methods**:
-- `determine_structure(feature_count: int) -> StructureType`: 機能数から構造を決定
-- `get_feature_path(feature_name: str) -> Path`: 機能ドキュメントの出力パスを返す
-
-**Source Requirements**: FR-005, Clarifications (5機能閾値)
+**対応する要件**: FR-011, FR-024
 
 ---
 
-### 5. GeneratorConfig
+### Entity
 
-ドキュメント生成ツール（Sphinx/MkDocs）の設定を表現します。
+data-model.mdファイルから抽出されたデータモデルエンティティを表します（例：User、Task）。フィールド、タイプ、バージョン履歴を含みます（P2機能）。
 
-**Attributes**:
-- `tool` (GeneratorTool): 使用するツール（enum: `SPHINX`, `MKDOCS`）
-- `project_name` (str): プロジェクト名
-- `author` (str): 著者名
-- `version` (str): バージョン番号（例：`"0.1.0"`）
-- `language` (str): ドキュメント言語（デフォルト: `"ja"`）
-- `theme` (str): 使用するテーマ
-- `extensions` (List[str]): 拡張機能リスト（Sphinxの場合）
-- `plugins` (List[str]): プラグインリスト（MkDocsの場合）
-- `custom_settings` (dict): カスタム設定（ツール固有）
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
 
-**Sphinx-Specific**:
-- `extensions`: `['myst_parser', 'sphinx.ext.autodoc', ...]`（FR-005a）
-- `source_suffix`: `{'.md': 'markdown', '.rst': 'restructuredtext'}`
-- `myst_enable_extensions`: `['colon_fence', 'deflist', 'tasklist', 'attrs_inline']`
+@dataclass(frozen=True)
+class EntityField:
+    """エンティティのフィールド定義"""
 
-**MkDocs-Specific**:
-- `theme`: `'material'`（デフォルト）
-- `plugins`: `['search', 'awesome-pages']`
+    name: str
+    """フィールド名（例：email）"""
 
-**Methods**:
-- `to_sphinx_conf()`: Sphinx `conf.py`の内容を生成（Jinja2テンプレート経由）
-- `to_mkdocs_yaml()`: MkDocs `mkdocs.yml`の内容を生成（Jinja2テンプレート経由）
+    type_hint: str
+    """型ヒント（例：str、int、Optional[str]）"""
 
-**Source Requirements**: FR-005, FR-005a, FR-006, FR-007
+    description: Optional[str] = None
+    """フィールドの説明（任意）"""
 
----
+    introduced_in: Optional[int] = None
+    """フィールドを導入した機能番号（P2、統合時に設定）"""
 
-### 6. Generator (Abstract Interface)
+    modified_in: Optional[List[int]] = None
+    """フィールドを変更した機能番号のリスト（P2、統合時に設定）"""
 
-ドキュメント生成を実行する抽象インターフェース。Strategy Patternの基底クラス（research.md Decision 3）。
+@dataclass(frozen=True)
+class Entity:
+    """data-model.mdから抽出されたエンティティ"""
 
-**Methods** (abstract):
-- `init_project(config: GeneratorConfig, structure: DocumentStructure) -> None`: プロジェクト初期化
-- `update_docs(features: List[Feature], incremental: bool = True) -> None`: ドキュメント更新
-- `build_docs() -> BuildResult`: ドキュメントビルド実行
-- `validate_project() -> ValidationResult`: プロジェクト構造検証
+    name: str
+    """エンティティ名（例：User、Task）"""
 
-**Implementations**:
-- `SphinxGenerator`: Sphinx用の実装（Markdown + myst-parser）
-- `MkDocsGenerator`: MkDocs用の実装
+    fields: List[EntityField]
+    """エンティティのフィールドリスト"""
 
-**Source Requirements**: FR-005, FR-013, FR-018, research.md Decision 3
+    description: Optional[str] = None
+    """エンティティの説明（任意）"""
 
----
+    introduced_in: int
+    """エンティティを導入した機能番号"""
 
-### 7. SphinxGenerator (Concrete Implementation)
+    is_enum: bool = False
+    """列挙型かどうか"""
 
-Sphinx + myst-parserを使用したドキュメント生成実装。
+    enum_values: Optional[List[str]] = None
+    """列挙型の値リスト（is_enum=Trueの場合）"""
 
-**Attributes**:
-- `config` (GeneratorConfig): Sphinx設定
-- `structure` (DocumentStructure): ドキュメント構造
-- `template_dir` (Path): Jinja2テンプレートディレクトリ（`templates/sphinx/`）
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not self.name:
+            raise ValueError("Entity name cannot be empty")
+        if self.is_enum and not self.enum_values:
+            raise ValueError(f"Enum entity {self.name} must have enum_values")
+        if not self.is_enum and len(self.fields) == 0:
+            raise ValueError(f"Non-enum entity {self.name} must have at least one field")
+```
 
-**Methods**:
-- `init_project()`: `conf.py`, `index.md`, `Makefile`, `make.bat`を生成（FR-005）
-- `update_docs()`: 各Featureから`.md`ファイルを生成し、`index.md`のtoctreeを更新（FR-013）
-- `build_docs()`: `make html`を実行してHTMLを生成（FR-018）
-- `validate_project()`: `conf.py`の存在、myst-parser設定を検証
+**関係性**:
+- 1つのEntityは1つのFeatureで導入される
+- 1つのEntityは複数のFeatureで変更される可能性がある（P2の統合機能）
+- SynthesisResultは複数のEntityを含む（P2）
 
-**Specific Logic**:
-- FR-005a: `conf.py`にmyst-parser設定を含める
-- FR-008: セクション階層をMarkdown見出しレベル（`#`, `##`, `###`）に変換
-- FR-013: ファイル命名規則（`001-user-auth` → `user-auth.md`）
+**検証ルール**:
+- `name`は空文字列ではいけない
+- `is_enum=True`の場合、`enum_values`は必須で、1つ以上の値を持つ
+- `is_enum=False`の場合、`fields`は1つ以上のフィールドを持つ
 
-**Source Requirements**: FR-005, FR-005a, FR-008, FR-013, FR-018
-
----
-
-### 8. MkDocsGenerator (Concrete Implementation)
-
-MkDocsを使用したドキュメント生成実装。
-
-**Attributes**:
-- `config` (GeneratorConfig): MkDocs設定
-- `structure` (DocumentStructure): ドキュメント構造
-- `template_dir` (Path): Jinja2テンプレートディレクトリ（`templates/mkdocs/`）
-
-**Methods**:
-- `init_project()`: `mkdocs.yml`と`docs/index.md`を生成（FR-006）
-- `update_docs()`: 各Featureから`.md`ファイルを生成し、`mkdocs.yml`のnavを更新（FR-014）
-- `build_docs()`: `mkdocs build`を実行してHTMLを生成（FR-019）
-- `validate_project()`: `mkdocs.yml`の存在を検証
-
-**Source Requirements**: FR-006, FR-014, FR-019
+**対応する要件**: FR-025（P2）
 
 ---
 
-### 9. ChangeDetector
+### APIEndpoint
 
-Git diffを使用して変更されたファイルを検出します（research.md Decision 2）。
+contracts/ディレクトリから抽出されたAPIエンドポイント定義を表します。メソッド、パス、パラメータ、バージョン履歴を含みます（P2機能）。
 
-**Attributes**:
-- `repo` (GitRepository): GitPythonのリポジトリオブジェクト
-- `base_ref` (str): 比較基準（デフォルト: `"HEAD"`）
+```python
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+from enum import Enum
 
-**Methods**:
-- `get_changed_features() -> List[Feature]`: 変更された機能のリストを返す
-- `is_file_changed(file_path: Path) -> bool`: 特定ファイルが変更されたか判定
-- `get_diff_stats() -> DiffStats`: 変更統計（追加行数、削除行数等）
+class HTTPMethod(Enum):
+    """HTTPメソッド"""
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    PATCH = "PATCH"
+    DELETE = "DELETE"
 
-**Logic**:
-- `git diff --name-only HEAD~1 HEAD`で変更ファイルを取得
-- `.specify/specs/`配下の変更のみをフィルタリング
-- 該当するFeatureオブジェクトを返す
+@dataclass(frozen=True)
+class APIParameter:
+    """APIパラメータ定義"""
 
-**Source Requirements**: FR-010, research.md Decision 2
+    name: str
+    """パラメータ名"""
+
+    type_hint: str
+    """型ヒント（例：str、int）"""
+
+    location: str
+    """パラメータの場所（path、query、body、header）"""
+
+    required: bool = True
+    """必須かどうか"""
+
+    description: Optional[str] = None
+    """パラメータの説明（任意）"""
+
+@dataclass(frozen=True)
+class APIEndpoint:
+    """contracts/から抽出されたAPIエンドポイント"""
+
+    method: HTTPMethod
+    """HTTPメソッド（GET、POST等）"""
+
+    path: str
+    """エンドポイントパス（例：/users/{id}）"""
+
+    summary: Optional[str] = None
+    """エンドポイントの概要（任意）"""
+
+    parameters: List[APIParameter] = field(default_factory=list)
+    """パラメータリスト"""
+
+    request_body: Optional[str] = None
+    """リクエストボディの型（任意）"""
+
+    response_type: Optional[str] = None
+    """レスポンスの型（任意）"""
+
+    introduced_in: int = 0
+    """エンドポイントを導入した機能番号（P2）"""
+
+    modified_in: Optional[List[int]] = None
+    """エンドポイントを変更した機能番号のリスト（P2）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not self.path:
+            raise ValueError("API endpoint path cannot be empty")
+        if not self.path.startswith("/"):
+            raise ValueError(f"API endpoint path must start with '/': {self.path}")
+
+    @property
+    def endpoint_id(self) -> str:
+        """エンドポイントの一意識別子（例：GET /users/{id}）"""
+        return f"{self.method.value} {self.path}"
+```
+
+**関係性**:
+- 1つのAPIEndpointは1つのFeatureで導入される
+- 1つのAPIEndpointは複数のFeatureで変更される可能性がある（P2の統合機能）
+- SynthesisResultは複数のAPIEndpointを含む（P2）
+
+**検証ルール**:
+- `path`は空文字列ではいけない
+- `path`は`/`で始まらなければならない
+- `method`は有効なHTTPMethodでなければならない
+
+**対応する要件**: FR-026（P2）
 
 ---
 
-### 10. MarkdownParser
+### DocumentationSite
 
-Markdownファイルを解析してSectionツリーを生成します（research.md Decision 5）。
+生成されたドキュメントサイトの構造を表します。ページ、ナビゲーション、アセットを含みます。
 
-**Attributes**:
-- `markdown_it` (MarkdownIt): markdown-it-pyのパーサーインスタンス
-- `enable_myst` (bool): MyST構文のサポート有効化（デフォルト: True）
+```python
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
+from enum import Enum
 
-**Methods**:
-- `parse(content: str) -> List[Section]`: Markdownをセクションツリーに解析
-- `extract_headings(content: str) -> List[Heading]`: 見出しのリストを抽出
-- `extract_code_blocks(content: str) -> List[CodeBlock]`: コードブロックを抽出
-- `extract_metadata(content: str) -> dict`: フロントマターまたはメタデータセクションを抽出
+class DocToolType(Enum):
+    """ドキュメントツールの種類"""
+    SPHINX = "sphinx"
+    MKDOCS = "mkdocs"
 
-**Supported Syntax**:
-- CommonMark標準構文
-- MyST Markdownディレクティブ（`` ```{note}``, `` ```{warning}``等）
-- フロントマター（YAML）
+class StructureType(Enum):
+    """ドキュメント構造の種類"""
+    FLAT = "flat"  # 5機能以下
+    COMPREHENSIVE = "comprehensive"  # 6機能以上
 
-**Source Requirements**: FR-008, FR-012, research.md Decision 5
+@dataclass(frozen=True)
+class DocumentationSite:
+    """生成されたドキュメントサイト"""
+
+    root_dir: Path
+    """ドキュメントルートディレクトリ（例：{project}/docs/）"""
+
+    tool_type: DocToolType
+    """使用するドキュメントツール（Sphinx/MkDocs）"""
+
+    structure_type: StructureType
+    """ドキュメント構造（フラット/包括的）"""
+
+    project_name: str
+    """プロジェクト名"""
+
+    author: Optional[str] = None
+    """著者名（Sphinx用）"""
+
+    version: Optional[str] = None
+    """バージョン（Sphinx用）"""
+
+    language: str = "ja"
+    """言語（Sphinx用、デフォルト：日本語）"""
+
+    site_name: Optional[str] = None
+    """サイト名（MkDocs用）"""
+
+    repo_url: Optional[str] = None
+    """リポジトリURL（MkDocs用）"""
+
+    feature_pages: List[Path] = field(default_factory=list)
+    """生成された機能ページのパスリスト"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not self.root_dir.is_dir():
+            raise ValueError(f"Documentation root directory does not exist: {self.root_dir}")
+        if not self.project_name:
+            raise ValueError("Project name cannot be empty")
+
+        # Sphinx特有の検証
+        if self.tool_type == DocToolType.SPHINX:
+            conf_py = self.root_dir / "conf.py"
+            if not conf_py.is_file():
+                raise ValueError(f"Sphinx conf.py not found: {conf_py}")
+
+        # MkDocs特有の検証
+        if self.tool_type == DocToolType.MKDOCS:
+            mkdocs_yml = self.root_dir / "mkdocs.yml"
+            if not mkdocs_yml.is_file():
+                raise ValueError(f"MkDocs mkdocs.yml not found: {mkdocs_yml}")
+
+    @property
+    def features_dir(self) -> Optional[Path]:
+        """機能ページディレクトリ（包括的構造の場合のみ）"""
+        if self.structure_type == StructureType.COMPREHENSIVE:
+            return self.root_dir / "features"
+        return None
+```
+
+**関係性**:
+- 1つのDocumentationSiteは1つのSpecKitProjectに属する
+- 1つのDocumentationSiteは複数のFeatureページを含む
+
+**検証ルール**:
+- `root_dir`は実際に存在するディレクトリでなければならない（FR-010）
+- `project_name`は空文字列ではいけない
+- Sphinxの場合、`conf.py`が存在しなければならない
+- MkDocsの場合、`mkdocs.yml`が存在しなければならない
+
+**状態遷移**:
+```
+FLAT (5機能以下) → COMPREHENSIVE (6機能以上)
+```
+※ 逆方向の遷移（COMPREHENSIVE → FLAT）は発生しない（FR-019b）
+
+**対応する要件**: FR-005, FR-006, FR-010, FR-019a, FR-019b
 
 ---
 
-### 11. BuildResult
+### Audience
 
-ドキュメントビルドの結果を表現します。
+ターゲットオーディエンス（関連するコンテンツフィルタリングルールを含む）を表す列挙型です（P3機能）。
 
-**Attributes**:
-- `success` (bool): ビルド成功/失敗
-- `output_dir` (Path): 生成されたHTMLの出力先（Sphinx: `_build/html/`, MkDocs: `site/`）
-- `warnings` (List[str]): ビルド警告のリスト
-- `errors` (List[str]): ビルドエラーのリスト
-- `build_time` (float): ビルド時間（秒）
-- `file_count` (int): 生成されたHTMLファイル数
+```python
+from enum import Enum
+from dataclasses import dataclass
+from typing import Set
 
-**Methods**:
-- `is_valid() -> bool`: エラーなし、かつ警告が閾値以下か判定
-- `get_summary() -> str`: ビルド結果のサマリー文字列を生成
+class AudienceType(Enum):
+    """ターゲットオーディエンスの種類"""
+    END_USER = "enduser"      # エンドユーザー向け（機能と使用法のみ）
+    DEVELOPER = "developer"   # 開発者向け（API とアーキテクチャ）
+    CONTRIBUTOR = "contributor"  # コントリビューター向け（すべて）
 
-**Source Requirements**: FR-018, FR-019, SC-001
+@dataclass(frozen=True)
+class Audience:
+    """ターゲットオーディエンスの定義（P3）"""
+
+    type: AudienceType
+    """オーディエンスの種類"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not isinstance(self.type, AudienceType):
+            raise ValueError(f"Invalid audience type: {self.type}")
+
+    @property
+    def include_spec(self) -> bool:
+        """spec.mdを含めるか"""
+        return True  # すべてのオーディエンスで含める
+
+    @property
+    def include_plan(self) -> bool:
+        """plan.mdを含めるか"""
+        return self.type in [AudienceType.DEVELOPER, AudienceType.CONTRIBUTOR]
+
+    @property
+    def include_tasks(self) -> bool:
+        """tasks.mdを含めるか"""
+        return self.type == AudienceType.CONTRIBUTOR
+
+    @property
+    def include_data_model(self) -> bool:
+        """data-model.mdを含めるか"""
+        return self.type in [AudienceType.DEVELOPER, AudienceType.CONTRIBUTOR]
+
+    @property
+    def include_contracts(self) -> bool:
+        """contracts/を含めるか"""
+        return self.type in [AudienceType.DEVELOPER, AudienceType.CONTRIBUTOR]
+
+    @property
+    def include_in_progress_features(self) -> bool:
+        """進行中の機能を含めるか（FR-029、P3）"""
+        return self.type in [AudienceType.DEVELOPER, AudienceType.CONTRIBUTOR]
+```
+
+**関係性**:
+- Audienceは生成されるドキュメントのフィルタリングルールを定義する（P3）
+
+**検証ルール**:
+- `type`は有効なAudienceTypeでなければならない
+
+**対応する要件**: FR-029（P3）
 
 ---
 
-### 12. ValidationResult
+### SynthesisResult
 
-プロジェクト検証の結果を表現します。
+機能間でマージした後のエンティティとAPIの統合ビューを表します（P2機能）。
 
-**Attributes**:
-- `is_valid` (bool): 検証成功/失敗
-- `errors` (List[ValidationError]): 検証エラーのリスト
-- `warnings` (List[ValidationWarning]): 検証警告のリスト
-- `checked_items` (List[str]): チェックした項目のリスト
+```python
+from dataclasses import dataclass, field
+from typing import Dict, List
 
-**ValidationError**:
-- `message` (str): エラーメッセージ
-- `suggestion` (str): 解決方法の提案（research.md Decision 8）
-- `file_path` (Path | None): 関連ファイルパス
+@dataclass(frozen=True)
+class SynthesisResult:
+    """機能間でマージされた統合ビュー（P2）"""
 
-**Source Requirements**: FR-033, research.md Decision 8
+    entities: Dict[str, Entity]
+    """統合されたエンティティ（エンティティ名 → Entity）"""
+
+    api_endpoints: Dict[str, APIEndpoint]
+    """統合されたAPIエンドポイント（endpoint_id → APIEndpoint）"""
+
+    conflicts: List[str] = field(default_factory=list)
+    """検出された競合のリスト（エラーメッセージ）"""
+
+    breaking_changes: List[str] = field(default_factory=list)
+    """検出された破壊的変更のリスト（警告メッセージ）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        # 競合が検出された場合は警告（エラーではない）
+        if self.conflicts:
+            # ログに警告を出力（実装時にlogging使用）
+            pass
+```
+
+**関係性**:
+- 1つのSynthesisResultは複数のEntityを含む
+- 1つのSynthesisResultは複数のAPIEndpointを含む
+- 競合や破壊的変更は解決戦略（最新優先）によって処理される（FR-027、P2）
+
+**検証ルール**:
+- `entities`と`api_endpoints`は空の辞書でも有効（機能がエンティティやAPIを定義していない場合）
+- `conflicts`が存在する場合、ログに警告を出力する
+
+**対応する要件**: FR-025, FR-026, FR-027, FR-028（P2）
 
 ---
-
-## Enumerations
 
 ### FeatureStatus
+
+gitブランチステータスから派生した実装状態を表す列挙型です（P3機能）。
+
 ```python
-DRAFT       # spec.mdのみ存在
-PLANNED     # plan.mdが存在
-IN_PROGRESS # tasks.mdが存在、一部タスク完了
-COMPLETED   # 全タスク完了
+from enum import Enum
+
+class FeatureStatus(Enum):
+    """機能の実装ステータス（P3、FR-030）"""
+
+    IMPLEMENTED = "implemented"
+    """mainブランチにマージ済み"""
+
+    IN_PROGRESS = "in_progress"
+    """機能ブランチとして存在"""
+
+    PLANNED = "planned"
+    """ブランチが存在しない（仕様のみ）"""
+
+    ABANDONED = "abandoned"
+    """明示的に放棄された（将来の拡張）"""
 ```
 
-### DocumentType
+**状態遷移**:
+```
+PLANNED → IN_PROGRESS → IMPLEMENTED
+         ↓
+       ABANDONED
+```
+
+**検証ルール**:
+- gitブランチの状態から自動的に決定される（P3）
+- MVP段階ではすべての機能が`PLANNED`固定
+
+**対応する要件**: FR-030（P3）
+
+---
+
+### BaseGenerator
+
+ドキュメントジェネレーターの抽象ベースクラスです。SphinxGeneratorとMkDocsGeneratorがこのインターフェースを実装します。
+
 ```python
-SPEC   # spec.md
-PLAN   # plan.md
-TASKS  # tasks.md
+from abc import ABC, abstractmethod
+from pathlib import Path
+
+class BaseGenerator(ABC):
+    """ドキュメントジェネレータの抽象ベースクラス（Strategy Pattern）"""
+
+    @abstractmethod
+    def initialize(
+        self,
+        project: SpecKitProject,
+        doc_site: DocumentationSite,
+        force: bool = False
+    ) -> None:
+        """
+        ドキュメントプロジェクトの初期化と設定ファイル生成
+
+        Args:
+            project: spec-kitプロジェクト
+            doc_site: ドキュメントサイト設定
+            force: 既存ディレクトリを上書きするか
+
+        Raises:
+            SpecKitDocsError: 初期化失敗時
+        """
+        pass
+
+    @abstractmethod
+    def generate_feature_page(self, feature: Feature) -> Path:
+        """
+        単一機能のページ生成
+
+        Args:
+            feature: 機能エンティティ
+
+        Returns:
+            生成されたページファイルの絶対パス
+
+        Raises:
+            SpecKitDocsError: ページ生成失敗時
+        """
+        pass
+
+    @abstractmethod
+    def update_navigation(self, feature_pages: List[Path]) -> None:
+        """
+        目次（toctree/nav）の更新
+
+        Args:
+            feature_pages: 生成された機能ページのパスリスト
+
+        Raises:
+            SpecKitDocsError: ナビゲーション更新失敗時
+        """
+        pass
+
+    @abstractmethod
+    def validate(self) -> bool:
+        """
+        ビルド前検証
+
+        Returns:
+            検証成功ならTrue、失敗ならFalse
+
+        Raises:
+            SpecKitDocsError: 検証エラー時
+        """
+        pass
 ```
 
-### GitStatus
+**実装クラス**:
+- `SphinxGenerator`: Sphinxドキュメントジェネレータ（MyST Markdown形式）
+- `MkDocsGenerator`: MkDocsドキュメントジェネレータ（Markdown形式）
+
+**検証ルール**:
+- すべてのメソッドは実装クラスで実装されなければならない
+- `initialize()`実行後、`validate()`は`True`を返さなければならない
+- すべてのエラーは`SpecKitDocsError`例外として発生させる
+
+**対応する要件**: FR-005, FR-006, FR-013, FR-014（Strategy Pattern、plan.md Decision 3）
+
+---
+
+## 実装ノート
+
+### Python型ヒント
+すべてのエンティティはPython 3.11+の型ヒントを使用します：
 ```python
-UNTRACKED  # Gitで追跡されていない
-MODIFIED   # 変更あり
-STAGED     # ステージング済み
-COMMITTED  # コミット済み
+from typing import Optional, List, Dict
+from pathlib import Path
+
+# Optionalフィールド
+field_name: Optional[str] = None
+
+# リストフィールド
+items: List[str] = field(default_factory=list)
+
+# 辞書フィールド
+mapping: Dict[str, int] = field(default_factory=dict)
+
+# Pathフィールド（絶対パス）
+file_path: Path
 ```
 
-### StructureType
+### データクラスの不変性
+すべてのエンティティは`@dataclass(frozen=True)`で定義され、不変です：
 ```python
-FLAT          # フラット構造（5機能以下）
-COMPREHENSIVE # 包括的構造（6機能以上）
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class MyEntity:
+    name: str
+    value: int
+
+    def __post_init__(self) -> None:
+        # 検証ロジック
+        if self.value < 0:
+            raise ValueError("value must be non-negative")
 ```
 
-### GeneratorTool
+### エラーハンドリング
+すべてのエラーは`SpecKitDocsError`例外として発生させます（FR-035、C002）：
 ```python
-SPHINX  # Sphinx + myst-parser
-MKDOCS  # MkDocs
+from speckit_docs.exceptions import SpecKitDocsError
+
+class InvalidFeatureError(SpecKitDocsError):
+    """機能が無効な場合のエラー"""
+    pass
+
+# 使用例
+if not feature.spec_file.is_file():
+    raise InvalidFeatureError(
+        f"spec.md not found: {feature.spec_file}\n"
+        f"Error: Missing required file\n"
+        f"Action: Create spec.md in {feature.directory}/"
+    )
 ```
 
-## Entity Relationships
+エラーメッセージには以下を含めます（C002準拠）：
+1. **ファイルパス**: 問題のあるファイルの絶対パス
+2. **エラー種類**: 何が問題なのか（Missing required file、Invalid format等）
+3. **推奨アクション**: ユーザーが次に何をすべきか
+
+## データモデル図
 
 ```
-Project (spec-kitプロジェクト)
-  ├─ 1..* Feature
-  │    ├─ 1 Document (spec.md) - required
-  │    ├─ 0..1 Document (plan.md) - optional
-  │    └─ 0..1 Document (tasks.md) - optional
-  │
-  ├─ 1 DocumentStructure (動的決定)
-  │    ├─ type: FLAT | COMPREHENSIVE
-  │    └─ directories: List[str]
-  │
-  ├─ 1 GeneratorConfig
-  │    ├─ tool: SPHINX | MKDOCS
-  │    └─ settings: dict
-  │
-  ├─ 1 Generator (SphinxGenerator | MkDocsGenerator)
-  │    ├─ uses: GeneratorConfig
-  │    ├─ uses: DocumentStructure
-  │    └─ generates: BuildResult
-  │
-  ├─ 1 ChangeDetector (Git統合)
-  │    └─ tracks: List[Feature]
-  │
-  └─ 1 MarkdownParser
-       └─ parses: Document → List[Section]
+SpecKitProject (1)
+    ├── root_dir: Path
+    ├── specify_dir: Path
+    ├── specs_dir: Path
+    ├── git_repo: bool
+    └── has many Features (0..*)
+
+Feature (0..*)
+    ├── id: str
+    ├── number: int
+    ├── name: str
+    ├── directory: Path
+    ├── spec_file: Optional[Path]
+    ├── plan_file: Optional[Path]
+    ├── tasks_file: Optional[Path]
+    ├── data_model_file: Optional[Path] (P2)
+    ├── contracts_dir: Optional[Path] (P2)
+    ├── status: FeatureStatus (P3)
+    ├── has many Entities (0..*) (P2)
+    └── has many APIEndpoints (0..*) (P2)
+
+Entity (0..*) (P2)
+    ├── name: str
+    ├── fields: List[EntityField]
+    ├── description: Optional[str]
+    ├── introduced_in: int
+    ├── is_enum: bool
+    └── enum_values: Optional[List[str]]
+
+APIEndpoint (0..*) (P2)
+    ├── method: HTTPMethod
+    ├── path: str
+    ├── summary: Optional[str]
+    ├── parameters: List[APIParameter]
+    ├── request_body: Optional[str]
+    ├── response_type: Optional[str]
+    ├── introduced_in: int
+    └── modified_in: Optional[List[int]]
+
+DocumentationSite (0..1)
+    ├── root_dir: Path
+    ├── tool_type: DocToolType
+    ├── structure_type: StructureType
+    ├── project_name: str
+    ├── author: Optional[str]
+    ├── version: Optional[str]
+    ├── language: str
+    ├── site_name: Optional[str]
+    ├── repo_url: Optional[str]
+    └── feature_pages: List[Path]
+
+BaseGenerator (抽象クラス)
+    ├── initialize()
+    ├── generate_feature_page()
+    ├── update_navigation()
+    └── validate()
+    ├── implemented by: SphinxGenerator
+    └── implemented by: MkDocsGenerator
+
+SynthesisResult (1) (P2)
+    ├── entities: Dict[str, Entity]
+    ├── api_endpoints: Dict[str, APIEndpoint]
+    ├── conflicts: List[str]
+    └── breaking_changes: List[str]
+
+Audience (列挙型) (P3)
+    ├── END_USER
+    ├── DEVELOPER
+    └── CONTRIBUTOR
+
+FeatureStatus (列挙型) (P3)
+    ├── IMPLEMENTED
+    ├── IN_PROGRESS
+    ├── PLANNED
+    └── ABANDONED
 ```
 
-## Data Flow
+## まとめ
 
-### doc-init フロー
-```
-User Input (tool, project_name, author)
-  → GeneratorConfig 生成
-  → Feature Scanner (.specify/specs/ 探索)
-  → Feature[] 取得
-  → DocumentStructure 決定 (feature_count基準)
-  → Generator.init_project()
-  → Jinja2 Template レンダリング
-  → ファイル書き込み (conf.py / mkdocs.yml, index.md, etc.)
-```
-
-### doc-update フロー
-```
-ChangeDetector.get_changed_features()
-  → Feature[] (変更されたもののみ、またはすべて)
-  → for each Feature:
-       Document.parse() → Section[]
-       → MarkdownParser.parse()
-       → Section.to_sphinx_md() / to_mkdocs_md()
-       → 機能ドキュメント書き込み
-  → index更新 (toctree / nav)
-  → Generator.build_docs()
-  → BuildResult 返却
-```
-
-## Storage and Persistence
-
-**File-Based Storage**:
-- すべてのデータはファイルシステムに保存（データベース不使用）
-- `.specify/specs/`: 入力データ（spec.md, plan.md, tasks.md）
-- `docs/`: 生成されたドキュメント（Markdown）
-- `_build/html/` or `site/`: 生成されたHTML（ビルド成果物）
-- `.git/`: 変更追跡（Git diff）
-
-**No Caching**:
-- キャッシュファイルは管理しない（research.md Decision 2）
-- Git diffで変更検出するため、別途キャッシュ不要
-- 必要に応じてビルド結果（HTML）を再利用可能
-
-## Performance Considerations
-
-**Incremental Processing**:
-- 変更されたFeatureのみを再処理（FR-010）
-- Git diffで変更ファイルを検出
-- 未変更のドキュメントはスキップ
-
-**Batch Size**:
-- 典型的なプロジェクト: 1-20機能
-- 最適化目標: 50機能まで
-- 50機能以上の場合: 進行状況表示（`tqdm`等）
-
-**No Parallelization** (research.md Decision 9):
-- 逐次処理で十分（SC-006: 45秒以内で10機能処理）
-- I/Oバウンドのため並列化の恩恵が少ない
-- シンプルさを優先
-
-## Validation and Error Handling
-
-**Validation Points**:
-1. **プロジェクト検証**: `.specify/`ディレクトリの存在、Git初期化
-2. **Feature検証**: spec.mdの存在、有効なMarkdown
-3. **ビルド検証**: Sphinx/MkDocsのビルドエラー検出
-
-**Error Handling Strategy** (research.md Decision 8):
-```python
-class SpecKitDocsError(Exception):
-    def __init__(self, message: str, suggestion: str):
-        self.message = message
-        self.suggestion = suggestion
-```
-
-- 明確なエラーメッセージ + 次のステップ提案
-- コンテキスト情報をログに含める
-- ユーザーが解決できる形式で提示
-
-**Source Requirements**: FR-033, research.md Decision 8
-
-## Implementation Notes
-
-**Python 3.11+ Features**:
-- `pathlib.Path`: ファイルパス操作
-- `dataclasses`: エンティティ定義（`@dataclass`デコレーター）
-- `enum.Enum`: 列挙型定義
-- Type hints: すべてのメソッドシグネチャに型ヒント
-
-**Third-Party Libraries**:
-- `markdown-it-py`: Markdown解析
-- `GitPython`: Git操作
-- `Jinja2`: テンプレートレンダリング
-- `sphinx`, `myst-parser`: Sphinxドキュメント生成
-- `mkdocs`: MkDocsドキュメント生成
-
-**Testing Strategy**:
-- ユニットテスト: 各エンティティのメソッド
-- 統合テスト: end-to-endフロー（init → update → build）
-- コントラクトテスト: CLI入出力、ファイルフォーマット
-
-## Summary
-
-このデータモデルは、spec-kit-docsの実装における中核エンティティを定義しています。主要な設計決定：
-
-1. **Feature中心設計**: spec-kitの機能ディレクトリを中心に構造化
-2. **Strategy Pattern**: SphinxGenerator/MkDocsGeneratorで拡張可能
-3. **Git統合**: ChangeDetectorでインクリメンタル更新を実現
-4. **動的構造決定**: DocumentStructureが機能数に応じて最適な構造を選択
-5. **Markdown統一**: Document/Section/MarkdownParserでMarkdown→Markdown変換を最小化
-
-次のフェーズでは、これらのエンティティを使用したCLIインターフェース（contracts/）と基本的な使用方法（quickstart.md）を定義します。
+このデータモデルは、spec-kit-docsプロジェクトのすべての主要エンティティを定義します。すべてのエンティティは不変（`@dataclass(frozen=True)`）で、型安全（mypy互換）、かつ明確な検証ルールを持ちます。MVP（P1）段階では、SpecKitProject、Feature、DocumentationSite、BaseGeneratorが主に使用され、P2以降でEntity、APIEndpoint、SynthesisResult、P3でAudience、FeatureStatusが追加されます。
