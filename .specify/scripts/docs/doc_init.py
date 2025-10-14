@@ -8,7 +8,6 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -37,8 +36,8 @@ console = Console()
 @app.command()
 def main(
     doc_type: str = typer.Option("sphinx", "--type", help="Documentation tool (sphinx/mkdocs)"),
-    project_name: Optional[str] = typer.Option(None, "--project-name", help="Project name"),
-    author: Optional[str] = typer.Option(None, "--author", help="Author name"),
+    project_name: str | None = typer.Option(None, "--project-name", help="Project name"),
+    author: str | None = typer.Option(None, "--author", help="Author name"),
     version: str = typer.Option("0.1.0", "--version", help="Project version"),
     language: str = typer.Option("ja", "--language", help="Documentation language"),
     force: bool = typer.Option(False, "--force", help="Force overwrite existing files"),
@@ -126,7 +125,7 @@ def main(
 
         # Success message
         console.print("\n[bold green]✓ ドキュメントプロジェクトの初期化が完了しました！[/bold green]")
-        console.print(f"\n[bold]次のステップ:[/bold]")
+        console.print("\n[bold]次のステップ:[/bold]")
         if doc_type == "sphinx":
             console.print("  1. cd docs/")
             console.print("  2. make html")

@@ -13,7 +13,7 @@ repo_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(repo_root / "src"))
 
 # Import and execute main function from src
-from speckit_docs.doc_update import main
+from speckit_docs.doc_update import main  # noqa: E402
 
 if __name__ == "__main__":
     sys.exit(main())
