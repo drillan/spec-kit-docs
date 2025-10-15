@@ -19,14 +19,14 @@ class TestInstallIntegration:
         install_handler(force=True)
 
         # Verify command templates were copied
-        assert (tmp_path / ".claude" / "commands" / "doc-init.md").exists()
-        assert (tmp_path / ".claude" / "commands" / "doc-update.md").exists()
+        assert (tmp_path / ".claude" / "commands" / "speckit.doc-init.md").exists()
+        assert (tmp_path / ".claude" / "commands" / "speckit.doc-update.md").exists()
 
         # Verify command template content
-        doc_init_content = (tmp_path / ".claude" / "commands" / "doc-init.md").read_text()
+        doc_init_content = (tmp_path / ".claude" / "commands" / "speckit.doc-init.md").read_text()
         assert "[Active Rules: C001-C014]" in doc_init_content
         assert "CRITICAL原則" in doc_init_content
-        assert "/doc-init" in doc_init_content
+        assert "/speckit.doc-init" in doc_init_content
 
         # Verify backend scripts were copied
         assert (tmp_path / ".specify" / "scripts" / "docs" / "doc_init.py").exists()
@@ -83,7 +83,7 @@ class TestInstallIntegration:
         (tmp_path / ".claude").mkdir()
         (tmp_path / ".claude" / "commands").mkdir()
 
-        existing_file = tmp_path / ".claude" / "commands" / "doc-init.md"
+        existing_file = tmp_path / ".claude" / "commands" / "speckit.doc-init.md"
         existing_file.write_text("old content")
         monkeypatch.chdir(tmp_path)
 
