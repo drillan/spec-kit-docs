@@ -11,6 +11,12 @@ app = typer.Typer(
 console = Console()
 
 
+@app.callback()
+def callback() -> None:
+    """speckit-docs - AI-driven documentation generation for spec-kit projects."""
+    pass
+
+
 @app.command()
 def install(
     force: bool = typer.Option(
@@ -30,5 +36,10 @@ def install(
     install_handler(force=force)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for the CLI."""
     app()
+
+
+if __name__ == "__main__":
+    main()

@@ -43,7 +43,7 @@ dev = [
 ]
 
 [project.scripts]
-speckit-docs = "speckit_docs.cli:app"
+speckit-docs = "speckit_docs.cli:main"
 
 [build-system]
 requires = ["hatchling"]
