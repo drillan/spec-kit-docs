@@ -18,15 +18,18 @@ try:
     from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
     from speckit_docs.generators.mkdocs import MkDocsGenerator
     from speckit_docs.generators.sphinx import SphinxGenerator
+    from speckit_docs.utils.dependencies import handle_dependencies
     from speckit_docs.utils.feature_discovery import FeatureDiscoverer
 except ImportError:
     # When running as script directly, try relative imports
     import os
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
     from speckit_docs.exceptions import SpecKitDocsError
     from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
     from speckit_docs.generators.mkdocs import MkDocsGenerator
     from speckit_docs.generators.sphinx import SphinxGenerator
+    from speckit_docs.utils.dependencies import handle_dependencies
     from speckit_docs.utils.feature_discovery import FeatureDiscoverer
 
 app = typer.Typer()
@@ -41,6 +44,8 @@ def main(
     version: str = typer.Option("0.1.0", "--version", help="Project version"),
     language: str = typer.Option("ja", "--language", help="Documentation language"),
     force: bool = typer.Option(False, "--force", help="Force overwrite existing files"),
+    auto_install: bool = typer.Option(False, "--auto-install", help="Auto-install dependencies without confirmation (CI/CD mode)"),
+    no_install: bool = typer.Option(False, "--no-install", help="Skip dependency checking and installation"),
 ) -> int:
     """Initialize documentation project."""
     try:
@@ -61,6 +66,27 @@ def main(
             except (subprocess.CalledProcessError, FileNotFoundError):
                 author = "Unknown Author"
                 console.print("[dim]Using default author: Unknown Author[/dim]")
+
+        # Session 2025-10-15: Handle dependencies (FR-008b through FR-008e)
+        console.print("\n[bold]依存関係を確認中...[/bold]")
+        dep_result = handle_dependencies(
+            doc_type=doc_type,
+            auto_install=auto_install,
+            no_install=no_install,
+            project_root=Path.cwd(),
+            console=console,
+        )
+
+        # Log dependency result
+        if dep_result.status == "installed":
+            console.print(f"[green]✓[/green] {len(dep_result.installed_packages)} 個のパッケージをインストールしました")
+        elif dep_result.status == "not_needed":
+            console.print("[green]✓[/green] 依存関係は既に満たされています")
+        elif dep_result.status == "skipped":
+            console.print(f"[yellow]⚠[/yellow] 依存関係チェックをスキップしました: {dep_result.message}")
+        elif dep_result.status == "failed":
+            console.print("[yellow]⚠[/yellow] 自動インストールに失敗しましたが、続行します")
+            console.print("[dim]手動で依存関係をインストールしてください（上記の代替方法を参照）[/dim]")
 
         # Discover features to determine structure
         console.print("\n[bold]機能を検出中...[/bold]")
@@ -124,7 +150,9 @@ def main(
         generator.generate_index()
 
         # Success message
-        console.print("\n[bold green]✓ ドキュメントプロジェクトの初期化が完了しました！[/bold green]")
+        console.print(
+            "\n[bold green]✓ ドキュメントプロジェクトの初期化が完了しました！[/bold green]"
+        )
         console.print("\n[bold]次のステップ:[/bold]")
         if doc_type == "sphinx":
             console.print("  1. cd docs/")
