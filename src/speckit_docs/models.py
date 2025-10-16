@@ -205,6 +205,87 @@ class Document:
     git_status: GitStatus = GitStatus.UNTRACKED
 
 
+@dataclass(frozen=True)
+class SpecKitProject:
+    """Represents a spec-kit project.
+
+    Attributes:
+        root_dir: Project root directory absolute path
+        specify_dir: .specify/ directory absolute path
+        specs_dir: specs/ directory absolute path
+        git_repo: Whether it's a Git repository
+    """
+
+    root_dir: Path
+    specify_dir: Path
+    specs_dir: Path
+    git_repo: bool
+
+    def __post_init__(self) -> None:
+        """Validation rules."""
+        if not self.root_dir.is_dir():
+            raise ValueError(f"Project root directory does not exist: {self.root_dir}")
+        if not self.specify_dir.is_dir():
+            raise ValueError(f".specify/ directory does not exist: {self.specify_dir}")
+        if not self.specs_dir.is_dir():
+            raise ValueError(f"specs/ directory does not exist: {self.specs_dir}")
+
+
+@dataclass(frozen=True)
+class DocumentationSite:
+    """Represents a generated documentation site.
+
+    Attributes:
+        root_dir: Documentation root directory (e.g., {project}/docs/)
+        tool_type: Documentation tool (Sphinx/MkDocs)
+        structure_type: Documentation structure (FLAT/COMPREHENSIVE)
+        project_name: Project name
+        author: Author name (for Sphinx)
+        version: Version (for Sphinx)
+        language: Language (for Sphinx, default: ja)
+        site_name: Site name (for MkDocs)
+        repo_url: Repository URL (for MkDocs)
+        feature_pages: List of generated feature page paths
+    """
+
+    root_dir: Path
+    tool_type: GeneratorTool
+    structure_type: StructureType
+    project_name: str
+    author: str | None = None
+    version: str | None = None
+    language: str = "ja"
+    site_name: str | None = None
+    repo_url: str | None = None
+    feature_pages: list[Path] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        """Validation rules."""
+        if not self.root_dir.is_dir():
+            raise ValueError(f"Documentation root directory does not exist: {self.root_dir}")
+        if not self.project_name:
+            raise ValueError("Project name cannot be empty")
+
+        # Sphinx-specific validation
+        if self.tool_type == GeneratorTool.SPHINX:
+            conf_py = self.root_dir / "conf.py"
+            if not conf_py.is_file():
+                raise ValueError(f"Sphinx conf.py not found: {conf_py}")
+
+        # MkDocs-specific validation
+        if self.tool_type == GeneratorTool.MKDOCS:
+            mkdocs_yml = self.root_dir / "mkdocs.yml"
+            if not mkdocs_yml.is_file():
+                raise ValueError(f"MkDocs mkdocs.yml not found: {mkdocs_yml}")
+
+    @property
+    def features_dir(self) -> Path | None:
+        """Feature pages directory (COMPREHENSIVE structure only)."""
+        if self.structure_type == StructureType.COMPREHENSIVE:
+            return self.root_dir / "features"
+        return None
+
+
 @dataclass
 class GeneratorConfig:
     """Configuration for documentation generator.

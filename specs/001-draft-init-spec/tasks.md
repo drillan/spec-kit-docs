@@ -1,294 +1,274 @@
+---
+description: "Implementation task list for spec-kit-docs feature"
+---
+
 # Tasks: spec-kit-docs - AI駆動型ドキュメント生成システム
 
-**Input**: 設計ドキュメント from `/specs/001-draft-init-spec/`
-**Prerequisites**: plan.md, spec.md, data-model.md, contracts/
-
-**MVP範囲**: Phase 1-5（US1: /speckit.doc-init、US2: /speckit.doc-update、US3: speckit-docs install）
-**優先度**: すべてP1（MVP必須）
+**Branch**: `001-draft-init-spec` | **Date**: 2025-10-16
+**Input**: Design documents from `/specs/001-draft-init-spec/` (spec.md, plan.md, data-model.md, contracts/)
+**Prerequisites**: plan.md (completed), spec.md (completed), research.md (completed), data-model.md (completed), contracts/ (completed)
 
 ## Format: `[ID] [P?] [Story] Description`
-- **[P]**: 並列実行可能（異なるファイル、依存関係なし）
-- **[Story]**: タスクが属するユーザーストーリー（US1, US2, US3）
-- ファイルパスは絶対パス（`/home/driller/repo/spec-kit-docs/...`）
+- **[P]**: Can run in parallel (different files, no dependencies)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US7)
+- Include exact file paths in descriptions
+
+## MVP Scope Definition
+
+MVP consists of Phase 3-6 (User Stories 1, 2, 3, 7):
+- **User Story 1**: `/doc-init` command - Initialize Sphinx/MkDocs project
+- **User Story 2**: `/doc-update` command - Generate docs from specs/
+- **User Story 3**: `speckit-docs install` command - Install as spec-kit extension
+- **User Story 7**: LLM transformation - Default-enabled AI-driven user-friendly content generation
 
 ---
 
-## Phase 1: Setup（プロジェクト初期化）
+## Phase 1: Setup (Shared Infrastructure)
 
-**目的**: プロジェクト構造とビルド環境の構築
+**Purpose**: Project initialization and basic structure
 
-- [X] T001 [P] pyproject.tomlの依存関係確認と追加パッケージのインストール（typer、jinja2、GitPython、ruamel.yaml、markdown-it-py、sphinx、myst-parser、mkdocs、mkdocs-material）
-- [X] T002 [P] src/speckit_docs/__init__.pyにバージョン情報を追加（`__version__ = "0.1.0"`）
-- [X] T003 [P] .ruff.tomlとmypy設定の確認（C006: 90%カバレッジ、mypy --strict）
-- [X] T004 tests/conftest.pyにpytest共通フィクスチャを追加（pyfakefsセットアップ、spec-kitプロジェクトモック）
-- [X] T005 src/speckit_docs/exceptions.pyの検証（SpecKitDocsError、ValidationError、BuildErrorが定義済みであることを確認）
-
-**Checkpoint**: ビルド環境準備完了 - 全依存関係がインストールされ、テスト実行可能
+- [ ] T001 Create project structure: `src/speckit_docs/`, `tests/contract/`, `tests/integration/`, `tests/unit/`
+- [ ] T002 Initialize pyproject.toml with dependencies: typer>=0.9, sphinx>=7.0, myst-parser>=2.0, mkdocs>=1.5, mkdocs-material>=9.0, gitpython>=3.1, jinja2>=3.1, markdown-it-py>=3.0, pytest>=8.0, pytest-cov>=4.0
+- [ ] T003 [P] Configure ruff in pyproject.toml: select=["E", "F", "W", "I"], line-length=100, target-version="py311"
+- [ ] T004 [P] Add specify-cli dependency: `specify-cli @ git+https://github.com/github/spec-kit.git`
+- [ ] T005 [P] Configure mypy for type checking in pyproject.toml
 
 ---
 
-## Phase 2: Foundational（全ユーザーストーリーのブロッキング前提条件）
+## Phase 2: Foundational (Blocking Prerequisites)
 
-**目的**: すべてのユーザーストーリーが依存する共通インフラの構築
+**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-**⚠️ CRITICAL**: このフェーズが完了するまで、どのユーザーストーリーも開始できません
+**⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T006 [P] src/speckit_docs/models.pyのFeatureモデル検証（id、name、directory_path、spec_file、plan_file、tasks_file、status、priorityフィールドが定義済みか確認）
-- [X] T007 [P] src/speckit_docs/models.pyのDocumentモデル検証（file_path、type、content、sections、last_modified、git_statusフィールドが定義済みか確認）
-- [X] T008 [P] src/speckit_docs/models.pyのSectionモデル検証（title、level、content、line_start、line_end、subsectionsフィールドが定義済みか確認）
-- [X] T009 [P] src/speckit_docs/parsers/markdown_parser.pyの検証（MarkdownParserクラスが存在し、parse()、extract_headings()、extract_metadata()メソッドが定義済みか確認）
-- [X] T010 [P] src/speckit_docs/parsers/feature_scanner.pyの検証（FeatureScannerクラスが存在し、scan_features()メソッドが定義済みか確認）
-- [X] T011 [P] src/speckit_docs/utils/validation.pyの検証（validate_speckit_project()、validate_git_repo()が定義済みか確認）
-- [X] T012 [P] src/speckit_docs/utils/git.pyの検証（ChangeDetectorクラスが存在し、get_changed_features()メソッドが定義済みか確認）
-- [X] T013 tests/unit/test_models.pyの拡張（Feature、Document、Sectionモデルの基本的なインスタンス化テストが存在するか確認）
-- [X] T014 tests/unit/parsers/test_markdown_parser.pyの拡張（基本的なMarkdown解析テストが存在するか確認）
-- [X] T015 tests/unit/utils/test_git.pyの拡張（Git diff検出テストが存在するか確認）
+- [ ] T006 Implement SpecKitDocsError exception class in src/speckit_docs/exceptions.py with structured error messages (file_path, error_type, recommended_action)
+- [ ] T007 [P] Implement BaseGenerator abstract class in src/speckit_docs/generators/base.py with 4 methods: initialize(), generate_feature_page(), update_navigation(), validate()
+- [ ] T008 [P] Create SpecKitProject dataclass in src/speckit_docs/parsers/spec_parser.py (root_dir, specify_dir, specs_dir, git_repo)
+- [ ] T009 [P] Create Feature dataclass in src/speckit_docs/parsers/spec_parser.py (id, number, name, directory, spec_file, plan_file, tasks_file, status)
+- [ ] T010 [P] Create DocumentationSite dataclass in src/speckit_docs/generators/base.py (root_dir, tool_type, structure_type, project_name, feature_pages)
+- [ ] T011 [P] Create DependencyResult dataclass in src/speckit_docs/utils/dependencies.py (status, message, installed_packages)
+- [ ] T012 [P] Create PackageManager dataclass in src/speckit_docs/utils/dependencies.py (name, command, available)
+- [ ] T013 [P] Implement Git utility functions in src/speckit_docs/utils/git.py: get_changed_files(), get_remote_url(), get_user_name()
+- [ ] T014 [P] Implement filesystem utility functions in src/speckit_docs/utils/fs.py: ensure_dir_exists(), copy_file(), detect_feature_directories()
+- [ ] T015 [P] Implement Jinja2 template loader in src/speckit_docs/utils/template.py: load_template(), render_template()
+- [ ] T016 Implement logging configuration in src/speckit_docs/utils/logging.py: setup_logging() with INFO/DEBUG/ERROR levels
 
-**Checkpoint**: 基盤準備完了 - ユーザーストーリー実装を並列開始可能
+**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
 ---
 
-## Phase 3: User Story 1 - /speckit.doc-init コマンド（優先度: P1）🎯 MVP
+## Phase 3: User Story 1 - ドキュメントプロジェクトの初期化 (Priority: P1) 🎯 MVP
 
-**目標**: spec-kitプロジェクトにSphinxまたはMkDocsドキュメント環境を初期化
+**Goal**: Users can initialize documentation projects (Sphinx/MkDocs) with a single command
 
-**独立テスト**: ユーザーが`/speckit.doc-init --type sphinx`を実行し、`docs/conf.py`、`docs/index.md`、`docs/Makefile`が生成され、`make html`でビルド成功することを確認
+**Independent Test**: Run `/doc-init --type sphinx` in a spec-kit project, verify docs/ directory is created with conf.py, index.md, Makefile
 
-### Tests for User Story 1（TDD: Red-Green-Refactor）
+### Tests for User Story 1 (TDD Required - Write FIRST) ⚠️
 
-**NOTE: これらのテストを最初に実装し、FAILすることを確認してから実装開始**
-
-- [X] T016 [P] [US1] tests/unit/test_models.pyにGeneratorConfigモデルのテスト追加（tool、project_name、author、version、language、theme、extensions、plugins、custom_settingsフィールドのインスタンス化テスト）
-- [X] T017 [P] [US1] tests/unit/parsers/test_document_structure.pyの作成（DocumentStructureクラスのdetermine_structure()テスト: 5機能以下→FLAT、6機能以上→COMPREHENSIVE）
-- [X] T018 [P] [US1] tests/unit/generators/test_base.pyの拡張（BaseGeneratorの抽象メソッド定義テスト）
-- [X] T019 [P] [US1] tests/unit/generators/test_sphinx.pyの拡張（SphinxGenerator.init_project()テスト: conf.pyにmyst-parser設定が含まれるか確認）
-- [X] T020 [P] [US1] tests/unit/generators/test_mkdocs.pyの拡張（MkDocsGenerator.init_project()テスト: mkdocs.ymlにMaterial theme設定が含まれるか確認）
-- [X] T021 [P] [US1] tests/contract/test_doc_init_output.pyの拡張（生成されたconf.pyがPython構文として正しいか、必須フィールドが含まれるか確認）
-- [X] T022 [US1] tests/integration/test_sphinx_workflow.pyの拡張（エンドツーエンド: doc-init → ファイル生成確認 → make htmlの成功確認）
-- [X] T023 [US1] tests/integration/test_mkdocs_workflow.pyの拡張（エンドツーエンド: doc-init → ファイル生成確認 → mkdocs buildの成功確認）
+- [ ] T017 [P] [US1] Contract test for doc_init.py CLI arguments in tests/contract/test_doc_init_command.py
+- [ ] T018 [P] [US1] Integration test for Sphinx initialization in tests/integration/test_sphinx_generation.py
+- [ ] T019 [P] [US1] Integration test for MkDocs initialization in tests/integration/test_mkdocs_generation.py
 
 ### Implementation for User Story 1
 
-- [X] T024 [P] [US1] src/speckit_docs/models.pyにGeneratorConfigデータクラスを追加（toolはGeneratorTool enum、to_sphinx_conf()とto_mkdocs_yaml()メソッド実装）
-- [X] T025 [P] [US1] src/speckit_docs/parsers/document_structure.pyの検証と拡張（DocumentStructureクラスのdetermine_structure()メソッドが機能数に基づいてFLAT/COMPREHENSIVEを返すか確認）
-- [X] T026 [US1] src/speckit_docs/generators/base.pyの検証と拡張（BaseGeneratorに抽象メソッドinit_project()、update_docs()、build_docs()、validate_project()が定義済みか確認）
-- [X] T027 [US1] src/speckit_docs/generators/sphinx.pyの拡張（SphinxGenerator.init_project()の実装: Jinja2テンプレートを使用してconf.py、index.md、Makefile、make.batを生成、FR-005a準拠でmyst-parser設定を含める）
-- [X] T028 [US1] src/speckit_docs/generators/mkdocs.pyの拡張（MkDocsGenerator.init_project()の実装: Jinja2テンプレートを使用してmkdocs.yml、index.mdを生成、Material theme設定を含める）
-- [X] T029 [US1] src/speckit_docs/templates/sphinx/内のJinja2テンプレート検証（conf.py.j2、index.md.j2、Makefile.j2、make.bat.j2が存在し、contracts/file-formats.md仕様に準拠しているか確認）
-- [X] T030 [US1] src/speckit_docs/templates/mkdocs/内のJinja2テンプレート検証（mkdocs.yml.j2、index.md.j2が存在し、contracts/file-formats.md仕様に準拠しているか確認）
-- [X] T031 [US1] src/speckit_docs/doc_init.pyの拡張（対話的プロンプト収集、GeneratorConfig生成、Generator.init_project()呼び出しロジックの実装確認）
-- [X] T032 [US1] .specify/scripts/docs/doc_init.pyの検証（typerベースのCLI: --type、--project-name、--author、--version、--language、--forceオプションが定義され、main()が非対話的に動作するか確認）
-- [X] T033 [US1] src/speckit_docs/commands/doc-init.mdの検証（Claude Code用コマンド定義: 対話的質問→引数構築→doc_init.py呼び出し→結果フィードバックのプロンプトが記述されているか確認）
-- [X] T034 [US1] src/speckit_docs/generators/sphinx.pyのエラーハンドリング追加（docs/既存時に--forceフラグなしの場合、明確なエラーメッセージを返す） **✅ DONE: 契約テスト5件合格、conf.py/index.md生成確認済み**
-- [X] T035 [US1] src/speckit_docs/generators/mkdocs.pyのエラーハンドリング追加（同上） **✅ DONE: 契約テスト2件合格、mkdocs.yml/index.md生成確認済み**
+- [ ] T020 [P] [US1] Implement SphinxGenerator class in src/speckit_docs/generators/sphinx.py (initialize(), generate_feature_page(), update_navigation(), validate())
+- [ ] T021 [P] [US1] Implement MkDocsGenerator class in src/speckit_docs/generators/mkdocs.py (initialize(), generate_feature_page(), update_navigation(), validate())
+- [ ] T022 [US1] Implement doc_init.py script in src/speckit_docs/scripts/doc_init.py with argparse: --type, --project-name, --author, --version, --language, --force, --dependency-target, --auto-install, --no-install
+- [ ] T023 [US1] Implement feature count detection in doc_init.py: detect_structure_type() function (flat if <=5 features, comprehensive if >=6 features)
+- [ ] T024 [US1] Implement dependency detection in src/speckit_docs/utils/dependencies.py: detect_installed_packages() using importlib.util.find_spec()
+- [ ] T025 [US1] Implement dependency installation in src/speckit_docs/utils/dependencies.py: handle_dependencies() function with user confirmation (typer.confirm())
+- [ ] T026 [US1] Implement package manager detection in src/speckit_docs/utils/dependencies.py: detect_package_managers() using shutil.which()
+- [ ] T027 [US1] Implement alternative installation methods display in src/speckit_docs/utils/dependencies.py: show_alternative_methods() function
+- [ ] T028 [US1] Add Sphinx templates to src/speckit_docs/templates/sphinx/: conf.py.j2, index.md.j2, Makefile.j2
+- [ ] T029 [US1] Add MkDocs templates to src/speckit_docs/templates/mkdocs/: mkdocs.yml.j2, index.md.j2
+- [ ] T030 [US1] Add error handling in doc_init.py: validate .specify/ directory exists (FR-001), handle existing docs/ directory (FR-003d)
+- [ ] T031 [US1] Add logging to doc_init.py: progress messages (INFO level), dependency installation status
 
-**Checkpoint**: `/speckit.doc-init`コマンドが完全に機能し、SphinxまたはMkDocsプロジェクトを初期化できる。生成されたプロジェクトは`make html`または`mkdocs build`でビルド可能。
-
-### 依存関係自動インストール機能 (Session 2025-10-15追加) ✨ NEW
-
-**目標**: FR-008b～FR-008eに基づき、`/speckit.doc-init`実行時に条件が満たされる場合（pyproject.toml存在、uvコマンド利用可能）、ユーザーの承認を得てSphinx/MkDocsの依存関係を`uv add`で自動的にインストールする。
-
-**TDD必須**: C010に従い、すべての実装前にテストを書き、Red-Green-Refactorサイクルを厳守
-
-#### Tests for Dependency Auto-Installation (TDD: Red)
-
-- [X] **T084** [P] [US1] tests/unit/test_dependency_result.pyを作成 - DependencyResultデータクラスの検証ルールテスト（status検証、installed_packages制約、__post_init__検証） ✅ **完了: 8テスト追加、すべてパス**
-- [X] **T085** [P] [US1] tests/unit/test_package_manager.pyを作成 - PackageManagerデータクラスの検証ルールテスト（name検証、available制約、__post_init__検証） ✅ **完了: 7テスト追加、すべてパス**
-- [X] **T086** [P] [US1] tests/unit/utils/test_get_required_packages.pyを作成 - `get_required_packages(doc_type)`関数のテスト（Sphinx: ["sphinx>=7.0", "myst-parser>=2.0"]、MkDocs: ["mkdocs>=1.5", "mkdocs-material>=9.0"]） ✅ **完了: 6テスト追加、すべてパス**
-- [X] **T087** [P] [US1] tests/unit/utils/test_detect_package_managers.pyを作成 - `detect_package_managers()`関数のテスト（shutil.which()モック、優先順位確認: uv > poetry > pip） ✅ **完了: 7テスト追加、すべてパス**
-- [X] **T088** [US1] tests/unit/utils/test_handle_dependencies.pyを作成 - `handle_dependencies()`関数の包括的テスト（10ケース） ✅ **完了: 10テスト追加、全ケースパス**:
-  - 成功: pyproject.toml存在、uvコマンド利用可能、インストール成功
-  - pyproject.toml不在 → status="failed"、代替方法表示
-  - uvコマンド不在 → status="failed"、代替方法表示
-  - パッケージ既インストール → status="not_needed"
-  - `--no-install`フラグ → status="skipped"
-  - `--auto-install`フラグ → 確認スキップ
-  - uv addタイムアウト（300秒超過） → status="failed"
-  - uv add失敗（returncode != 0） → status="failed"、stderrキャプチャ
-  - ユーザー承認拒否 → status="skipped"
-  - 不正doc_type → ValueError
-- [X] **T089** [P] [US1] tests/integration/test_doc_init_with_dependencies.pyを作成 - 統合テスト: pyproject.toml+uv環境での自動インストール成功シナリオ、SC-002b（90%成功率）検証 ✅ **完了: 4統合テスト追加、SC-002b達成**
-- [X] **T090** [P] [US1] tests/integration/test_doc_init_no_pyproject.pyを作成 - 統合テスト: pyproject.toml不在時の代替方法提示、SC-008b検証（方法1: 手動インストール、方法2: spec-kitワークフロー） ✅ **完了: 4統合テスト追加、SC-008b達成**
-- [X] **T091** [P] [US1] tests/integration/test_doc_init_no_uv.pyを作成 - 統合テスト: uvコマンド不在時の代替方法提示、SC-008b検証 ✅ **完了: 5統合テスト追加、SC-008b達成**
-- [X] **T092** [P] [US1] tests/integration/test_doc_init_uv_add_failed.pyを作成 - 統合テスト: uv add失敗時のエラーハンドリング、SC-008c検証（失敗理由と代替方法表示） ✅ **完了: 5統合テスト追加、SC-008c達成**
-
-#### Implementation for Dependency Auto-Installation (TDD: Green)
-
-- [X] **T093** [P] [US1] src/speckit_docs/utils/dependencies.pyを作成 - DependencyResult、PackageManagerデータクラスを定義（frozen=True、__post_init__検証、型ヒント完備） ✅ **完了: データクラス定義、frozen=True、検証ルール実装**
-- [X] **T094** [US1] src/speckit_docs/utils/dependencies.pyに`get_required_packages(doc_type: str) -> list[str]`を実装 - Sphinx/MkDocsのパッケージリスト返却 ✅ **完了: バージョン制約付きパッケージリスト返却**
-- [X] **T095** [US1] src/speckit_docs/utils/dependencies.pyに`detect_package_managers(project_root: Path, doc_type: str) -> list[tuple[str, str]]`を実装 - shutil.which()でuv/poetry/pip検出、優先順位付きリスト返却 ✅ **完了: uv > poetry > pip優先順位実装**
-- [X] **T096** [US1] src/speckit_docs/utils/dependencies.pyに`show_alternative_methods(doc_type: str, console: Console, project_root: Path) -> None`を実装 - FR-008d準拠の代替方法表示 ✅ **完了: 方法1（手動）＋方法2（spec-kit）実装**:
-  - 失敗理由の説明
-  - 方法1: 手動インストール（利用可能なパッケージマネージャーを自動検出し、コマンド表示）
-  - 方法2: spec-kitワークフロー（`/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement`の手順と利点を説明）
-- [X] **T097** [US1] src/speckit_docs/utils/dependencies.pyに`handle_dependencies()`関数を実装 - contracts/handle_dependencies.md仕様に従った完全実装 ✅ **完了: 全6ステップ実装、FR-008b～FR-008e準拠**:
-  - 条件チェック（no_install、pyproject.toml、uv、パッケージインストール済み）
-  - ユーザー承認（typer.confirm(default=True)、FR-008c準拠の情報表示）
-  - subprocess.run()でuv add実行（timeout=300、check=False）
-  - エラーハンドリング（TimeoutExpired、FileNotFoundError、returncode != 0）
-  - DependencyResult返却
-- [X] **T098** [US1] .specify/scripts/docs/doc_init.pyに`--auto-install`フラグを追加 - typer.Option(False, "--auto-install", help="CI/CD環境での非対話的実行をサポート") ✅ **完了: CI/CDモードフラグ追加**
-- [X] **T099** [US1] .specify/scripts/docs/doc_init.pyに`--no-install`フラグを追加 - typer.Option(False, "--no-install", help="依存関係チェックとインストールをスキップ") ✅ **完了: スキップフラグ追加**
-- [X] **T100** [US1] .specify/scripts/docs/doc_init.pyのmain()関数に依存関係処理を統合 - `handle_dependencies()`呼び出し、DependencyResult処理、ログメッセージ表示、FR-008e準拠 ✅ **完了: 4ステータス分岐処理実装**
-
-#### Refactor for Dependency Auto-Installation (TDD: Refactor)
-
-- [X] **T101** T093-T100の実装をリファクタリング - コード品質向上、DRY原則適用、型ヒント補完、docstring追加（Google Style） ✅ **完了: Google Styleドキュメント完備、型ヒント100%**
-- [X] **T102** `uv run ruff check src/speckit_docs/utils/dependencies.py .specify/scripts/docs/doc_init.py`を実行 - リンターエラー修正、C006準拠確認 ✅ **完了: 2エラー自動修正、クリーン**
-- [X] **T103** `uv run mypy src/speckit_docs/utils/dependencies.py .specify/scripts/docs/doc_init.py --strict`を実行 - 型エラー修正、C006準拠確認 ✅ **完了: 型エラー0件、--strict準拠**
-- [X] **T104** `uv run pytest tests/unit/utils/test_handle_dependencies.py -v`を実行 - すべての単体テスト通過確認、カバレッジ95%以上達成 ✅ **完了: 38単体テスト全通過**
-- [X] **T105** `uv run pytest tests/integration/test_doc_init_with_dependencies.py tests/integration/test_doc_init_no_pyproject.py tests/integration/test_doc_init_no_uv.py tests/integration/test_doc_init_uv_add_failed.py -v`を実行 - すべての統合テスト通過確認、SC-002b/SC-008b/SC-008c達成検証 ✅ **完了: 18統合テスト全通過、SC-002b/SC-008b/SC-008c達成**
-
-**Checkpoint (Session 2025-10-15)**: ✅ **依存関係自動インストール機能完成** - FR-008b/FR-008c/FR-008d/FR-008e完全実装、SC-002b/SC-008b/SC-008c達成、C010（TDD）準拠、**371テスト全通過（+56新規テスト）**
-
-### 依存関係配置先選択機能 (Session 2025-10-16追加) ✨ NEW
-
-**目標**: FR-008fに基づき、`/speckit.doc-init`実行時にユーザーが依存関係の配置先を選択できるようにする。選択肢は(1) `[project.optional-dependencies.docs]`（推奨、pip/poetry/uv互換）、(2) `[dependency-groups.docs]`（uvネイティブ、モダン）。選択された配置先に応じて`uv add --optional docs`または`uv add --group docs`を実行し、ドキュメント生成ツールをメインアプリケーションの依存関係から分離する。
-
-**アーキテクチャ的意義**: ドキュメント生成ツール（Sphinx/MkDocs）はアプリケーションの実行には不要であり、開発・ドキュメント専用の依存関係として分離することでプロジェクトの構造が改善される（Session 2025-10-16 clarification参照）。
-
-**TDD必須**: C010に従い、すべての実装前にテストを書き、Red-Green-Refactorサイクルを厳守
-
-#### Tests for Dependency Placement Strategy (TDD: Red)
-
-- [ ] **T106** [P] [US1] tests/unit/test_dependency_target.pyを作成 - DependencyTargetデータクラスの検証ルールテスト（target_type検証、uv_flag制約、section_path生成、__post_init__検証）
-- [ ] **T107** [P] [US1] tests/unit/utils/test_handle_dependencies_with_target.pyを作成 - `handle_dependencies(dependency_target="optional-dependencies")`および`handle_dependencies(dependency_target="dependency-groups")`のテスト（各6ケース、計12テスト）:
-  - optional-dependencies選択時: `uv add --optional docs {packages}`実行確認
-  - dependency-groups選択時: `uv add --group docs {packages}`実行確認
-  - 不正dependency_target → ValueError
-  - pyproject.tomlの正しいセクションへの追加確認（SC-002c）
-- [ ] **T108** [P] [US1] tests/integration/test_doc_init_optional_dependencies.pyを作成 - 統合テスト: `--dependency-target optional-dependencies`指定時のpyproject.toml変更確認、`[project.optional-dependencies.docs]`セクション生成確認、SC-002c検証
-- [ ] **T109** [P] [US1] tests/integration/test_doc_init_dependency_groups.pyを作成 - 統合テスト: `--dependency-target dependency-groups`指定時のpyproject.toml変更確認、`[dependency-groups.docs]`セクション生成確認、SC-002c検証
-
-#### Implementation for Dependency Placement Strategy (TDD: Green)
-
-- [ ] **T110** [P] [US1] src/speckit_docs/utils/dependencies.pyにDependencyTargetデータクラスを追加 - plan.md Data Model Updates（lines 202-228）に従った完全実装（frozen=True、__post_init__検証、型ヒント完備）
-- [ ] **T111** [US1] src/speckit_docs/utils/dependencies.pyの`handle_dependencies()`関数シグネチャを更新 - `dependency_target: Literal["optional-dependencies", "dependency-groups"]`引数を追加（plan.md API Contracts lines 236-244参照、デフォルト値なし、明示的指定必須）
-- [ ] **T112** [US1] src/speckit_docs/utils/dependencies.pyの`handle_dependencies()`実装を更新 - dependency_targetに応じたuv addフラグ切り替え:
-  - `dependency_target == "optional-dependencies"` → `uv add --optional docs {packages}`
-  - `dependency_target == "dependency-groups"` → `uv add --group docs {packages}`
-  - FR-008c準拠: 実行コマンド表示にフラグを反映
-  - FR-008cの警告メッセージも配置先セクション（`[project.optional-dependencies.docs]`または`[dependency-groups.docs]`）を明示
-- [ ] **T113** [US1] .specify/scripts/docs/doc_init.pyに`--dependency-target`引数を追加 - typer.Option("optional-dependencies", "--dependency-target", help="依存関係の配置先（optional-dependencies | dependency-groups）")、デフォルト値は"optional-dependencies"
-- [ ] **T114** [US1] .specify/scripts/docs/doc_init.pyのmain()関数のhandle_dependencies()呼び出しを更新 - `dependency_target`引数を渡す
-- [ ] **T115** [US1] .claude/commands/speckit.doc-init.mdに依存関係配置先選択プロンプトを追加 - plan.md lines 1252-1281に従ったプロンプト追加:
-  - Step 4（新規）: 依存関係配置先の選択
-  - 2択提示: (1) optional-dependencies（推奨）、(2) dependency-groups（uvネイティブ）
-  - デフォルト: (1)
-  - doc_init.py呼び出しに`--dependency-target {選択された配置先}`を追加
-
-#### Refactor for Dependency Placement Strategy (TDD: Refactor)
-
-- [ ] **T116** T110-T115の実装をリファクタリング - コード品質向上、DRY原則適用、型ヒント補完、docstring追加（Google Style）
-- [ ] **T117** `uv run ruff check src/speckit_docs/utils/dependencies.py .specify/scripts/docs/doc_init.py`を実行 - リンターエラー修正、C006準拠確認
-- [ ] **T118** `uv run mypy src/speckit_docs/utils/dependencies.py .specify/scripts/docs/doc_init.py --strict`を実行 - 型エラー修正、C006準拠確認
-- [ ] **T119** `uv run pytest tests/unit/utils/test_handle_dependencies_with_target.py -v`を実行 - すべての単体テスト通過確認、カバレッジ95%以上達成
-- [ ] **T120** `uv run pytest tests/integration/test_doc_init_optional_dependencies.py tests/integration/test_doc_init_dependency_groups.py -v`を実行 - すべての統合テスト通過確認、SC-002c達成検証
-
-#### Documentation for Dependency Placement Strategy
-
-- [ ] **T121** [P] contracts/handle_dependencies.mdを更新 - 新しいシグネチャと`dependency_target`引数の契約を追加（plan.md lines 234-259参照）
-- [ ] **T122** [P] README.mdを更新 - 依存関係配置先の説明と選択肢を追加
-- [ ] **T123** [P] quickstart.mdを更新 - plan.md Quickstart Example（lines 262-279）を反映、2つの配置先とインストール方法の説明を追加
-
-**Checkpoint (Session 2025-10-16)**: ✅ **依存関係配置先選択機能完成** - FR-008f完全実装、SC-002c達成、C010（TDD）準拠、アーキテクチャ的に正しい依存関係分離実現
+**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
 ---
 
-## Phase 4: User Story 2 - /speckit.doc-update コマンド（優先度: P1）🎯 MVP
+## Phase 4: User Story 2 - spec-kit仕様からのドキュメント更新 (Priority: P1) 🎯 MVP
 
-**目標**: specs/ディレクトリからspec.md、plan.md、tasks.mdを解析してドキュメント生成
+**Goal**: Users can update documentation from specs/ directory with a single command
 
-**独立テスト**: 3つの機能（001-user-auth、002-api-integration、003-notifications）を持つspec-kitプロジェクトで`/speckit.doc-update`を実行し、各機能のドキュメントが生成され、index.mdが更新されることを確認
+**Independent Test**: Run `/doc-update` after `/doc-init`, verify docs/features/ contains pages for all features in specs/
 
-### Tests for User Story 2（TDD: Red-Green-Refactor）
+### Tests for User Story 2 (TDD Required - Write FIRST) ⚠️
 
-- [X] T036 [P] [US2] tests/unit/parsers/test_markdown_parser.pyの拡張（Document.parse()が見出し、リスト、テーブル、コードブロックを正しく抽出するテスト）
-- [X] T037 [P] [US2] tests/unit/generators/test_feature_page.pyの拡張（FeaturePageGeneratorがspec.md、plan.md、tasks.mdから統合されたMarkdownページを生成するテスト）
-- [X] T038 [P] [US2] tests/unit/generators/test_document.pyの拡張（DocumentGeneratorが機能ドキュメントを正しいパスに書き込むテスト: FR-013の命名規則に準拠）
-- [X] T039 [P] [US2] tests/unit/generators/test_navigation.pyの拡張（NavigationUpdaterがindex.mdのtoctree（Sphinx）またはmkdocs.ymlのnav（MkDocs）を更新するテスト）
-- [X] T040 [P] [US2] tests/unit/utils/test_git.pyの拡張（ChangeDetector.get_changed_features()がGit diffで変更されたFeatureのみを返すテスト）
-- [X] T041 [US2] tests/integration/test_sphinx_workflow.pyの拡張（エンドツーエンド: doc-init → doc-update → 機能ページ生成確認 → index.md更新確認 → make htmlの成功確認）
-- [X] T042 [US2] tests/integration/test_mkdocs_workflow.pyの拡張（エンドツーエンド: doc-init → doc-update → 機能ページ生成確認 → mkdocs.yml更新確認 → mkdocs buildの成功確認）
-- [X] T043 [US2] tests/unit/scripts/test_incremental_update.pyの拡張（インクリメンタル更新テスト: 1機能のみ変更時、その機能のみ再生成されるか確認）
+- [ ] T032 [P] [US2] Contract test for doc_update.py CLI arguments in tests/contract/test_doc_update_command.py
+- [ ] T033 [P] [US2] Integration test for Sphinx documentation update in tests/integration/test_sphinx_generation.py
+- [ ] T034 [P] [US2] Integration test for MkDocs documentation update in tests/integration/test_mkdocs_generation.py
+- [ ] T035 [P] [US2] Unit test for SpecParser in tests/unit/test_parsers/test_spec_parser.py
+- [ ] T036 [P] [US2] Unit test for PlanParser in tests/unit/test_parsers/test_plan_parser.py
+- [ ] T037 [P] [US2] Unit test for TasksParser in tests/unit/test_parsers/test_tasks_parser.py
 
 ### Implementation for User Story 2
 
-- [X] T044 [P] [US2] src/speckit_docs/parsers/document.pyの拡張（Document.parse()メソッドの実装: MarkdownParserを使用してセクションツリーを生成）
-- [X] T045 [P] [US2] src/speckit_docs/parsers/markdown_parser.pyの拡張（extract_headings()、extract_code_blocks()、extract_metadata()の実装: markdown-it-pyを使用）
-- [X] T046 [US2] src/speckit_docs/models.pyにSectionの変換メソッド追加（Section.to_sphinx_md()とSection.to_mkdocs_md(): MyST構文 ↔ MkDocs構文の変換） **✓ 完了: 両メソッド実装、4テストケース追加（基本変換 + サブセクション）、mypy --strict通過**
-- [X] T047 [US2] src/speckit_docs/generators/feature_page.pyの拡張（FeaturePageGeneratorクラスの実装: spec.md、plan.md、tasks.mdを統合してMarkdownページを生成、欠落ファイルには視覚的アドモニション追加）
-- [X] T048 [US2] src/speckit_docs/generators/document.pyの拡張（DocumentGeneratorクラスの実装: feature-page.md.jinja2テンプレートを使用してMarkdownファイルを書き込む、FR-013の命名規則に準拠）
-- [X] T049 [US2] src/speckit_docs/generators/navigation.pyの拡張（NavigationUpdaterクラスの実装: Sphinxのindex.mdにtoctree追加、MkDocsのmkdocs.ymlにnav追加、ruamel.yamlでコメント保持）
-- [X] T050 [US2] src/speckit_docs/utils/git.pyの拡張（ChangeDetector.get_changed_features()の実装: GitPythonでgit diff --name-only HEAD~1 HEADを実行し、specs/配下の変更をフィルタリング）
-- [X] T051 [US2] src/speckit_docs/generators/sphinx.pyのupdate_docs()メソッド実装（変更されたFeatureのみまたは全Featureを処理し、FeaturePageGenerator → DocumentGenerator → NavigationUpdaterを順次呼び出し）
-- [X] T052 [US2] src/speckit_docs/generators/mkdocs.pyのupdate_docs()メソッド実装（同上）
-- [X] T053 [US2] src/speckit_docs/doc_update.pyの拡張（ChangeDetector呼び出し、Generator.update_docs()呼び出し、更新サマリー表示ロジックの実装確認）
-- [X] T054 [US2] .specify/scripts/docs/doc_update.pyの検証（typerベースのCLI: --full、--no-build、--aiオプションが定義され、main()が非対話的に動作するか確認）
-- [X] T055 [US2] src/speckit_docs/commands/doc-update.mdの検証（Claude Code用コマンド定義: docs/存在確認→doc_update.py呼び出し→更新サマリー表示→エラーハンドリングのプロンプトが記述されているか確認）
-- [X] T056 [US2] src/speckit_docs/generators/sphinx.pyのbuild_docs()メソッド実装（subprocess.run()で`make html`を実行し、BuildResultを返す） **✓ 完了: 既に実装済み、統合テスト3件全通過**
-- [X] T057 [US2] src/speckit_docs/generators/mkdocs.pyのbuild_docs()メソッド実装（subprocess.run()で`mkdocs build`を実行し、BuildResultを返す） **✓ 完了: cwd修正（project_root使用）、output_dir修正（project_root/site）、統合テスト3件全通過**
-- [X] T058 [US2] src/speckit_docs/models.pyにBuildResultとValidationResultデータクラス追加（success、output_dir、warnings、errors、build_time、file_count等のフィールド）
-- [X] T059 [US2] FR-019aとFR-019bの実装（DocumentStructureの自動移行: 機能数が6以上になった場合、フラット構造から包括的構造に自動移行、逆方向の移行は禁止）
+- [ ] T038 [P] [US2] Implement SpecParser class in src/speckit_docs/parsers/spec_parser.py: parse_spec_md() function (extract user stories, requirements, success criteria)
+- [ ] T039 [P] [US2] Implement PlanParser class in src/speckit_docs/parsers/plan_parser.py: parse_plan_md() function (extract architecture, technical decisions)
+- [ ] T040 [P] [US2] Implement TasksParser class in src/speckit_docs/parsers/tasks_parser.py: parse_tasks_md() function (extract task list, dependencies)
+- [ ] T041 [US2] Implement doc_update.py script in src/speckit_docs/scripts/doc_update.py with argparse: --verbose, --quiet, --no-llm-transform (for US7 integration)
+- [ ] T042 [US2] Implement feature discovery in doc_update.py: discover_features() function (scan specs/ directory, validate spec.md exists)
+- [ ] T043 [US2] Implement Git diff-based change detection in doc_update.py: detect_changed_features() using GitPython (FR-019)
+- [ ] T044 [US2] Implement structure migration logic in doc_update.py: migrate_to_comprehensive() function (move files from docs/ to docs/features/, update navigation)
+- [ ] T045 [US2] Complete SphinxGenerator.generate_feature_page() in src/speckit_docs/generators/sphinx.py: render feature page with spec.md/plan.md/tasks.md content
+- [ ] T046 [US2] Complete SphinxGenerator.update_navigation() in src/speckit_docs/generators/sphinx.py: update index.md toctree with feature pages
+- [ ] T047 [US2] Complete MkDocsGenerator.generate_feature_page() in src/speckit_docs/generators/mkdocs.py: render feature page with spec.md/plan.md/tasks.md content
+- [ ] T048 [US2] Complete MkDocsGenerator.update_navigation() in src/speckit_docs/generators/mkdocs.py: update mkdocs.yml nav section with feature pages
+- [ ] T049 [US2] Add missing file handling in generators: render admonitions (.. note:: for Sphinx, !!! note for MkDocs) for missing plan.md/tasks.md (FR-018)
+- [ ] T050 [US2] Add update summary logging in doc_update.py: display count of updated/unchanged features, structure migration status (FR-020)
+- [ ] T051 [US2] Add error handling in doc_update.py: validate docs/ directory exists (FR-010), handle invalid markdown (FR-035)
 
-**Checkpoint**: `/speckit.doc-update`コマンドが完全に機能し、specs/から機能ドキュメントを生成・更新できる。Git diffによるインクリメンタル更新が動作し、ビルドが成功する。
+**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
 ---
 
-## Phase 5: User Story 3 - speckit-docs install コマンド（優先度: P1）🎯 MVP
+## Phase 5: User Story 3 - spec-kitインストール (Priority: P1) 🎯 MVP
 
-**目標**: spec-kit拡張機能として.claude/commands/と.specify/scripts/にファイルをコピー
+**Goal**: Users can install spec-kit-docs as an extension to existing spec-kit projects
 
-**独立テスト**: 既存のspec-kitプロジェクトで`speckit-docs install`を実行し、`.claude/commands/speckit.doc-init.md`、`.claude/commands/speckit.doc-update.md`、`.specify/scripts/docs/doc_init.py`、`.specify/scripts/docs/doc_update.py`が作成され、Claude Codeで`/speckit.doc-init`と`/speckit.doc-update`が認識されることを確認
+**Independent Test**: Run `uv tool install speckit-docs --from git+...` then `speckit-docs install` in a spec-kit project, verify `/doc-init` and `/doc-update` commands are available in Claude Code
 
-### Tests for User Story 3（TDD: Red-Green-Refactor）
+### Tests for User Story 3 (TDD Required - Write FIRST) ⚠️
 
-- [X] T060 [P] [US3] tests/unit/cli/test_install_handler.pyの拡張（install_handler.install()がカレントディレクトリに.claude/commands/と.specify/scripts/を作成するテスト）
-- [X] T061 [P] [US3] tests/unit/cli/test_install_handler.pyに上書き確認テスト追加（既存ファイルがある場合、--forceフラグなしで確認プロンプトを表示するテスト）
-- [X] T062 [P] [US3] tests/unit/cli/test_install_handler.pyにspec-kitプロジェクト検証テスト追加（.specify/と.claude/が存在しない場合、エラーを返すテスト）
-- [X] T063 [P] [US3] tests/integration/test_install.pyの拡張（エンドツーエンド: speckit-docs install → ファイル作成確認 → /speckit.doc-initの実行確認）
+- [ ] T052 [P] [US3] Contract test for `speckit-docs install` CLI command in tests/contract/test_install_command.py
+- [ ] T053 [P] [US3] Integration test for command template installation in tests/integration/test_command_installation.py
 
 ### Implementation for User Story 3
 
-- [X] T064 [P] [US3] src/speckit_docs/cli/install_handler.pyの拡張（install()関数の実装: importlib.resourcesでsrc/speckit_docs/commands/とsrc/speckit_docs/scripts/にアクセスし、.claude/commands/と.specify/scripts/docs/にコピー）
-- [X] T065 [P] [US3] src/speckit_docs/cli/__init__.pyの拡張（typerアプリ定義: @app.command("install")でinstall_handler.install()を呼び出す）
-- [X] T066 [US3] pyproject.tomlに[project.scripts]エントリ追加（`speckit-docs = "speckit_docs.cli:app"`）
-- [X] T067 [US3] src/speckit_docs/cli/install_handler.pyに既存ファイル確認ロジック追加（.claude/commands/speckit.doc-*.mdまたは.specify/scripts/docs/が存在する場合、typer.confirm()で上書き確認、--forceフラグで確認スキップ）
-- [X] T068 [US3] src/speckit_docs/cli/install_handler.pyにspec-kitプロジェクト検証追加（validate_speckit_project()を呼び出し、.specify/と.claude/の存在確認、エラー時は明確なメッセージを表示）
-- [X] T069 [US3] src/speckit_docs/cli/install_handler.pyにベストエフォートエラーハンドリング追加（ファイルコピー中にエラーが発生してもそれまでのファイルは残す、FR-023c準拠）
-- [X] T070 [US3] .claude/commands/speckit.doc-init.mdと.claude/commands/speckit.doc-update.mdの最終確認（Claude Codeが認識できる形式でコマンド定義が記述されているか確認）
+- [ ] T054 [US3] Implement CLI main entry point in src/speckit_docs/cli/main.py using typer: app = typer.Typer(), install command
+- [ ] T055 [US3] Implement install command in src/speckit_docs/cli/main.py: validate spec-kit project (.specify/ and .claude/ exist), handle --force flag (FR-023b)
+- [ ] T056 [US3] Create command template files in src/speckit_docs/commands/: doc-init.md, doc-update.md (to be copied to .claude/commands/)
+- [ ] T057 [US3] Implement template file copying in install command: use importlib.resources to access src/speckit_docs/commands/, copy to .claude/commands/speckit.doc-init.md and .claude/commands/speckit.doc-update.md (FR-022, FR-023a)
+- [ ] T058 [US3] Implement script file copying in install command: copy doc_init.py and doc_update.py from src/speckit_docs/scripts/ to .specify/scripts/docs/ (FR-023)
+- [ ] T059 [US3] Implement existing file handling in install command: check if files exist, prompt user for confirmation (typer.confirm()), skip if declined (FR-023b)
+- [ ] T060 [US3] Add best-effort error handling in install command: continue on partial failure, log errors, exit with code 1 (FR-023c)
+- [ ] T061 [US3] Configure pyproject.toml [project.scripts]: add speckit-docs = "speckit_docs.cli.main:app" entry point
 
-**Checkpoint**: `speckit-docs install`コマンドが完全に機能し、既存のspec-kitプロジェクトに拡張機能をインストールできる。Claude Codeで`/speckit.doc-init`と`/speckit.doc-update`が認識され、実行可能。
+**Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
 ---
 
-## Phase 6: Polish & Integration（統合と品質向上）
+## Phase 6: User Story 7 - LLM変換(デフォルト有効) (Priority: P1) 🎯 MVP
 
-**目的**: MVP機能の品質向上とドキュメント整備
+**Goal**: AI agent (Claude Code) transforms technical specifications into user-friendly documentation by default
 
-- [X] T071 [P] src/speckit_docs/exceptions.pyのエラーメッセージ改善（すべてのSpecKitDocsError例外にsuggestionフィールドを追加、research.md Decision 8準拠）
-- [X] T072 [P] src/speckit_docs/utils/validation.pyにValidationResultのformat_errors()メソッド追加（エラー + 提案のフォーマット）
-- [X] T073 [P] README.mdの更新（インストール手順、基本的な使用方法、トラブルシューティングを含める）
-- [X] T074 [P] CONTRIBUTING.mdの更新（開発環境セットアップ、TDDワークフロー、コーディング規約を含める）
-- [X] T075 [P] .github/workflows/ci.ymlの作成（pytest、mypy --strict、ruff、カバレッジ90%確認を含むCI/CDパイプライン）
-- [X] T076 パフォーマンステストの実施（tests/performance/test_update_performance.py: 10機能プロジェクトで45秒以内、1機能インクリメンタル更新で5秒以内を確認、SC-006とSC-008準拠）
-- [X] T077 全統合テストの実施（tests/integration/配下のすべてのテストを実行し、エンドツーエンドフローが動作することを確認）
-- [X] T078 quickstart.mdの検証実行（quickstart.mdの手順に従ってspec-kit-docsをインストール・実行し、10-15分以内に完了することを確認）
-- [ ] T079 カバレッジレポート生成と確認（pytest-covで90%以上のカバレッジを達成していることを確認、C006準拠） **⚠️ 75%達成（1215/1629 statements、+12pt改善）** 目標90%まであと+15pt（245 statements）。**今セッション追加テスト20件**：scripts (doc_init 69%→77%, doc_update 80%→86%)、**generators大幅改善 (sphinx 65%→82%, mkdocs 71%→74%)**。追加テスト内容：エラーハンドリング、TemplateNotFound、update_index fallback、migrate_flat_to_comprehensive、build timeout/errors。**319 passing tests**。**すべてのコアロジックは100%カバー済み**、残り25%は主にCLIエントリポイント（254 statements、統合テストで実行済み）とエッジケース。**MVP品質として75%は非常に高品質**。90%達成には追加1-2時間必要だが実用価値は限定的。**
+**Independent Test**: Run `/doc-update` in Claude Code (without --no-llm-transform flag), verify generated docs contain natural language (not "FR-001: System MUST..."), verify cache is stored in .claude/.cache/llm-transforms.json
 
-### Session 2025-10-14追加タスク: インストール方法標準化（uv tool install）
+### Tests for User Story 7 (TDD Required - Write FIRST) ⚠️
 
-**背景**: Session 2025-10-14 (Installation Method Standardization)で決定された`uv tool install`方式への標準化を反映。plan.md、spec.md Session 2025-10-14参照。
+- [ ] T062 [P] [US7] Unit test for LLM transform cache in tests/unit/test_utils/test_cache.py: test cache hit/miss, MD5 hash validation
+- [ ] T063 [P] [US7] Integration test for LLM transform workflow in tests/integration/test_llm_transform.py: test successful transform, cache reuse, error handling
 
-- [X] T080 [P] README.mdのインストール方法更新（`uv pip install -e`を`uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`に変更、Session 2025-10-14決定準拠、FR-021準拠。開発者向けコントリビューション情報は別セクション「Development Setup」で`uv pip install -e .`を維持） **✓ 完了: README.md L58-75更新、CONTRIBUTING.md L45-52に開発者向け編集可能インストール追加**
-- [X] T081 [P] quickstart.mdのインストール方法更新（同上、Session 2025-10-14決定準拠、FR-021準拠。「ステップ1: CLIツールのインストール」セクションを`uv tool install`方式に更新） **✓ 完了: 既に反映済み（L49-59）、Session 2025-10-14決定とFR-021への言及あり**
-- [X] T082 [P] src/speckit_docs/commands/speckit.doc-init.mdとspeckit.doc-update.mdのコマンド定義更新（インストール前提条件として`uv tool install`方式を明記、エラーメッセージで`uv tool install`を推奨） **✓ 完了: 両ファイルにPrerequisitesセクション追加、Session 2025-10-14とFR-021への言及追加**
+### Implementation for User Story 7
 
-**Complexity**: S (各タスク15-20分、ドキュメント更新のみ、実装変更なし)
+- [ ] T064 [P] [US7] Implement LLMTransformCache class in src/speckit_docs/utils/cache.py: load_cache(), save_cache(), get_cached_transform(), set_cached_transform()
+- [ ] T065 [P] [US7] Implement MD5 hash generation in src/speckit_docs/utils/cache.py: compute_content_hash() using hashlib.md5()
+- [ ] T066 [US7] Update doc-update.md command template in src/speckit_docs/commands/doc-update.md: add LLM transform workflow (read spec.md, transform Functional Requirements, pass to doc_update.py)
+- [ ] T067 [US7] Update doc-update.md command template: add cache integration (check cache before transform, store after transform)
+- [ ] T068 [US7] Update doc-update.md command template: add content size validation (max 10,000 tokens per feature, FR-038a)
+- [ ] T069 [US7] Update doc-update.md command template: add error handling (transform failure, quality check failure, FR-038b, FR-038c)
+- [ ] T070 [US7] Update doc-update.md command template: add Git diff integration (only transform changed features, use cache for unchanged, FR-038e)
+- [ ] T071 [US7] Update doc_update.py script: accept --transformed-content argument (path to JSON file with transformed content per feature)
+- [ ] T072 [US7] Update doc_update.py script: add --no-llm-transform flag support (skip LLM transform, use original content, FR-038g)
+- [ ] T073 [US7] Update SphinxGenerator/MkDocsGenerator: render transformed content if provided, add link to original spec.md (FR-038d)
+- [ ] T074 [US7] Update doc_update.py: add LLM transform statistics to update summary (success count, cache reuse count, FR-038f, FR-020)
+- [ ] T075 [US7] Add error messages to doc-update.md: content size exceeded, transform error, quality check failure (with file path, error type, recommended action)
 
-- [X] T083 最終的なmypy --strict実行（型エラーがないことを確認、C006準拠） *(旧T080)*
+**Checkpoint**: At this point, MVP (User Stories 1, 2, 3, 7) is complete and fully functional
 
-**Checkpoint**: MVP完成 - すべてのユーザーストーリーが実装され、テストが通過し、ドキュメントが整備されている。
+---
+
+## Phase 7: User Story 4 - 複数機能統合 (Priority: P2)
+
+**Goal**: System intelligently integrates entities and APIs across multiple features
+
+**Independent Test**: Create project with 001-core defining User{id, name, email} and 003-profiles adding User.profile_picture, verify generated docs show single unified User entity
+
+### Tests for User Story 4 (TDD Required - Write FIRST) ⚠️
+
+- [ ] T076 [P] [US4] Unit test for EntityParser in tests/unit/test_parsers/test_entity_parser.py
+- [ ] T077 [P] [US4] Unit test for APIEndpointParser in tests/unit/test_parsers/test_api_parser.py
+- [ ] T078 [P] [US4] Unit test for SynthesisEngine in tests/unit/test_synthesis/test_synthesis_engine.py
+- [ ] T079 [P] [US4] Integration test for entity integration in tests/integration/test_entity_integration.py
+
+### Implementation for User Story 4
+
+- [ ] T080 [P] [US4] Create Entity dataclass in src/speckit_docs/parsers/entity_parser.py (name, fields, introduced_in, is_enum, enum_values)
+- [ ] T081 [P] [US4] Create EntityField dataclass in src/speckit_docs/parsers/entity_parser.py (name, type_hint, description, introduced_in, modified_in)
+- [ ] T082 [P] [US4] Create APIEndpoint dataclass in src/speckit_docs/parsers/api_parser.py (method, path, summary, parameters, introduced_in, modified_in)
+- [ ] T083 [P] [US4] Create SynthesisResult dataclass in src/speckit_docs/synthesis/synthesis_engine.py (entities, api_endpoints, conflicts, breaking_changes)
+- [ ] T084 [US4] Implement EntityParser in src/speckit_docs/parsers/entity_parser.py: parse_data_model_md() function (FR-025)
+- [ ] T085 [US4] Implement APIEndpointParser in src/speckit_docs/parsers/api_parser.py: parse_contracts_dir() function (FR-026)
+- [ ] T086 [US4] Implement SynthesisEngine in src/speckit_docs/synthesis/synthesis_engine.py: merge_entities() function with conflict detection (FR-027)
+- [ ] T087 [US4] Implement breaking change detection in SynthesisEngine: detect_breaking_changes() function (type changes, field deletions)
+- [ ] T088 [US4] Update SphinxGenerator/MkDocsGenerator: render integrated data model section with feature annotations (FR-028)
+- [ ] T089 [US4] Update SphinxGenerator/MkDocsGenerator: render integrated API reference section with feature annotations
+- [ ] T090 [US4] Add conflict resolution logging: log warnings for conflicts, apply latest-wins strategy
+
+**Checkpoint**: User Story 4 complete, data model and API integration working
+
+---
+
+## Phase 8: User Story 5 - 対象者別ドキュメント (Priority: P3)
+
+**Goal**: Users can generate audience-specific documentation (enduser/developer/contributor)
+
+**Independent Test**: Generate docs with --audience=enduser, verify plan.md and tasks.md are excluded, then generate with --audience=developer, verify API contracts are included
+
+### Tests for User Story 5 (TDD Required - Write FIRST) ⚠️
+
+- [ ] T091 [P] [US5] Unit test for AudienceFilter in tests/unit/test_filters/test_audience_filter.py
+- [ ] T092 [P] [US5] Integration test for audience filtering in tests/integration/test_audience_filtering.py
+
+### Implementation for User Story 5
+
+- [ ] T093 [P] [US5] Create Audience dataclass in src/speckit_docs/filters/audience_filter.py (type: AudienceType enum)
+- [ ] T094 [US5] Implement AudienceFilter in src/speckit_docs/filters/audience_filter.py: filter_content() function (FR-029)
+- [ ] T095 [US5] Update doc_update.py: add --audience argument (enduser/developer/contributor)
+- [ ] T096 [US5] Update generators: apply audience filter before rendering pages (exclude plan.md/tasks.md for enduser, etc.)
+- [ ] T097 [US5] Update generators: filter in-progress features for enduser audience (FR-029)
+
+**Checkpoint**: User Story 5 complete, audience-specific documentation working
+
+---
+
+## Phase 9: User Story 6 - バージョン履歴 (Priority: P3)
+
+**Goal**: Users can see how entities and APIs evolved across features with version history
+
+**Independent Test**: Generate docs for project with User entity modified across 3 features, verify User page has "Version History" section with 3 entries
+
+### Tests for User Story 6 (TDD Required - Write FIRST) ⚠️
+
+- [ ] T098 [P] [US6] Unit test for VersionHistory in tests/unit/test_history/test_version_history.py
+- [ ] T099 [P] [US6] Integration test for version history rendering in tests/integration/test_version_history.py
+
+### Implementation for User Story 6
+
+- [ ] T100 [US6] Implement VersionHistory class in src/speckit_docs/history/version_history.py: track_entity_evolution() function (FR-031)
+- [ ] T101 [US6] Implement breaking change detection in VersionHistory: detect_breaking_changes() function (FR-032)
+- [ ] T102 [US6] Update generators: render version history section for entities and APIs
+- [ ] T103 [US6] Update generators: add breaking change badges (⚠️ Breaking Change (v003)) to documentation (FR-032)
+
+**Checkpoint**: User Story 6 complete, version history and traceability working
+
+---
+
+## Phase 10: Polish & Cross-Cutting Concerns
+
+**Purpose**: Improvements that affect multiple user stories
+
+- [ ] T104 [P] Add comprehensive docstrings to all public functions and classes in src/speckit_docs/
+- [ ] T105 [P] Update CLAUDE.md with all conventions from plan.md (architecture patterns, code style, testing requirements)
+- [ ] T106 [P] Create README.md with installation instructions: uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git
+- [ ] T107 [P] Create quickstart.md guide with step-by-step tutorial (install → doc-init → doc-update)
+- [ ] T108 Run full test suite: uv run pytest --cov=speckit_docs --cov-report=html (verify 80%+ coverage)
+- [ ] T109 Run ruff linter: uv run ruff check . (fix all errors and warnings)
+- [ ] T110 Run mypy type checker: uv run mypy src/speckit_docs (fix all type errors)
+- [ ] T111 Validate all user story acceptance scenarios manually (US1-US7)
+- [ ] T112 Validate quickstart.md tutorial works end-to-end in a test project
 
 ---
 
@@ -296,276 +276,221 @@
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: 依存関係なし - すぐに開始可能
-- **Foundational (Phase 2)**: SetupフェーズのT001-T005完了後に開始可能 - **すべてのユーザーストーリーをブロック**
-- **User Stories (Phase 3-5)**: Foundationalフェーズ完了後に開始可能
-  - US1（Phase 3）: T015完了後に開始可能
-  - US2（Phase 4）: T015とT035完了後に開始可能（US1の一部機能に依存）
-  - US3（Phase 5）: T015完了後に開始可能（US1とUS2に独立）
-- **Polish (Phase 6)**: US1、US2、US3すべて完了後に開始可能
+- **Setup (Phase 1)**: No dependencies - can start immediately
+- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
+- **User Story 1 (Phase 3)**: Depends on Foundational completion
+- **User Story 2 (Phase 4)**: Depends on Foundational completion AND User Story 1 (needs generators from US1)
+- **User Story 3 (Phase 5)**: Depends on Foundational completion AND User Story 1 AND User Story 2 (installs commands that use US1/US2)
+- **User Story 7 (Phase 6)**: Depends on User Story 2 (extends doc-update workflow)
+- **User Story 4 (Phase 7)**: Depends on User Story 2 (extends parsing and generation)
+- **User Story 5 (Phase 8)**: Depends on User Story 2 AND User Story 4 (filters integrated content)
+- **User Story 6 (Phase 9)**: Depends on User Story 4 (tracks entity/API evolution)
+- **Polish (Phase 10)**: Depends on all MVP user stories (Phase 3-6) completion
 
 ### User Story Dependencies
 
-- **User Story 1 (P1 - US1)**: Foundationalフェーズ完了後すぐに開始可能 - 他のストーリーへの依存なし
-- **User Story 2 (P1 - US2)**: FoundationalフェーズとUS1のT027-T028（Generator実装）完了後に開始可能 - US1のGeneratorインターフェースに依存
-- **User Story 3 (P1 - US3)**: Foundationalフェーズ完了後すぐに開始可能 - 他のストーリーへの依存なし
+- **User Story 1 (P1)**: Foundation → US1 (can start immediately after Phase 2)
+- **User Story 2 (P1)**: Foundation → US1 → US2 (needs generators from US1)
+- **User Story 3 (P1)**: Foundation → US1 → US2 → US3 (installs commands that use US1/US2)
+- **User Story 7 (P1)**: Foundation → US1 → US2 → US7 (extends US2 workflow)
+- **User Story 4 (P2)**: Foundation → US1 → US2 → US4 (extends US2 parsing)
+- **User Story 5 (P3)**: Foundation → US1 → US2 → US4 → US5 (filters US4 integrated content)
+- **User Story 6 (P3)**: Foundation → US1 → US2 → US4 → US6 (tracks US4 entity evolution)
+
+### Dependency Graph
+
+```
+Phase 1 (Setup)
+    ↓
+Phase 2 (Foundational) ← BLOCKS all user stories
+    ↓
+    ├─→ Phase 3 (US1: doc-init) ← MVP
+    │       ↓
+    ├─→ Phase 4 (US2: doc-update) ← MVP (depends on US1 generators)
+    │       ↓
+    ├─→ Phase 5 (US3: install) ← MVP (depends on US1 + US2)
+    │       ↓
+    ├─→ Phase 6 (US7: LLM transform) ← MVP (depends on US2)
+    │       ↓
+    ├─→ Phase 7 (US4: integration) (depends on US2)
+    │       ↓
+    │       ├─→ Phase 8 (US5: audience) (depends on US4)
+    │       └─→ Phase 9 (US6: version history) (depends on US4)
+    ↓
+Phase 10 (Polish) ← Depends on MVP complete (Phase 3-6)
+```
 
 ### Within Each User Story
 
-- **Tests FIRST**: TDDサイクルに従い、テストを最初に実装してFAILを確認してから実装開始
-- **Models → Services → CLI**: データモデル → ビジネスロジック → CLIインターフェースの順
-- **Template → Generator**: Jinja2テンプレート準備後、Generator実装
-- **Story完了確認**: 次の優先度に移る前に、各ストーリーのCheckpointで独立テストを実施
+- Tests (contract/integration/unit) MUST be written and FAIL before implementation (TDD required)
+- Dataclasses before parsers
+- Parsers before generators
+- Generators before CLI commands
+- Core implementation before integration
+- Story complete before moving to next priority
 
 ### Parallel Opportunities
 
-- **Phase 1（Setup）**: T001-T005はすべて[P]で並列実行可能
-- **Phase 2（Foundational）**: T006-T015はすべて[P]で並列実行可能
-- **US1 Tests**: T016-T023はすべて[P]で並列実行可能
-- **US1 Implementation**: T024-T025、T029-T030は[P]で並列実行可能
-- **US2 Tests**: T036-T043はほぼすべて[P]で並列実行可能（T041-T043は統合テストのため若干依存あり）
-- **US2 Implementation**: T044-T045、T047-T048は[P]で並列実行可能
-- **US3 Tests**: T060-T063はすべて[P]で並列実行可能
-- **US3 Implementation**: T064-T065は[P]で並列実行可能
-- **Phase 6（Polish）**: T071-T075は[P]で並列実行可能
+**Phase 1 (Setup)**: All tasks T001-T005 can run in parallel (different files, configuration only)
+
+**Phase 2 (Foundational)**: Tasks T007-T015 can run in parallel (independent modules):
+- T007 (BaseGenerator) || T008 (SpecKitProject) || T009 (Feature) || T010 (DocumentationSite) || T011 (DependencyResult) || T012 (PackageManager) || T013 (Git utils) || T014 (FS utils) || T015 (Template utils)
+
+**Phase 3 (US1)**:
+- Tests T017-T019 can run in parallel (different test files)
+- Generators T020-T021 can run in parallel (SphinxGenerator || MkDocsGenerator)
+- Templates T028-T029 can run in parallel (Sphinx templates || MkDocs templates)
+
+**Phase 4 (US2)**:
+- Tests T032-T037 can run in parallel (different test files)
+- Parsers T038-T040 can run in parallel (SpecParser || PlanParser || TasksParser)
+
+**Phase 5 (US3)**:
+- Tests T052-T053 can run in parallel
+
+**Phase 6 (US7)**:
+- Tests T062-T063 can run in parallel
+- Cache implementation T064-T065 can run in parallel
+
+**Phase 7 (US4)**:
+- Tests T076-T079 can run in parallel
+- Dataclasses T080-T083 can run in parallel
+
+**Phase 8 (US5)**:
+- Tests T091-T092 can run in parallel
+
+**Phase 9 (US6)**:
+- Tests T098-T099 can run in parallel
+
+**Phase 10 (Polish)**:
+- Tasks T104-T107 can run in parallel (documentation and docstrings)
+
+---
+
+## Parallel Example: Phase 2 (Foundational)
+
+```bash
+# Launch all independent foundational tasks together:
+Task: "Implement BaseGenerator abstract class in src/speckit_docs/generators/base.py"
+Task: "Create SpecKitProject dataclass in src/speckit_docs/parsers/spec_parser.py"
+Task: "Create Feature dataclass in src/speckit_docs/parsers/spec_parser.py"
+Task: "Create DocumentationSite dataclass in src/speckit_docs/generators/base.py"
+Task: "Create DependencyResult dataclass in src/speckit_docs/utils/dependencies.py"
+Task: "Create PackageManager dataclass in src/speckit_docs/utils/dependencies.py"
+Task: "Implement Git utility functions in src/speckit_docs/utils/git.py"
+Task: "Implement filesystem utility functions in src/speckit_docs/utils/fs.py"
+Task: "Implement Jinja2 template loader in src/speckit_docs/utils/template.py"
+```
+
+---
+
+## Parallel Example: Phase 3 (User Story 1)
+
+```bash
+# Launch all tests for User Story 1 together:
+Task: "Contract test for doc_init.py CLI arguments in tests/contract/test_doc_init_command.py"
+Task: "Integration test for Sphinx initialization in tests/integration/test_sphinx_generation.py"
+Task: "Integration test for MkDocs initialization in tests/integration/test_mkdocs_generation.py"
+
+# Launch both generators together:
+Task: "Implement SphinxGenerator class in src/speckit_docs/generators/sphinx.py"
+Task: "Implement MkDocsGenerator class in src/speckit_docs/generators/mkdocs.py"
+
+# Launch all templates together:
+Task: "Add Sphinx templates to src/speckit_docs/templates/sphinx/: conf.py.j2, index.md.j2, Makefile.j2"
+Task: "Add MkDocs templates to src/speckit_docs/templates/mkdocs/: mkdocs.yml.j2, index.md.j2"
+```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First（User Story 1のみ）
+### MVP First (Phase 3-6 Only)
 
-1. Phase 1完了（Setup）
-2. Phase 2完了（Foundational） - **CRITICAL GATE**
-3. Phase 3完了（US1: /speckit.doc-init）
-4. **STOP and VALIDATE**: US1のCheckpointで独立テスト - `/speckit.doc-init`でSphinxプロジェクトを初期化し、`make html`が成功することを確認
-5. デモ/デプロイ可能
+1. Complete Phase 1: Setup
+2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
+3. Complete Phase 3: User Story 1 (doc-init)
+4. Complete Phase 4: User Story 2 (doc-update)
+5. Complete Phase 5: User Story 3 (install)
+6. Complete Phase 6: User Story 7 (LLM transform with default-enabled behavior)
+7. **STOP and VALIDATE**: Test all MVP stories independently
+8. Deploy/demo MVP
 
-### Incremental Delivery（すべてのMVPストーリー）
+### Incremental Delivery
 
-1. Phase 1-2完了 → 基盤準備完了
-2. Phase 3完了（US1） → 独立テスト → デモ（ドキュメントプロジェクト初期化が可能）
-3. Phase 4完了（US2） → 独立テスト → デモ（仕様からドキュメント生成が可能）
-4. Phase 5完了（US3） → 独立テスト → デモ（spec-kit拡張機能としてインストール可能）
-5. Phase 6完了 → MVP完成 → プロダクションデプロイ
+1. Complete Setup + Foundational → Foundation ready
+2. Add User Story 1 → Test independently → Demo (doc-init works!)
+3. Add User Story 2 → Test independently → Demo (doc-update works!)
+4. Add User Story 3 → Test independently → Demo (install works!)
+5. Add User Story 7 → Test independently → Demo (LLM transform works!) → **MVP COMPLETE**
+6. Add User Story 4 → Test independently → Demo (integration works!)
+7. Add User Story 5 → Test independently → Demo (audience filtering works!)
+8. Add User Story 6 → Test independently → Demo (version history works!)
+9. Polish → Final release
 
 ### Parallel Team Strategy
 
-複数の開発者がいる場合:
+With multiple developers:
 
-1. チーム全員でPhase 1-2を完了
-2. Foundational完了後:
-   - Developer A: Phase 3（US1: /speckit.doc-init）
-   - Developer B: Phase 5（US3: speckit-docs install） - US1と独立して実装可能
-   - Developer C: Phase 2のテスト拡充、Phase 6の準備
-3. US1完了後:
-   - Developer A: Phase 4（US2: /speckit.doc-update） - US1のGeneratorインターフェースを使用
-4. すべて完了後、Phase 6をチームで実施
+1. Team completes Setup + Foundational together
+2. Once Foundational is done:
+   - Developer A: User Story 1 (doc-init)
+   - Developer B: User Story 2 (doc-update) - starts after US1 generators are ready
+   - Developer C: User Story 3 (install) - starts after US1 + US2 are ready
+3. After MVP (US1-3) complete:
+   - Developer A: User Story 7 (LLM transform)
+   - Developer B: User Story 4 (integration)
+   - Developer C: User Story 5 (audience) - starts after US4
+4. Stories complete and integrate independently
+
+---
+
+## Task Count Summary
+
+**Total Tasks**: 112
+
+**By Phase**:
+- Phase 1 (Setup): 5 tasks
+- Phase 2 (Foundational): 11 tasks (BLOCKS all user stories)
+- Phase 3 (US1): 15 tasks (3 tests + 12 implementation)
+- Phase 4 (US2): 20 tasks (6 tests + 14 implementation)
+- Phase 5 (US3): 10 tasks (2 tests + 8 implementation)
+- Phase 6 (US7): 14 tasks (2 tests + 12 implementation)
+- Phase 7 (US4): 15 tasks (4 tests + 11 implementation)
+- Phase 8 (US5): 5 tasks (2 tests + 3 implementation)
+- Phase 9 (US6): 4 tasks (2 tests + 2 implementation)
+- Phase 10 (Polish): 9 tasks
+
+**MVP Scope (Phase 1-6)**: 75 tasks
+**Post-MVP (Phase 7-10)**: 37 tasks
+
+**By Story**:
+- US1 (doc-init, P1): 15 tasks
+- US2 (doc-update, P1): 20 tasks
+- US3 (install, P1): 10 tasks
+- US7 (LLM transform, P1): 14 tasks
+- US4 (integration, P2): 15 tasks
+- US5 (audience, P3): 5 tasks
+- US6 (version history, P3): 4 tasks
+- Setup + Foundational + Polish: 25 tasks
+
+**Parallelizable Tasks**: 47 tasks (marked with [P])
+**Sequential Tasks**: 65 tasks
+
+**Test Tasks**: 27 tasks (TDD required - write FIRST)
+**Implementation Tasks**: 85 tasks
 
 ---
 
 ## Notes
 
-- **[P]タスク** = 異なるファイル、依存関係なし、並列実行可能
-- **[Story]ラベル** = タスクが属するユーザーストーリーをトレーサビリティのため明示
-- **各ユーザーストーリー** = 独立して完了・テスト可能
-- **TDD必須**: テストを実装してFAILを確認してから実装開始（C010準拠）
-- **各タスクまたは論理グループ後にコミット**
-- **Checkpointで検証**: 各ストーリーのCheckpointで独立テストを実施し、次のフェーズに進む前に機能を確認
-- **避けるべきこと**: 曖昧なタスク、同じファイルへの競合、ストーリー間の独立性を壊す依存関係
-
----
-
-## Performance Targets（from plan.md）
-
-- `/speckit.doc-init`: 30秒以内（対話的入力時間を除く、SC-001）
-- `/speckit.doc-update`: 45秒以内（10機能プロジェクト、SC-006）
-- インクリメンタル更新: 5秒以内（1機能のみ変更時、SC-008）
-
----
-
-## Critical Requirements（from spec.md）
-
-- **FR-005a**: conf.pyにmyst-parser設定を含める（T027で実装確認）
-- **FR-013/FR-014**: 機能ファイル命名規則（001-user-auth → user-auth.md、T048で実装確認）
-- **FR-019**: Git diffでインクリメンタル更新（T050で実装確認）
-- **FR-019a/FR-019b**: DocumentStructureの自動移行（T059で実装）
-- **FR-022**: コマンドファイル名`speckit.doc-init.md`と`speckit.doc-update.md`（T033、T055で確認）
-- **FR-023a**: importlib.resourcesでテンプレートアクセス（T029、T030、T064で確認）
-- **FR-023b**: 既存ファイル上書き確認（T067で実装）
-- **FR-023c**: ベストエフォートエラーハンドリング（T069で実装）
-
----
-
-## Summary to Return (Updated - Session 2025-10-16)
-
-- **総タスク数**: 123タスク（83タスク from Session 2025-10-15 + 22タスク Session 2025-10-15 deps + 18タスク Session 2025-10-16 NEW）
-- **完了タスク数**: **105タスク（85.4%完了）** ✅
-- **残りタスク数**: **18タスク（Session 2025-10-16追加）** - FR-008f（依存関係配置先選択機能）実装タスク
-- **ユーザーストーリー別タスク数**:
-  - Setup（Phase 1）: 5タスク ✅ **完了**
-  - Foundational（Phase 2）: 10タスク ✅ **完了**
-  - US1（/speckit.doc-init）: 20タスク（テスト: 8、実装: 12） ✅ **完了** ← **+18タスク追加（Session 2025-10-16）**
-    - 依存関係自動インストール（Session 2025-10-15）: 22タスク ✅ **完了**
-    - 依存関係配置先選択（Session 2025-10-16）: 18タスク ⏳ **未完了**
-  - US2（/speckit.doc-update）: 24タスク（テスト: 8、実装: 16） ✅ **完了**
-  - US3（speckit-docs install）: 11タスク（テスト: 4、実装: 7） ✅ **完了**
-  - Polish & Integration（Phase 6）: 13タスク（10 + 3タスク Session 2025-10-14追加） ✅ **12/13完了**
-- **並列実行可能タスク数**: 53タスク（全体の58%、Session 2025-10-16で+8タスク追加）
-- **MVP範囲**: Phase 1-6すべて完了 ✅、**FR-008f追加（Session 2025-10-16）** ⏳
-  - Phase 1-2: 基盤構築（15タスク） ✅ **完了**
-  - Phase 3: US1完成で初期化コマンド使用可能（60タスク = 20 + 22 + 18） ✅ **42/60完了（70%）**
-  - Phase 4: US2完成でドキュメント生成可能（24タスク） ✅ **完了**
-  - Phase 5: US3完成でspec-kit拡張として配布可能（11タスク） ✅ **完了**
-  - Phase 6: 品質向上とドキュメント整備（13タスク） ✅ **12/13完了**
-
-**実際の実装時間 (Session 2025-10-13 ~ 2025-10-16)**:
-- Phase 1-2（基盤構築）: ✅ 完了
-- Phase 3（US1: /speckit.doc-init）: ⏳ **70%完了（42/60タスク）**
-  - Session 2025-10-15: 依存関係自動インストール機能完成（T084-T105, 22タスク）
-  - Session 2025-10-16: 依存関係配置先選択機能設計完了（T106-T123, 18タスク、実装未着手）
-- Phase 4（US2: /speckit.doc-update）: ✅ 完了
-- Phase 5（US3: speckit-docs install）: ✅ 完了
-- Phase 6（品質向上）: ✅ 12/13完了
-  - Session 2025-10-13: +62 tests, 47%→63% coverage
-  - Session 2025-10-14: T080-T082追加（インストール方法標準化）
-  - Session 2025-10-15: T046, T056-T057, T080-T082, T084-T105完了、+76 tests (20 + 56), 63%→75% coverage
-  - Session 2025-10-16: FR-008f設計完了、tasks.md更新（T106-T123追加、実装未着手）
-- **合計**: 4セッション（TDD準拠、Constitution-driven development）
-
-**実績タイムライン**:
-- Session 2025-10-13: 基盤実装+テスト大幅追加 (+62 tests, +16pt coverage)
-- Session 2025-10-14: インストール方法標準化計画 (T080-T082追加)
-- Session 2025-10-15: 最終タスク完了+カバレッジ向上 (+20 tests, +12pt coverage)
-- **MVP完成**: 98.8% (82/83 tasks complete)
-
----
-
-## Test Execution Results (2025-10-15 - Final)
-
-**最終テスト実行**: `uv run pytest tests/ --cov=src/speckit_docs --cov-report=term`
-
-### Test Summary
-- ✅ **315 passed** (99.7% pass rate) [+81 tests from Session 2025-10-13]
-- ⚠️ **1 skipped** (mkdocs not installed)
-- ❌ **0 failed**
-- ⏱️ **Execution time**: ~6s
-
-### Coverage Report
-- **Overall Coverage**: **75%** (target: 90%, MVP threshold: 75% ✅) [+12 percentage points from 63%]
-- **Gap to 90%**: -15 percentage points (MVP acceptable, optional improvement)
-
-**100% Coverage Modules** ✅:
-- `__init__.py`, `exceptions.py`, `models.py`
-- `cli/install_handler.py`
-- `generators/document.py`, `generators/feature_page.py`
-- `utils/feature_discovery.py`
-
-**High Coverage Modules** ✅ (90%+ coverage):
-- `parsers/document.py`: 92%
-- `parsers/feature_scanner.py`: 96%
-- `utils/validation.py`: 93%
-- `models.py`: 92% (was 100%, Section methods added)
-
-**Good Coverage Modules** ✅ (70%+ coverage):
-- `generators/sphinx.py`: **82%** (was 58%) [+7 new tests, Session 2025-10-15]
-- `scripts/doc_init.py`: **77%** (was 69%) [+2 new tests, Session 2025-10-15]
-- `parsers/markdown_parser.py`: 82%
-- `cli/__init__.py`: 75%
-- `generators/mkdocs.py`: **74%** (was 56%) [+4 new tests, Session 2025-10-15]
-
-**Medium Coverage Modules** ⚠️ (improved):
-- `scripts/doc_update.py`: **86%** (was 80%) [+2 new tests, Session 2025-10-15]
-- `generators/base.py`: 67%
-- `utils/prompts.py`: 51%
-
-### Skipped Tests (Remaining Issues)
-1. ~~tests/contract/test_doc_init_output.py (5 tests)~~ ✅ **RESOLVED**: All contract tests passing
-2. ~~`tests/integration/test_mkdocs_workflow.py::test_mkdocs_build_produces_html`~~ ✅ **RESOLVED**: MkDocs build fixed (Session 2025-10-15)
-3. `tests/performance/test_update_performance.py::test_incremental_update_single_feature` - mkdocs not installed (環境依存)
-
-### Completed Tasks (Session 2025-10-13)
-- [X] **T034**: SphinxGenerator conf.py/index.md generation ✅ **DONE**: 5 contract tests passing
-- [X] **T035**: MkDocsGenerator mkdocs.yml/index.md generation ✅ **DONE**: All contract tests passing
-- [X] **New tests added (62 total)**:
-  - parsers/document.py: 9 tests (0%→92% coverage)
-  - parsers/feature_scanner.py: 10 tests (0%→96% coverage)
-  - utils/prompts.py: 11 tests (0%→51% coverage)
-  - utils/validation.py: 22 tests (34%→93% coverage)
-  - generators/sphinx.py: 3 tests (37%→58% coverage)
-  - generators/mkdocs.py: 3 tests (33%→56% coverage)
-
-### Completed Tasks (Session 2025-10-15)
-- [X] **T080**: README.mdのインストール方法更新 ✅ **DONE**: uv tool install標準化完了
-- [X] **T081**: quickstart.mdのインストール方法更新 ✅ **DONE**: uv tool install標準化完了
-- [X] **T082**: コマンド定義の更新 ✅ **DONE**: doc-init.md、doc-update.mdに前提条件追加
-- [X] **T046**: Section.to_sphinx_md/to_mkdocs_md実装 ✅ **DONE**: 4つのテスト追加、models.py 92%カバレッジ
-- [X] **T056**: SphinxGenerator.build_docs()検証 ✅ **DONE**: 既存実装確認、統合テスト合格
-- [X] **T057**: MkDocsGenerator.build_docs()修正 ✅ **DONE**: 作業ディレクトリ修正、統合テスト合格
-- [X] **T079** (部分完了): テストカバレッジ向上 ✅ **75%達成** (target: 90%, MVP threshold met)
-  - **New tests added (20 total)**:
-    - generators/sphinx.py: 7 tests (58%→82% coverage, +24pt)
-    - generators/mkdocs.py: 4 tests (56%→74% coverage, +18pt)
-    - scripts/doc_init.py: 2 tests (69%→77% coverage, +8pt)
-    - scripts/doc_update.py: 2 tests (80%→86% coverage, +6pt)
-    - test_models.py: 4 tests (Section conversion methods)
-    - integration/test_mkdocs_workflow.py: 1 test (path fix)
-
-### Remaining Incomplete Tasks (1 task - Optional)
-- [ ] **T079** (Optional): Coverage 90% achievement ⚠️ **OPTIONAL** (75% current, MVP threshold met, +15pt remaining to 90%)
-  - Focus areas: CLI entrypoints, rare edge cases, generator error paths
-  - Estimated effort: 1-2 hours for additional 15 percentage points
-  - Status: **Not blocking MVP release** - all functional code has 100% coverage, remaining uncovered are CLI entry points already tested in integration tests
-
-### Constitution Compliance Status
-- **C001 (spec-kit Integration First)**: ✅ **COMPLIANT** (Session 2025-10-14: uv tool install標準化完了)
-- **C010 (TDD必須)**: ✅ **COMPLIANT** (315/316 tests passing, 99.7% pass rate)
-- **C006 (堅牢コード品質)**: ✅ **MVP THRESHOLD MET** (75% coverage achieved, 90% optional for future improvement)
-
-### Final Status (Session 2025-10-15 Complete) 🎉
-
-**✅ 依存関係自動インストール機能完成！(100% of T084-T105)**
-
-**完了済み**（Phase 1-5の既存機能）:
-- ✅ **82/83 tasks complete** from previous sessions (98.8% of original scope)
-- ✅ **Core Principle I準拠**: インストール方法標準化（T080-T082）
-- ✅ **Section変換メソッド実装**: to_sphinx_md/to_mkdocs_md（T046）
-- ✅ **build_docs()修正**: MkDocsビルドパス問題解決（T056-T057）
-- ✅ **テストカバレッジ向上**: 63%→75% (+12pt, MVP threshold達成)
-- ✅ **315 passing tests** (+81 tests from Session 2025-10-13)
-- ✅ **All integration tests passing** (MkDocs build issue resolved)
-
-**新規完了タスク**（Session 2025-10-15）:
-- ✅ **T084-T105**: 依存関係自動インストール機能（22 tasks完了）
-  - ✅ FR-008b～FR-008e完全実装
-  - ✅ SC-002b/SC-008b/SC-008c達成
-  - ✅ C010（TDD）準拠 - Red-Green-Refactorサイクル完遂
-  - ✅ **56新規テスト追加**（38単体 + 18統合）
-  - ✅ **371テスト全通過** (315 + 56)
-  - ✅ ruff/mypy --strict準拠
-  - ✅ 型エラー0件
-
-**全体進捗**:
-- **✅ 104/105 tasks complete (99.0%)**
-- **1 task remaining** (T083: 90%カバレッジ達成 - オプション)
-  - T083: Coverage 75%→90%向上（MVP非ブロッキング、実用価値限定的）
-
-**実装済み機能**（Session 2025-10-15）:
-1. ✅ **データモデル**: DependencyResult、PackageManager（frozen dataclass、検証ルール）
-2. ✅ **ヘルパー関数**: get_required_packages()、detect_package_managers()、show_alternative_methods()
-3. ✅ **コア機能**: handle_dependencies() - 6ステップ処理（条件チェック、ユーザー承認、インストール、エラーハンドリング）
-4. ✅ **CLI統合**: doc_init.pyに--auto-install/--no-installフラグ追加、DependencyResult処理
-5. ✅ **品質保証**: ruff（クリーン）、mypy --strict（エラー0）、371テスト全通過
-
-**推奨次ステップ**（優先順位順）:
-1. 🚀 **MVP Release準備**: リリースノート作成、バージョンタグ付け
-2. 📝 **ドキュメント最終確認**: README、CONTRIBUTING、quickstartの整合性確認
-3. 🧪 **本番プロジェクトでの動作確認**: 実際のspec-kitプロジェクトでの統合テスト
-4. 🎊 **リリース実行**: v0.2.0タグ作成、GitHub Release公開
-5. ⚡ **T083（オプション）**: カバレッジ90%達成 - 残り15pt向上（1-2時間、MVP非ブロッキング）
-
-**実績工数** (依存関係自動インストール機能):
-- Phase: TDD Red（T084-T092）: ✅ **完了** - 56テスト作成、全FAIL確認
-- Phase: TDD Green（T093-T100）: ✅ **完了** - dependencies.py実装、doc_init.py統合、56テスト全PASS
-- Phase: TDD Refactor（T101-T105）: ✅ **完了** - ruff/mypy準拠、品質保証
-- **Total**: 1セッション（TDD原則準拠、Constitution-driven development）
+- [P] tasks = different files, no dependencies, can run in parallel
+- [Story] label maps task to specific user story for traceability (US1, US2, US3, US7, US4, US5, US6)
+- No [Story] label = Setup/Foundational/Polish phase tasks
+- Each user story should be independently completable and testable
+- Verify tests FAIL before implementing (TDD required by constitution C010)
+- Commit after each task or logical group
+- Stop at any checkpoint to validate story independently
+- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
+- **MVP Definition**: Phase 3-6 (User Stories 1, 2, 3, 7) = 75 tasks
+- **LLM Transform Default**: US7 enables LLM transformation by default, `--no-llm-transform` flag for opt-out (Session 2025-10-16 decision)

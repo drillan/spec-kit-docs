@@ -7,6 +7,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 - ファイルシステム（ドキュメントプロジェクトとspec-kitメタデータの読み書き） (001-draft-init-spec)
 - Python 3.11+（spec-kit前提条件との互換性） (001-draft-init-spec)
 - N/A（ファイルシステムのみ使用、データベース不要） (001-draft-init-spec)
+- ファイルシステムのみ（ドキュメントプロジェクトとspec-kitメタデータの読み書き）。データベース不要。 (001-draft-init-spec)
 
 **Language**: Python 3.11+ （spec-kit前提条件との互換性）
 
@@ -100,9 +101,9 @@ speckit-docs install
 **Non-Interactive Execution**: バックエンドスクリプト（doc_init.py、doc_update.py）は標準入力（stdin）を使用せず、コマンドライン引数のみで動作（II. Non-Interactive Execution原則）
 
 ## Recent Changes
+- 001-draft-init-spec: Added Python 3.11+ （spec-kit前提条件との互換性）
 - 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
 - 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
-- 001-draft-init-spec: Added Python 3.11+（spec-kitの前提条件と互換性を保つ）
 
 
 <!-- MANUAL ADDITIONS START -->

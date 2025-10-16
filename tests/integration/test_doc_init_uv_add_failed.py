@@ -60,6 +60,7 @@ class TestDocInitUvAddFailed:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -103,6 +104,7 @@ class TestDocInitUvAddFailed:
             doc_type="mkdocs",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -146,6 +148,7 @@ class TestDocInitUvAddFailed:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -189,6 +192,7 @@ class TestDocInitUvAddFailed:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -228,6 +232,7 @@ class TestDocInitUvAddFailed:
             doc_type="sphinx",
             auto_install=True,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )

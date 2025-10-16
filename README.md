@@ -254,9 +254,9 @@ The current MVP version of spec-kit-docs includes:
 
 #### Quality Assurance
 - ✅ **Type Safety**: Full mypy --strict compliance
-- ✅ **Code Quality**: Ruff linting and Black formatting
-- ✅ **Test Coverage**: 46% test coverage (151 passing tests)
-- ✅ **CI/CD**: GitHub Actions workflow for automated testing
+- ✅ **Code Quality**: Ruff linting (E, F, W, I rules)
+- ✅ **Test Coverage**: 404 passing tests, 1 skipped
+- ✅ **Dependency Management**: Automatic dependency installation with uv
 
 ### Known Limitations
 

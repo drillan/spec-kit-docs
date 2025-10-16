@@ -22,6 +22,9 @@ class TestDocInit:
             version="1.0.0",
             language="ja",
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         # Verify success
@@ -53,6 +56,9 @@ class TestDocInit:
             version="1.0.0",
             language="ja",
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         # Verify success
@@ -83,6 +89,9 @@ class TestDocInit:
             project_name="Test",
             author="Test",
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         assert result == 0
@@ -108,6 +117,9 @@ class TestDocInit:
             project_name="Test",
             author="Test",
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         assert result == 0
@@ -133,6 +145,9 @@ class TestDocInit:
             project_name=None,  # Should default to tmp_path.name
             author="Test",
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         assert result == 0
@@ -157,6 +172,9 @@ class TestDocInit:
             project_name="Test",
             author="Test",
             force=True,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         assert result == 0
@@ -180,6 +198,9 @@ class TestDocInit:
             project_name="Test",
             author="Test",
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         # Should return error code
@@ -209,6 +230,9 @@ class TestDocInit:
             project_name="Test",
             author=None,
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         assert result == 0
@@ -240,6 +264,9 @@ class TestDocInit:
             project_name="Test",
             author=None,
             force=False,
+            dependency_target="optional-dependencies",
+            auto_install=False,
+            no_install=True,
         )
 
         assert result == 0

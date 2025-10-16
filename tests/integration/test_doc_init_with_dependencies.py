@@ -65,6 +65,7 @@ build-backend = "hatchling.build"
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -79,7 +80,7 @@ build-backend = "hatchling.build"
         # Verify subprocess call
         mock_run.assert_called_once()
         call_args = mock_run.call_args
-        assert call_args[0][0] == ["uv", "add", "sphinx>=7.0", "myst-parser>=2.0"]
+        assert call_args[0][0] == ["uv", "add", "--optional", "docs", "sphinx>=7.0", "myst-parser>=2.0"]
         assert call_args[1]["cwd"] == project_root
         assert call_args[1]["timeout"] == 300
 
@@ -108,6 +109,7 @@ build-backend = "hatchling.build"
             doc_type="mkdocs",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -122,7 +124,7 @@ build-backend = "hatchling.build"
         # Verify subprocess call
         mock_run.assert_called_once()
         call_args = mock_run.call_args
-        assert call_args[0][0] == ["uv", "add", "mkdocs>=1.5", "mkdocs-material>=9.0"]
+        assert call_args[0][0] == ["uv", "add", "--optional", "docs", "mkdocs>=1.5", "mkdocs-material>=9.0"]
 
     @patch("speckit_docs.utils.dependencies.shutil.which")
     @patch("speckit_docs.utils.dependencies.importlib.util.find_spec")
@@ -146,6 +148,7 @@ build-backend = "hatchling.build"
             doc_type="sphinx",
             auto_install=True,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -186,6 +189,7 @@ build-backend = "hatchling.build"
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
