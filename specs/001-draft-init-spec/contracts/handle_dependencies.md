@@ -15,6 +15,7 @@ def handle_dependencies(
     doc_type: str,
     auto_install: bool,
     no_install: bool,
+    dependency_target: Literal["optional-dependencies", "dependency-groups"],
     project_root: Path,
     console: Console,
 ) -> DependencyResult:
@@ -24,6 +25,7 @@ def handle_dependencies(
         doc_type: "sphinx" または "mkdocs"
         auto_install: --auto-installフラグ（CI/CD用、確認スキップ）
         no_install: --no-installフラグ（依存関係チェックスキップ）
+        dependency_target: 依存関係配置先 ("optional-dependencies" または "dependency-groups")
         project_root: プロジェクトルートパス
         console: rich.console.Console（進捗表示用）
 
@@ -32,6 +34,7 @@ def handle_dependencies(
 
     Raises:
         ValueError: doc_typeが"sphinx"または"mkdocs"以外の場合
+        ValueError: dependency_targetが"optional-dependencies"または"dependency-groups"以外の場合
         SpecKitDocsError: 予期しないエラーが発生した場合
     """
 ```
@@ -66,6 +69,24 @@ def handle_dependencies(
   - `False`: 通常のインストールフローを実行
 - **Requirement**: FR-008e（`--no-install`フラグ）
 - **Example**: `False` (通常実行), `True` (手動管理)
+
+### dependency_target (Literal["optional-dependencies", "dependency-groups"])
+
+- **Type**: `Literal["optional-dependencies", "dependency-groups"]`
+- **Allowed Values**: `"optional-dependencies"` | `"dependency-groups"`
+- **Description**: ドキュメント依存関係の配置先を指定（FR-008f）
+- **Validation**:
+  - 値が`"optional-dependencies"`または`"dependency-groups"`でない場合、`ValueError`を発生させる
+- **Behavior**:
+  - `"optional-dependencies"`: `uv add --optional docs {packages}`を実行
+    - `[project.optional-dependencies.docs]`セクションに配置
+    - pip/poetry/uv互換、PEP 621標準準拠
+  - `"dependency-groups"`: `uv add --group docs {packages}`を実行
+    - `[dependency-groups.docs]`セクションに配置
+    - uvネイティブ、PEP 735準拠
+- **Requirement**: FR-008f（依存関係配置先選択機能）
+- **Default**: `"optional-dependencies"` (推奨)
+- **Example**: `"optional-dependencies"` (推奨), `"dependency-groups"` (uvネイティブ)
 
 ### project_root (Path)
 
@@ -164,8 +185,10 @@ class DependencyResult:
    │   └─ ユーザーが承認 → 6へ
    └─ auto_install=True → 6へ（確認スキップ）
 
-6. uv addでインストール実行
-   ├─ subprocess.run(["uv", "add"] + packages, timeout=300)
+6. uv addでインストール実行（FR-008f: dependency_targetに応じてフラグ切り替え）
+   ├─ dependency_target == "optional-dependencies" → cmd = ["uv", "add", "--optional", "docs"] + packages
+   ├─ dependency_target == "dependency-groups" → cmd = ["uv", "add", "--group", "docs"] + packages
+   ├─ subprocess.run(cmd, timeout=300)
    ├─ returncode == 0 → return DependencyResult(status="installed", message="インストール成功", installed_packages=packages)
    ├─ returncode != 0 → show_alternative_methods() → return DependencyResult(status="failed", message=f"uv add失敗: {stderr}")
    ├─ TimeoutExpired → show_alternative_methods() → return DependencyResult(status="failed", message="タイムアウト")
@@ -179,6 +202,16 @@ class DependencyResult:
 ```python
 if doc_type not in ["sphinx", "mkdocs"]:
     raise ValueError(f"Invalid doc_type: {doc_type}. Must be 'sphinx' or 'mkdocs'")
+```
+
+#### ValueError (dependency_target検証エラー) - FR-008f
+
+```python
+if dependency_target not in ["optional-dependencies", "dependency-groups"]:
+    raise ValueError(
+        f"Invalid dependency_target: {dependency_target}. "
+        'Must be "optional-dependencies" or "dependency-groups"'
+    )
 ```
 
 #### subprocess.TimeoutExpired (uvタイムアウト)
@@ -238,11 +271,13 @@ except FileNotFoundError:
 | FR-008c | ユーザー承認プロンプト（パッケージリスト、実行コマンド、警告、`typer.confirm(default=True)`） |
 | FR-008d | `show_alternative_methods()`呼び出し（条件不満足時またはuv add失敗時） |
 | FR-008e | `--auto-install`/`--no-install`フラグサポート、uv add失敗時のエラー詳細と代替方法表示 |
+| FR-008f | `dependency_target`引数による配置先選択（`--optional`または`--group`フラグ切り替え） |
 | SC-002b | timeout=300秒、90%成功率目標（外部要因10%許容） |
+| SC-002c | 100%正確な配置（dependency_targetに応じた正しいpyproject.tomlセクション使用） |
 
 ## Example Usage
 
-### 成功ケース（auto_install=False）
+### 成功ケース（optional-dependencies）
 
 ```python
 from pathlib import Path
@@ -253,6 +288,7 @@ result = handle_dependencies(
     doc_type="sphinx",
     auto_install=False,
     no_install=False,
+    dependency_target="optional-dependencies",
     project_root=Path("/home/user/my-project"),
     console=console,
 )
@@ -260,6 +296,24 @@ result = handle_dependencies(
 # Output: DependencyResult(status="installed", message="インストール成功", installed_packages=["sphinx>=7.0", "myst-parser>=2.0"])
 assert result.status == "installed"
 assert "sphinx" in result.installed_packages[0]
+# Command executed: uv add --optional docs sphinx>=7.0 myst-parser>=2.0
+```
+
+### 成功ケース（dependency-groups） - FR-008f
+
+```python
+result = handle_dependencies(
+    doc_type="mkdocs",
+    auto_install=True,
+    no_install=False,
+    dependency_target="dependency-groups",
+    project_root=Path("/home/user/my-project"),
+    console=console,
+)
+
+# Output: DependencyResult(status="installed", message="インストール成功", installed_packages=["mkdocs>=1.5", "mkdocs-material>=9.0"])
+assert result.status == "installed"
+# Command executed: uv add --group docs mkdocs>=1.5 mkdocs-material>=9.0
 ```
 
 ### 失敗ケース（pyproject.toml不在）
@@ -269,6 +323,7 @@ result = handle_dependencies(
     doc_type="mkdocs",
     auto_install=True,
     no_install=False,
+    dependency_target="optional-dependencies",
     project_root=Path("/home/user/no-pyproject"),
     console=console,
 )
@@ -286,6 +341,7 @@ result = handle_dependencies(
     doc_type="sphinx",
     auto_install=False,
     no_install=True,
+    dependency_target="optional-dependencies",
     project_root=Path("/home/user/my-project"),
     console=console,
 )
@@ -303,6 +359,7 @@ result = handle_dependencies(
     doc_type="sphinx",
     auto_install=False,
     no_install=False,
+    dependency_target="optional-dependencies",
     project_root=Path("/home/user/my-project"),
     console=console,
 )

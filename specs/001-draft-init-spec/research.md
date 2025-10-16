@@ -777,4 +777,522 @@
 
 ---
 
-**Version**: 1.0.0 | **Last Updated**: 2025-10-14 | **Contributor**: AI Agent (Claude Code)
+## 7. 依存関係自動インストール機能の技術調査
+
+### Session 2025-10-15 (Dependency Auto-Installation)
+
+この
+
+セクションは、FR-008b～FR-008eで定義された依存関係自動インストール機能の技術的実装を調査します。
+
+#### 決定28: `handle_dependencies()`関数の設計
+
+**決定**: 単一の関数`handle_dependencies()`で依存関係管理のすべてのロジックをカプセル化する。
+
+**関数シグネチャ**:
+```python
+def handle_dependencies(
+    doc_type: str,
+    auto_install: bool,
+    no_install: bool,
+    project_root: Path,
+    console: Console,
+) -> DependencyResult:
+    """依存関係のチェックとインストールを処理する。
+
+    Args:
+        doc_type: "sphinx" または "mkdocs"
+        auto_install: --auto-installフラグ（CI/CD用、確認スキップ）
+        no_install: --no-installフラグ（依存関係チェックスキップ）
+        project_root: プロジェクトルートパス
+        console: rich.console.Console（進捗表示用）
+
+    Returns:
+        DependencyResult: status, message, installed_packagesを含む
+    """
+```
+
+**データクラス**:
+```python
+@dataclass(frozen=True)
+class DependencyResult:
+    status: Literal["installed", "skipped", "failed", "not_needed"]
+    message: str
+    installed_packages: list[str] = field(default_factory=list)
+```
+
+**根拠**:
+1. **単一責任原則**: 依存関係管理のすべてのロジックを1つの関数にカプセル化
+2. **決定的動作**: 同じ入力→同じ出力（V. Testability準拠）
+3. **型安全性**: mypy互換の型ヒント（C006準拠）
+4. **不変性**: データクラスのfrozen=True（エラー防止）
+
+**検討された代替案**:
+- クラスベース（`DependencyManager`） → MVP範囲では過剰設計
+- 複数関数分割（`check_conditions()`, `install_packages()`, `show_alternatives()`） → 関数呼び出しの複雑化
+
+---
+
+#### 決定29: subprocess.run()によるuvコマンド実行のエラーハンドリング
+
+**決定**: `check=False`で手動returncode確認、timeout=300秒、capture_output=Trueでstderr取得。
+
+**実装パターン**:
+```python
+try:
+    result = subprocess.run(
+        ["uv", "add"] + packages,
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        timeout=300,  # 5分
+        check=False,  # 手動でreturncode確認
+    )
+
+    if result.returncode == 0:
+        console.print("[green]✓[/green] 依存関係のインストールが成功しました")
+        return DependencyResult(
+            status="installed",
+            message="インストール成功",
+            installed_packages=packages,
+        )
+    else:
+        # C002準拠: エラー迂回禁止、明確なエラー+代替方法提示
+        console.print(f"[red]✗[/red] インストール失敗: {result.stderr}")
+        show_alternative_methods(doc_type, console, project_root)
+        return DependencyResult(
+            status="failed",
+            message=f"uv add失敗: {result.stderr}",
+        )
+
+except subprocess.TimeoutExpired:
+    console.print("[red]✗[/red] インストールがタイムアウトしました（5分超過）")
+    show_alternative_methods(doc_type, console, project_root)
+    return DependencyResult(status="failed", message="タイムアウト")
+
+except FileNotFoundError:
+    console.print("[red]✗[/red] uvコマンドが見つかりません")
+    show_alternative_methods(doc_type, console, project_root)
+    return DependencyResult(status="failed", message="uvコマンド不在")
+```
+
+**根拠**:
+1. **check=False**: カスタムエラーメッセージ表示が可能
+2. **timeout=300**: ネットワーク速度に依存するが、5分で十分（SC-002b: 90%成功率達成）
+3. **capture_output=True**: stderrキャプチャでエラー詳細をユーザーに提示
+4. **C002準拠**: エラー迂回絶対禁止、明確なエラー+代替方法提示
+
+**検討された代替案**:
+- `check=True` → subprocess.CalledProcessError、カスタムメッセージが困難
+- `shell=True` → セキュリティリスク、spec-kitパターンと不一致
+
+---
+
+#### 決定30: typer.confirm()の使用パターンとデフォルト値
+
+**決定**: `default=True`でユーザーエクスペリエンス最適化、本家spec-kitパターン踏襲。
+
+**実装パターン**:
+```python
+# 本家spec-kitのパターンを完全に踏襲（C012: DRY原則）
+packages = get_required_packages(doc_type)
+console.print(f"\n[bold]インストール予定のパッケージ:[/bold] {', '.join(packages)}")
+console.print(f"[yellow]警告:[/yellow] pyproject.tomlが変更されます")
+console.print(f"[dim]実行コマンド:[/dim] uv add {' '.join(packages)}")
+
+confirmed = typer.confirm(
+    "インストールを続行しますか？",
+    default=True,  # Enterキーでインストール続行
+)
+
+if not confirmed:
+    console.print("[yellow]インストールをスキップしました[/yellow]")
+    show_alternative_methods(doc_type, console, project_root)
+    return DependencyResult(status="skipped", message="ユーザーが拒否")
+```
+
+**根拠**:
+1. **default=True**: ほとんどのユーザーはインストールを望む（UX最適化）
+2. **本家spec-kitとの一貫性**: `specify init --here`でも同様のパターン
+3. **C012 (DRY原則)**: typerの既存パターン再利用
+
+**検討された代替案**:
+- `default=False` → 保守的だが摩擦増加、SC-002達成が困難
+- 3択選択 → 複雑化、MVP範囲超過
+
+**本家spec-kitの調査結果**:
+```python
+# specify-cli/specify/cli.py
+if not typer.confirm(
+    f"Overwrite {existing_file}?",
+    default=False,  # ファイル上書き時は慎重にdefault=False
+):
+    console.print("[yellow]Skipped[/yellow]")
+```
+
+依存関係インストールは「新規追加」であり「既存破壊」ではないため、`default=True`が適切です。
+
+---
+
+#### 決定31: パッケージマネージャー検出のベストプラクティス
+
+**決定**: 優先順位付き検出（uv > poetry > pip）、条件付きチェック。
+
+**実装パターン**:
+```python
+def detect_package_managers(project_root: Path, doc_type: str) -> list[tuple[str, str]]:
+    """利用可能なパッケージマネージャーを検出する。
+
+    Returns:
+        List of (manager_name, install_command) tuples
+    """
+    managers: list[tuple[str, str]] = []
+    packages = get_required_packages(doc_type)
+
+    # 優先順位順に検出（spec-kitエコシステムとの整合性）
+    if shutil.which("uv"):
+        managers.append(("uv", f"uv add {' '.join(packages)}"))
+
+    if shutil.which("poetry") and (project_root / "pyproject.toml").exists():
+        managers.append(("poetry", f"poetry add {' '.join(packages)}"))
+
+    if shutil.which("pip"):
+        managers.append(("pip", f"pip install {' '.join(packages)}"))
+
+    return managers
+```
+
+**根拠**:
+1. **優先順位**: uv > poetry > pip（spec-kitエコシステムとの整合性）
+2. **条件チェック**: poetryはpyproject.toml必須、pipは常に利用可能
+3. **拡張性**: 将来的にconda等を追加しやすい（III. Extensibility & Modularity準拠）
+
+**検討された代替案**:
+- 単一マネージャーのみ表示 → ユーザーの選択肢制限
+- 全マネージャー無条件表示 → 誤解を招く
+
+---
+
+#### 決定32: spec-kitワークフロー案内の実装
+
+**決定**: FR-008dに準拠し、3段階の代替方法を明確に提示（失敗理由+方法1+方法2）。
+
+**実装パターン**:
+```python
+def show_alternative_methods(
+    doc_type: str,
+    console: Console,
+    project_root: Path,
+) -> None:
+    """代替インストール方法を表示する（FR-008d準拠）。"""
+    packages = get_required_packages(doc_type)
+
+    console.print("\n[bold yellow]代替方法:[/bold yellow]")
+
+    # 方法1: 手動インストール（パッケージマネージャー自動検出）
+    console.print("\n[bold]方法1: 手動インストール[/bold]")
+    managers = detect_package_managers(project_root, doc_type)
+    if managers:
+        for manager_name, command in managers:
+            console.print(f"  • {manager_name}: [cyan]{command}[/cyan]")
+    else:
+        console.print("  [dim]利用可能なパッケージマネージャーが見つかりませんでした[/dim]")
+
+    # 方法2: spec-kitワークフロー（エコシステム強化）
+    console.print("\n[bold]方法2: spec-kitワークフロー[/bold]")
+    console.print("  依存関係管理をspec-kitワークフローで行うことで、")
+    console.print("  [green]依存関係の履歴がplan.md/tasks.mdに記録されます[/green]")
+    console.print("\n  手順:")
+    console.print("    1. [cyan]/speckit.specify[/cyan] - 「依存関係のインストール」仕様作成")
+    console.print(f"    2. [cyan]/speckit.plan[/cyan] - インストール計画立案")
+    console.print(f"    3. [cyan]/speckit.tasks[/cyan] - タスク分解")
+    console.print(f"    4. [cyan]/speckit.implement[/cyan] - {' '.join(packages)}をインストール")
+    console.print("\n  利点:")
+    console.print("    • 依存関係の変更履歴が残る")
+    console.print("    • なぜその依存関係が必要かドキュメント化される")
+    console.print("    • チーム全体で依存関係の追加理由を共有できる")
+```
+
+**根拠**:
+1. **FR-008d完全準拠**: 失敗理由+方法1（手動）+方法2（spec-kitワークフロー）を提示
+2. **spec-kitエコシステム強化**: ワークフローの価値を明確に説明
+3. **rich.console使用**: 視覚的に見やすい出力（色付き、構造化）
+
+**検討された代替案**:
+- 方法1のみ提示 → spec-kitエコシステムの価値を伝えられない
+- 方法2のみ提示 → 即座のインストールを望むユーザーに不便
+
+---
+
+#### 決定33: テスト戦略（TDD必須、C010準拠）
+
+**決定**: pyfakefs+subprocess mock、Red-Green-Refactorサイクル、95%以上カバレッジ。
+
+**テストフレームワーク構成**:
+```python
+# tests/unit/test_handle_dependencies.py
+@pytest.fixture
+def mock_fs(fs):  # pyfakefs fixture
+    """仮想ファイルシステムをセットアップ"""
+    fs.create_file("/project/pyproject.toml")
+    fs.create_dir("/project/.specify")
+    return fs
+
+@pytest.fixture
+def mock_subprocess():
+    """subprocess.runをモック"""
+    with patch("subprocess.run") as mock:
+        yield mock
+
+def test_handle_dependencies_success(mock_fs, mock_subprocess):
+    """正常系: pyproject.toml存在、uv利用可能、インストール成功"""
+    # Arrange (Red)
+    mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+    with patch("shutil.which", return_value="/usr/bin/uv"):
+        with patch("importlib.util.find_spec", return_value=None):  # 未インストール
+            # Act (Green)
+            result = handle_dependencies(
+                doc_type="sphinx",
+                auto_install=True,
+                no_install=False,
+                project_root=Path("/project"),
+                console=Console(),
+            )
+
+    # Assert
+    assert result.status == "installed"
+    assert "sphinx" in result.installed_packages
+    mock_subprocess.assert_called_once_with(
+        ["uv", "add", "sphinx>=7.0", "myst-parser>=2.0"],
+        cwd=Path("/project"),
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+```
+
+**エッジケーステスト**:
+1. `test_handle_dependencies_no_pyproject`: pyproject.toml不在 → `status="failed"`
+2. `test_handle_dependencies_uv_not_found`: uvコマンド不在 → `status="failed"`、代替方法表示
+3. `test_handle_dependencies_already_installed`: パッケージ既インストール → `status="not_needed"`
+4. `test_handle_dependencies_no_install_flag`: `--no-install`フラグ → `status="skipped"`
+5. `test_handle_dependencies_auto_install_flag`: `--auto-install`フラグ → 確認スキップ
+6. `test_handle_dependencies_timeout`: uv addタイムアウト → `status="failed"`
+7. `test_handle_dependencies_uv_add_failed`: uv add失敗（returncode != 0） → `status="failed"`、stderrキャプチャ
+8. `test_handle_dependencies_user_declined`: ユーザー承認拒否 → `status="skipped"`
+
+**根拠**:
+1. **C010 (TDD必須)**: Red-Green-Refactorサイクル厳守
+2. **V. Testability**: 決定的入力→決定的出力、外部依存排除
+3. **pyfakefs**: ファイルシステム仮想化、テスト速度向上
+4. **subprocess mock**: 外部コマンド実行を排除、テスト決定性保証
+5. **網羅性**: 正常系・異常系・境界値テスト、SC-002b（90%成功率）検証
+
+**カバレッジ目標**:
+- `handle_dependencies()`: 95%以上
+- 全体: 75%以上（既存目標維持）
+
+---
+
+### 技術的決定のまとめ
+
+| 項目 | 決定 | 根拠 |
+|------|------|------|
+| 関数設計 | `handle_dependencies()` 単一関数 | 単一責任、決定的動作 |
+| データ構造 | `DependencyResult` frozen dataclass | 不変性、型安全性 |
+| エラーハンドリング | `check=False` + 手動確認 | カスタムメッセージ、C002準拠 |
+| タイムアウト | 300秒（5分） | SC-002b: 90%成功率 |
+| ユーザー承認 | `typer.confirm(default=True)` | UX最適化、本家一貫性、C012準拠 |
+| パッケージマネージャー | uv > poetry > pip | spec-kit優先順位 |
+| ワークフロー案内 | 失敗理由+方法1+方法2 | FR-008d完全準拠、エコシステム強化 |
+| テスト | pyfakefs + subprocess mock | C010 (TDD)、V. Testability |
+
+---
+
+---
+
+## 8. 依存関係配置先選択機能の技術調査
+
+### Session 2025-10-16 (Dependency Placement Strategy)
+
+このセクションは、FR-008fで定義された依存関係配置先選択機能の技術的実装を調査します。
+
+#### 決定34: `uv add --optional` vs `uv add --group` の動作確認
+
+**決定**: 両方のコマンドをサポートし、ユーザーに選択させる。
+
+**`uv add --optional`の動作**:
+```bash
+uv add --optional docs sphinx>=7.0 myst-parser>=2.0
+```
+
+**pyproject.toml変更**:
+```toml
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.0",
+    "myst-parser>=2.0",
+]
+```
+
+**インストール方法**:
+```bash
+# すべてのoptional dependenciesをインストール
+uv sync --all-extras
+
+# docsグループのみ
+uv pip install -e ".[docs]"
+
+# pipでも互換
+pip install -e ".[docs]"
+```
+
+**仕様**: PEP 621（Storing project metadata in pyproject.toml）
+
+---
+
+**`uv add --group`の動作**:
+```bash
+uv add --group docs sphinx>=7.0 myst-parser>=2.0
+```
+
+**pyproject.toml変更**:
+```toml
+[dependency-groups]
+docs = [
+    "sphinx>=7.0",
+    "myst-parser>=2.0",
+]
+```
+
+**インストール方法**:
+```bash
+# docsグループをインストール
+uv sync --group docs
+```
+
+**仕様**: PEP 735（Dependency Groups in pyproject.toml）
+
+**判定**: ✅ 両方のコマンドが正常に動作することを確認。
+
+---
+
+#### 決定35: pip/poetryとの互換性確認
+
+**`[project.optional-dependencies]`の互換性**:
+- **pip**: `pip install -e ".[docs]"` ✅ 動作する
+- **poetry**: `poetry install --extras docs` ✅ 動作する
+- **uv**: `uv sync --all-extras` ✅ 動作する
+
+**判定**: ✅ pip/poetry/uv すべてで互換性あり
+
+**`[dependency-groups]`の互換性**:
+- **pip**: `pip install -e ".[docs]"` ❌ [dependency-groups]は認識されない（エラーにはならないが無視される）
+- **poetry**: `poetry install` ❌ [dependency-groups]は認識されない（エラーにはならないが無視される）
+- **uv**: `uv sync --group docs` ✅ 動作する
+
+**判定**: ⚠️ uvネイティブのみ。pip/poetryは無視する（エラーにはならない）
+
+**決定**: `optional-dependencies`をデフォルトとし、uvユーザーには`dependency-groups`を選択可能にする。
+
+---
+
+#### 決定36: デフォルト値の妥当性
+
+**`optional-dependencies`をデフォルトとする根拠**:
+1. **広い互換性**: pip/poetry/uvすべてで動作
+2. **PEP 621標準**: 長期間サポートされている安定した仕様
+3. **既存のPythonエコシステムとの一貫性**: 多くのプロジェクトが既に使用
+4. **spec-kitユーザーの多様性**: すべてのユーザーがuvを使用しているわけではない
+
+**判定**: ✅ デフォルト値は`optional-dependencies`とする。
+
+---
+
+#### 決定37: `handle_dependencies()`関数のシグネチャ変更
+
+**現在のシグネチャ**:
+```python
+def handle_dependencies(
+    doc_type: str,
+    auto_install: bool,
+    no_install: bool,
+    project_root: Path,
+    console: Console,
+) -> DependencyResult
+```
+
+**新しいシグネチャ**:
+```python
+def handle_dependencies(
+    doc_type: str,
+    auto_install: bool,
+    no_install: bool,
+    dependency_target: Literal["optional-dependencies", "dependency-groups"],  # NEW
+    project_root: Path,
+    console: Console,
+) -> DependencyResult
+```
+
+**影響範囲**:
+1. `scripts/doc_init.py` - 呼び出し側を更新
+2. `tests/unit/utils/test_handle_dependencies.py` - 全テストケースを更新
+3. `tests/integration/test_doc_init_*.py` - 統合テストを更新
+4. `.claude/commands/speckit.doc-init.md` - AIエージェントプロンプトを更新
+
+**後方互換性**: デフォルト値を設定せず、すべての呼び出し箇所で明示的に指定する（明示性優先）
+
+**決定**: 後方互換性よりも明示性を優先。すべての呼び出し箇所でdependency_targetを明示的に指定。
+
+---
+
+#### 決定38: `.claude/commands/speckit.doc-init.md`の変更範囲
+
+**追加が必要な内容**:
+
+1. **依存関係配置先の選択プロンプト**:
+   ```markdown
+   ## Step 4: 依存関係配置先の選択（Session 2025-10-16追加）
+
+   ユーザーに以下を尋ねる：
+
+   「ドキュメント依存関係の配置先を選択してください：
+   1. [project.optional-dependencies.docs]（推奨、pip/poetry/uv互換）
+   2. [dependency-groups.docs]（uvネイティブ、モダン）
+
+   デフォルト: 1」
+
+   選択結果を`--dependency-target`引数に変換：
+   - 選択肢1 → `--dependency-target optional-dependencies`
+   - 選択肢2 → `--dependency-target dependency-groups`
+   ```
+
+2. **doc_init.py呼び出しの更新**:
+   ```bash
+   uv run python .specify/scripts/docs/doc_init.py \
+     --type {選択されたツール} \
+     --project-name "{プロジェクト名}" \
+     --author "{著者名}" \
+     --version "{バージョン}" \
+     --language {言語} \
+     --dependency-target {選択された配置先}  # NEW
+   ```
+
+**決定**: プロンプトに依存関係配置先選択ステップを追加。
+
+---
+
+### 技術的決定のまとめ（Session 2025-10-16）
+
+| 項目 | 決定 | 根拠 |
+|------|------|------|
+| サポートする配置先 | `optional-dependencies` と `dependency-groups` の両方 | ユーザーの環境に応じた柔軟性を提供 |
+| デフォルト値 | `optional-dependencies` | pip/poetry/uv互換、広い互換性 |
+| 後方互換性 | 維持しない | 明示性を優先、すべての呼び出し箇所で明示的に指定 |
+| ユーザーインターフェース | AIエージェントが対話的に選択を収集 | spec-kit標準パターンに準拠 |
+| 引数追加 | `--dependency-target` | doc_init.pyに追加 |
+
+---
+
+**Version**: 1.2.0 | **Last Updated**: 2025-10-16 | **Contributor**: AI Agent (Claude Code)

@@ -1,6 +1,5 @@
 """Unit tests for SphinxGenerator (T017)."""
 
-from pathlib import Path
 
 from speckit_docs.generators.base import GeneratorConfig
 from speckit_docs.generators.sphinx import SphinxGenerator
@@ -341,15 +340,15 @@ class TestSphinxGenerator:
         """Test validate_project with valid Sphinx project."""
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
-        
+
         # Create necessary files
         (tmp_path / "docs").mkdir()
         (tmp_path / "docs" / "conf.py").write_text("extensions = ['myst_parser']")
         (tmp_path / "docs" / "index.md").write_text("# Test")
         (tmp_path / "docs" / "Makefile").write_text("html:")
-        
+
         result = generator.validate_project()
-        
+
         assert result.is_valid is True
         assert len(result.errors) == 0
         assert "conf.py exists" in result.checked_items
@@ -359,73 +358,76 @@ class TestSphinxGenerator:
         """Test validate_project with missing conf.py."""
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
-        
+
         # Create docs dir but no conf.py
         (tmp_path / "docs").mkdir()
-        
+
         result = generator.validate_project()
-        
+
         assert result.is_valid is False
         assert any("conf.py" in e for e in result.errors)
 
     def test_sphinx_generator_build_timeout(self, tmp_path, monkeypatch):
         """Test build_docs() when build times out."""
         import subprocess
+
         from speckit_docs.utils.validation import BuildError
-        
+
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
         generator.init_project()
-        
+
         # Mock subprocess.run to raise TimeoutExpired
         def mock_run(*args, **kwargs):
             raise subprocess.TimeoutExpired(cmd=args[0], timeout=300)
-        
+
         monkeypatch.setattr(subprocess, "run", mock_run)
-        
+
         # Should raise BuildError about timeout
         import pytest
         with pytest.raises(BuildError) as exc_info:
             generator.build_docs()
-        
+
         assert "タイムアウト" in str(exc_info.value)
 
     def test_sphinx_generator_build_generic_error(self, tmp_path, monkeypatch):
         """Test build_docs() when unexpected error occurs."""
         import subprocess
+
         from speckit_docs.utils.validation import BuildError
-        
+
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
         generator.init_project()
-        
+
         # Mock subprocess.run to raise generic exception
         def mock_run(*args, **kwargs):
             raise RuntimeError("Unexpected build error")
-        
+
         monkeypatch.setattr(subprocess, "run", mock_run)
-        
+
         # Should raise BuildError
         import pytest
         with pytest.raises(BuildError) as exc_info:
             generator.build_docs()
-        
+
         assert "エラーが発生しました" in str(exc_info.value)
 
     def test_sphinx_generator_template_not_found(self, tmp_path, monkeypatch):
         """Test generate_config() when template is not found."""
         from jinja2 import TemplateNotFound
+
         from speckit_docs.utils.validation import DocumentationProjectError
-        
+
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
-        
+
         # Mock jinja_env.get_template to raise TemplateNotFound
         def mock_get_template(name):
             raise TemplateNotFound(name)
-        
+
         monkeypatch.setattr(generator.jinja_env, "get_template", mock_get_template)
-        
+
         # Should raise SpecKitDocsError
         import pytest
         with pytest.raises(DocumentationProjectError):
@@ -438,24 +440,24 @@ class TestSphinxGenerator:
     def test_sphinx_update_index_fallback(self, tmp_path, monkeypatch):
         """Test _update_index() fallback when template not found."""
         from jinja2 import TemplateNotFound
-        
+
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
         generator.init_project()
-        
+
         # Create existing index.md
         index_path = tmp_path / "docs" / "index.md"
         index_path.write_text("# Test Project\n\nWelcome\n")
-        
+
         # Mock jinja_env.get_template to raise TemplateNotFound for index template
         original_get_template = generator.jinja_env.get_template
         def mock_get_template(name):
             if "index" in name:
                 raise TemplateNotFound(name)
             return original_get_template(name)
-        
+
         monkeypatch.setattr(generator.jinja_env, "get_template", mock_get_template)
-        
+
         # Call update_docs which internally calls _update_index
         features = [
             Feature(
@@ -466,13 +468,13 @@ class TestSphinxGenerator:
                 status=FeatureStatus.DRAFT,
             )
         ]
-        
+
         # Create spec file
         (tmp_path / "specs" / "001-test-feature").mkdir(parents=True)
         (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text("# Test")
-        
+
         generator.update_docs(features, incremental=False)
-        
+
         # Verify fallback was used (should have features section)
         content = index_path.read_text()
         assert "## 機能一覧" in content
@@ -481,27 +483,27 @@ class TestSphinxGenerator:
     def test_sphinx_update_index_fallback_replace_existing(self, tmp_path, monkeypatch):
         """Test _update_index() fallback replaces existing features section."""
         from jinja2 import TemplateNotFound
-        
+
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
         generator.init_project()
-        
+
         # Create index with existing features section
         index_path = tmp_path / "docs" / "index.md"
         index_path.write_text("# Test\n\n## 機能一覧\n\n- Old feature\n\n## Other Section\n\nContent")
-        
+
         # Mock template not found
         def mock_get_template(name):
             if "index" in name:
                 raise TemplateNotFound(name)
             raise TemplateNotFound(name)  # Fail all templates
-        
+
         monkeypatch.setattr(generator.jinja_env, "get_template", mock_get_template)
-        
+
         # Call _update_index directly
         features_data = [{"title": "New Feature", "file": "new-feature.md"}]
         generator._update_index(features_data, "FLAT")
-        
+
         # Verify old section was replaced
         content = index_path.read_text()
         assert "New Feature" in content
@@ -512,36 +514,36 @@ class TestSphinxGenerator:
         """Test _migrate_flat_to_comprehensive() migrates feature files."""
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
-        
+
         # Create docs directory with feature files
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
-        
+
         # Create files that should be migrated
         (docs_dir / "feature-one.md").write_text("# Feature One")
         (docs_dir / "feature-two.md").write_text("# Feature Two")
-        
+
         # Create files that should NOT be migrated
         (docs_dir / "index.md").write_text("# Index")
         (docs_dir / "conf.py").write_text("# Config")
         (docs_dir / ".gitignore").write_text("*.pyc")
-        
+
         # Run migration
         generator._migrate_flat_to_comprehensive()
-        
+
         # Verify files were moved
         assert (docs_dir / "features" / "feature-one.md").exists()
         assert (docs_dir / "features" / "feature-two.md").exists()
-        
+
         # Verify excluded files stayed in place
         assert (docs_dir / "index.md").exists()
         assert (docs_dir / "conf.py").exists()
         assert (docs_dir / ".gitignore").exists()
-        
+
         # Verify original files were moved (not copied)
         assert not (docs_dir / "feature-one.md").exists()
         assert not (docs_dir / "feature-two.md").exists()
-        
+
         # Verify output message
         captured = capsys.readouterr()
         assert "2個のファイルを移行しました" in captured.out
@@ -550,16 +552,16 @@ class TestSphinxGenerator:
         """Test _migrate_flat_to_comprehensive() when no files to migrate."""
         config = GeneratorConfig(tool="sphinx", project_name="Test")
         generator = SphinxGenerator(config, tmp_path)
-        
+
         # Create empty docs directory (only infrastructure files)
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
         (docs_dir / "index.md").write_text("# Index")
         (docs_dir / "conf.py").write_text("# Config")
-        
+
         # Run migration
         generator._migrate_flat_to_comprehensive()
-        
+
         # Verify no files were migrated
         captured = capsys.readouterr()
         assert "移行対象のファイルはありませんでした" in captured.out

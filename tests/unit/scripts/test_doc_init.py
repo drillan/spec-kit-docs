@@ -188,21 +188,21 @@ class TestDocInit:
     def test_doc_init_author_from_git_config(self, tmp_path, monkeypatch):
         """Test that author is retrieved from git config when not provided."""
         import subprocess
-        
+
         monkeypatch.chdir(tmp_path)
         (tmp_path / ".specify").mkdir()
         (tmp_path / "specs" / "001-test").mkdir(parents=True)
         (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
-        
+
         # Mock git config to return a user
         original_check_output = subprocess.check_output
         def mock_check_output(cmd, **kwargs):
             if "git" in cmd and "user.name" in cmd:
                 return "Git User\n"
             return original_check_output(cmd, **kwargs)
-        
+
         monkeypatch.setattr(subprocess, "check_output", mock_check_output)
-        
+
         # Run without author (should get from git)
         result = main(
             doc_type="sphinx",
@@ -210,9 +210,9 @@ class TestDocInit:
             author=None,
             force=False,
         )
-        
+
         assert result == 0
-        
+
         # Verify git author was used
         conf_content = (tmp_path / "docs" / "conf.py").read_text()
         assert "Git User" in conf_content
@@ -220,20 +220,20 @@ class TestDocInit:
     def test_doc_init_author_default_when_git_fails(self, tmp_path, monkeypatch):
         """Test that author defaults to 'Unknown Author' when git config fails."""
         import subprocess
-        
+
         monkeypatch.chdir(tmp_path)
         (tmp_path / ".specify").mkdir()
         (tmp_path / "specs" / "001-test").mkdir(parents=True)
         (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
-        
+
         # Mock git config to fail
         def mock_check_output(cmd, **kwargs):
             if "git" in cmd:
                 raise subprocess.CalledProcessError(1, cmd)
             raise FileNotFoundError()
-        
+
         monkeypatch.setattr(subprocess, "check_output", mock_check_output)
-        
+
         # Run without author (git fails, should use default)
         result = main(
             doc_type="sphinx",
@@ -241,9 +241,9 @@ class TestDocInit:
             author=None,
             force=False,
         )
-        
+
         assert result == 0
-        
+
         # Verify default author was used
         conf_content = (tmp_path / "docs" / "conf.py").read_text()
         assert "Unknown Author" in conf_content

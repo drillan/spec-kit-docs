@@ -43,6 +43,43 @@ class DependencyResult:
 
 
 @dataclass(frozen=True)
+class DependencyTarget:
+    """Represents where dependencies should be added in pyproject.toml.
+
+    Attributes:
+        target_type: "optional-dependencies" or "dependency-groups"
+        uv_flag: "--optional" or "--group"
+        section_path: Path in pyproject.toml (e.g., "[project.optional-dependencies.docs]")
+
+    Examples:
+        >>> target = DependencyTarget(
+        ...     target_type="optional-dependencies",
+        ...     uv_flag="--optional",
+        ...     section_path="[project.optional-dependencies.docs]",
+        ... )
+        >>> target.target_type
+        'optional-dependencies'
+        >>> target.uv_flag
+        '--optional'
+    """
+
+    target_type: Literal["optional-dependencies", "dependency-groups"]
+    uv_flag: str
+    section_path: str
+
+    def __post_init__(self) -> None:
+        """Validate DependencyTarget constraints."""
+        if self.target_type not in ["optional-dependencies", "dependency-groups"]:
+            raise ValueError(f"Invalid target_type: {self.target_type}")
+
+        if self.target_type == "optional-dependencies" and self.uv_flag != "--optional":
+            raise ValueError("optional-dependencies requires --optional flag")
+
+        if self.target_type == "dependency-groups" and self.uv_flag != "--group":
+            raise ValueError("dependency-groups requires --group flag")
+
+
+@dataclass(frozen=True)
 class PackageManager:
     """Represents a package manager and its availability.
 
@@ -168,17 +205,19 @@ def handle_dependencies(
     doc_type: str,
     auto_install: bool,
     no_install: bool,
+    dependency_target: Literal["optional-dependencies", "dependency-groups"],
     project_root: Path,
     console: Console,
 ) -> DependencyResult:
     """Handle dependency checking and installation.
 
-    Implements FR-008b through FR-008e: Conditional auto-installation with informed consent.
+    Implements FR-008b through FR-008f: Conditional auto-installation with dependency placement strategy.
 
     Args:
         doc_type: Documentation tool type ("sphinx" or "mkdocs")
         auto_install: Skip user confirmation (CI/CD mode)
         no_install: Skip all dependency checks and installation
+        dependency_target: Target location for dependencies ("optional-dependencies" or "dependency-groups")
         project_root: Project root directory (must contain pyproject.toml)
         console: Rich console for progress display
 
@@ -187,6 +226,7 @@ def handle_dependencies(
 
     Raises:
         ValueError: If doc_type is not "sphinx" or "mkdocs"
+        ValueError: If dependency_target is not "optional-dependencies" or "dependency-groups"
 
     Example:
         >>> from pathlib import Path
@@ -195,6 +235,7 @@ def handle_dependencies(
         ...     doc_type="sphinx",
         ...     auto_install=False,
         ...     no_install=False,
+        ...     dependency_target="optional-dependencies",
         ...     project_root=Path("/tmp/project"),
         ...     console=Console(),
         ... )
@@ -203,6 +244,13 @@ def handle_dependencies(
     # Validate doc_type
     if doc_type not in ["sphinx", "mkdocs"]:
         raise ValueError(f"Invalid doc_type: {doc_type}. Must be 'sphinx' or 'mkdocs'")
+
+    # Validate dependency_target
+    if dependency_target not in ["optional-dependencies", "dependency-groups"]:
+        raise ValueError(
+            f"Invalid dependency_target: {dependency_target}. "
+            'Must be "optional-dependencies" or "dependency-groups"'
+        )
 
     # Step 1: Check --no-install flag
     if no_install:
@@ -256,13 +304,18 @@ def handle_dependencies(
         )
 
     # Step 5: Get user approval (unless auto_install=True)
+    # Build uv add command based on dependency_target (FR-008f)
+    uv_flag = "--optional" if dependency_target == "optional-dependencies" else "--group"
+    uv_cmd = ["uv", "add", uv_flag, "docs"] + packages
+
     if not auto_install:
         console.print("\n[bold]依存関係の自動インストール[/bold]")
         console.print(f"ドキュメントツール: [cyan]{doc_type}[/cyan]")
+        console.print(f"配置先: [cyan]{dependency_target}[/cyan]")
         console.print("インストールするパッケージ:")
         for pkg in packages:
             console.print(f"  • {pkg}")
-        console.print(f"\n実行コマンド: [cyan]uv add {' '.join(packages)}[/cyan]")
+        console.print(f"\n実行コマンド: [cyan]{' '.join(uv_cmd)}[/cyan]")
         console.print("[yellow]警告: pyproject.tomlが変更されます[/yellow]")
 
         confirmed = typer.confirm("\nインストールを続行しますか?", default=True)
@@ -279,7 +332,7 @@ def handle_dependencies(
     console.print("\n[cyan]依存関係をインストール中...[/cyan]")
     try:
         result = subprocess.run(
-            ["uv", "add"] + packages,
+            uv_cmd,
             cwd=project_root,
             capture_output=True,
             text=True,

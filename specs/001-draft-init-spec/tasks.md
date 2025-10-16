@@ -141,6 +141,58 @@
 
 **Checkpoint (Session 2025-10-15)**: ✅ **依存関係自動インストール機能完成** - FR-008b/FR-008c/FR-008d/FR-008e完全実装、SC-002b/SC-008b/SC-008c達成、C010（TDD）準拠、**371テスト全通過（+56新規テスト）**
 
+### 依存関係配置先選択機能 (Session 2025-10-16追加) ✨ NEW
+
+**目標**: FR-008fに基づき、`/speckit.doc-init`実行時にユーザーが依存関係の配置先を選択できるようにする。選択肢は(1) `[project.optional-dependencies.docs]`（推奨、pip/poetry/uv互換）、(2) `[dependency-groups.docs]`（uvネイティブ、モダン）。選択された配置先に応じて`uv add --optional docs`または`uv add --group docs`を実行し、ドキュメント生成ツールをメインアプリケーションの依存関係から分離する。
+
+**アーキテクチャ的意義**: ドキュメント生成ツール（Sphinx/MkDocs）はアプリケーションの実行には不要であり、開発・ドキュメント専用の依存関係として分離することでプロジェクトの構造が改善される（Session 2025-10-16 clarification参照）。
+
+**TDD必須**: C010に従い、すべての実装前にテストを書き、Red-Green-Refactorサイクルを厳守
+
+#### Tests for Dependency Placement Strategy (TDD: Red)
+
+- [ ] **T106** [P] [US1] tests/unit/test_dependency_target.pyを作成 - DependencyTargetデータクラスの検証ルールテスト（target_type検証、uv_flag制約、section_path生成、__post_init__検証）
+- [ ] **T107** [P] [US1] tests/unit/utils/test_handle_dependencies_with_target.pyを作成 - `handle_dependencies(dependency_target="optional-dependencies")`および`handle_dependencies(dependency_target="dependency-groups")`のテスト（各6ケース、計12テスト）:
+  - optional-dependencies選択時: `uv add --optional docs {packages}`実行確認
+  - dependency-groups選択時: `uv add --group docs {packages}`実行確認
+  - 不正dependency_target → ValueError
+  - pyproject.tomlの正しいセクションへの追加確認（SC-002c）
+- [ ] **T108** [P] [US1] tests/integration/test_doc_init_optional_dependencies.pyを作成 - 統合テスト: `--dependency-target optional-dependencies`指定時のpyproject.toml変更確認、`[project.optional-dependencies.docs]`セクション生成確認、SC-002c検証
+- [ ] **T109** [P] [US1] tests/integration/test_doc_init_dependency_groups.pyを作成 - 統合テスト: `--dependency-target dependency-groups`指定時のpyproject.toml変更確認、`[dependency-groups.docs]`セクション生成確認、SC-002c検証
+
+#### Implementation for Dependency Placement Strategy (TDD: Green)
+
+- [ ] **T110** [P] [US1] src/speckit_docs/utils/dependencies.pyにDependencyTargetデータクラスを追加 - plan.md Data Model Updates（lines 202-228）に従った完全実装（frozen=True、__post_init__検証、型ヒント完備）
+- [ ] **T111** [US1] src/speckit_docs/utils/dependencies.pyの`handle_dependencies()`関数シグネチャを更新 - `dependency_target: Literal["optional-dependencies", "dependency-groups"]`引数を追加（plan.md API Contracts lines 236-244参照、デフォルト値なし、明示的指定必須）
+- [ ] **T112** [US1] src/speckit_docs/utils/dependencies.pyの`handle_dependencies()`実装を更新 - dependency_targetに応じたuv addフラグ切り替え:
+  - `dependency_target == "optional-dependencies"` → `uv add --optional docs {packages}`
+  - `dependency_target == "dependency-groups"` → `uv add --group docs {packages}`
+  - FR-008c準拠: 実行コマンド表示にフラグを反映
+  - FR-008cの警告メッセージも配置先セクション（`[project.optional-dependencies.docs]`または`[dependency-groups.docs]`）を明示
+- [ ] **T113** [US1] .specify/scripts/docs/doc_init.pyに`--dependency-target`引数を追加 - typer.Option("optional-dependencies", "--dependency-target", help="依存関係の配置先（optional-dependencies | dependency-groups）")、デフォルト値は"optional-dependencies"
+- [ ] **T114** [US1] .specify/scripts/docs/doc_init.pyのmain()関数のhandle_dependencies()呼び出しを更新 - `dependency_target`引数を渡す
+- [ ] **T115** [US1] .claude/commands/speckit.doc-init.mdに依存関係配置先選択プロンプトを追加 - plan.md lines 1252-1281に従ったプロンプト追加:
+  - Step 4（新規）: 依存関係配置先の選択
+  - 2択提示: (1) optional-dependencies（推奨）、(2) dependency-groups（uvネイティブ）
+  - デフォルト: (1)
+  - doc_init.py呼び出しに`--dependency-target {選択された配置先}`を追加
+
+#### Refactor for Dependency Placement Strategy (TDD: Refactor)
+
+- [ ] **T116** T110-T115の実装をリファクタリング - コード品質向上、DRY原則適用、型ヒント補完、docstring追加（Google Style）
+- [ ] **T117** `uv run ruff check src/speckit_docs/utils/dependencies.py .specify/scripts/docs/doc_init.py`を実行 - リンターエラー修正、C006準拠確認
+- [ ] **T118** `uv run mypy src/speckit_docs/utils/dependencies.py .specify/scripts/docs/doc_init.py --strict`を実行 - 型エラー修正、C006準拠確認
+- [ ] **T119** `uv run pytest tests/unit/utils/test_handle_dependencies_with_target.py -v`を実行 - すべての単体テスト通過確認、カバレッジ95%以上達成
+- [ ] **T120** `uv run pytest tests/integration/test_doc_init_optional_dependencies.py tests/integration/test_doc_init_dependency_groups.py -v`を実行 - すべての統合テスト通過確認、SC-002c達成検証
+
+#### Documentation for Dependency Placement Strategy
+
+- [ ] **T121** [P] contracts/handle_dependencies.mdを更新 - 新しいシグネチャと`dependency_target`引数の契約を追加（plan.md lines 234-259参照）
+- [ ] **T122** [P] README.mdを更新 - 依存関係配置先の説明と選択肢を追加
+- [ ] **T123** [P] quickstart.mdを更新 - plan.md Quickstart Example（lines 262-279）を反映、2つの配置先とインストール方法の説明を追加
+
+**Checkpoint (Session 2025-10-16)**: ✅ **依存関係配置先選択機能完成** - FR-008f完全実装、SC-002c達成、C010（TDD）準拠、アーキテクチャ的に正しい依存関係分離実現
+
 ---
 
 ## Phase 4: User Story 2 - /speckit.doc-update コマンド（優先度: P1）🎯 MVP
@@ -345,36 +397,41 @@
 
 ---
 
-## Summary to Return (Final - Session 2025-10-15)
+## Summary to Return (Updated - Session 2025-10-16)
 
-- **総タスク数**: 83タスク（80 + 3タスク追加 Session 2025-10-14）
-- **完了タスク数**: **82タスク（98.8%完了）** ✅
-- **残りタスク数**: **1タスク（オプション）** (T079: 90%テストカバレッジ達成 - MVP release非ブロッキング)
+- **総タスク数**: 123タスク（83タスク from Session 2025-10-15 + 22タスク Session 2025-10-15 deps + 18タスク Session 2025-10-16 NEW）
+- **完了タスク数**: **105タスク（85.4%完了）** ✅
+- **残りタスク数**: **18タスク（Session 2025-10-16追加）** - FR-008f（依存関係配置先選択機能）実装タスク
 - **ユーザーストーリー別タスク数**:
   - Setup（Phase 1）: 5タスク ✅ **完了**
   - Foundational（Phase 2）: 10タスク ✅ **完了**
-  - US1（/speckit.doc-init）: 20タスク（テスト: 8、実装: 12） ✅ **完了**
+  - US1（/speckit.doc-init）: 20タスク（テスト: 8、実装: 12） ✅ **完了** ← **+18タスク追加（Session 2025-10-16）**
+    - 依存関係自動インストール（Session 2025-10-15）: 22タスク ✅ **完了**
+    - 依存関係配置先選択（Session 2025-10-16）: 18タスク ⏳ **未完了**
   - US2（/speckit.doc-update）: 24タスク（テスト: 8、実装: 16） ✅ **完了**
   - US3（speckit-docs install）: 11タスク（テスト: 4、実装: 7） ✅ **完了**
   - Polish & Integration（Phase 6）: 13タスク（10 + 3タスク Session 2025-10-14追加） ✅ **12/13完了**
-- **並列実行可能タスク数**: 45タスク（全体の56%）
-- **MVP範囲**: Phase 1-6すべて完了 ✅
+- **並列実行可能タスク数**: 53タスク（全体の58%、Session 2025-10-16で+8タスク追加）
+- **MVP範囲**: Phase 1-6すべて完了 ✅、**FR-008f追加（Session 2025-10-16）** ⏳
   - Phase 1-2: 基盤構築（15タスク） ✅ **完了**
-  - Phase 3: US1完成で初期化コマンド使用可能（20タスク） ✅ **完了**
+  - Phase 3: US1完成で初期化コマンド使用可能（60タスク = 20 + 22 + 18） ✅ **42/60完了（70%）**
   - Phase 4: US2完成でドキュメント生成可能（24タスク） ✅ **完了**
   - Phase 5: US3完成でspec-kit拡張として配布可能（11タスク） ✅ **完了**
   - Phase 6: 品質向上とドキュメント整備（13タスク） ✅ **12/13完了**
 
-**実際の実装時間 (Session 2025-10-13 ~ 2025-10-15)**:
+**実際の実装時間 (Session 2025-10-13 ~ 2025-10-16)**:
 - Phase 1-2（基盤構築）: ✅ 完了
-- Phase 3（US1: /speckit.doc-init）: ✅ 完了
+- Phase 3（US1: /speckit.doc-init）: ⏳ **70%完了（42/60タスク）**
+  - Session 2025-10-15: 依存関係自動インストール機能完成（T084-T105, 22タスク）
+  - Session 2025-10-16: 依存関係配置先選択機能設計完了（T106-T123, 18タスク、実装未着手）
 - Phase 4（US2: /speckit.doc-update）: ✅ 完了
 - Phase 5（US3: speckit-docs install）: ✅ 完了
 - Phase 6（品質向上）: ✅ 12/13完了
   - Session 2025-10-13: +62 tests, 47%→63% coverage
   - Session 2025-10-14: T080-T082追加（インストール方法標準化）
-  - Session 2025-10-15: T046, T056-T057, T080-T082完了、+20 tests, 63%→75% coverage
-- **合計**: 3セッション（TDD準拠、Constitution-driven development）
+  - Session 2025-10-15: T046, T056-T057, T080-T082, T084-T105完了、+76 tests (20 + 56), 63%→75% coverage
+  - Session 2025-10-16: FR-008f設計完了、tasks.md更新（T106-T123追加、実装未着手）
+- **合計**: 4セッション（TDD準拠、Constitution-driven development）
 
 **実績タイムライン**:
 - Session 2025-10-13: 基盤実装+テスト大幅追加 (+62 tests, +16pt coverage)

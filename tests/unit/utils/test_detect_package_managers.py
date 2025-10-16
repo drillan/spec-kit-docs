@@ -3,8 +3,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from speckit_docs.utils.dependencies import detect_package_managers
 
 

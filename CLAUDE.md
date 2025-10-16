@@ -101,8 +101,8 @@ speckit-docs install
 
 ## Recent Changes
 - 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
+- 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
 - 001-draft-init-spec: Added Python 3.11+（spec-kitの前提条件と互換性を保つ）
-- 001-draft-init-spec: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 
 <!-- MANUAL ADDITIONS START -->

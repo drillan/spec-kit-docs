@@ -798,6 +798,246 @@ FeatureStatus (列挙型) (P3)
     └── ABANDONED
 ```
 
+---
+
+### DependencyResult (Session 2025-10-15追加)
+
+依存関係自動インストール機能（FR-008b～FR-008e）の結果を表すエンティティです。`handle_dependencies()`関数の戻り値として使用されます。
+
+```python
+from dataclasses import dataclass, field
+from typing import Literal
+
+@dataclass(frozen=True)
+class DependencyResult:
+    """依存関係インストールの結果を表すエンティティ"""
+
+    status: Literal["installed", "skipped", "failed", "not_needed"]
+    """インストール結果のステータス
+    - installed: 自動インストール成功
+    - skipped: ユーザーが拒否またはインストールをスキップ
+    - failed: インストール失敗（条件不満足またはuv addエラー）
+    - not_needed: パッケージが既にインストール済み
+    """
+
+    message: str
+    """ステータスの詳細メッセージ（ユーザーへのフィードバック用）"""
+
+    installed_packages: list[str] = field(default_factory=list)
+    """インストールされたパッケージのリスト（status="installed"の場合のみ）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        valid_statuses = ["installed", "skipped", "failed", "not_needed"]
+        if self.status not in valid_statuses:
+            raise ValueError(f"Invalid status: {self.status}. Must be one of {valid_statuses}")
+
+        if self.status == "installed" and not self.installed_packages:
+            raise ValueError("installed_packages must not be empty when status is 'installed'")
+
+        if self.status != "installed" and self.installed_packages:
+            raise ValueError(f"installed_packages must be empty when status is '{self.status}'")
+```
+
+**関係性**:
+- `handle_dependencies()`関数は1つのDependencyResultを返す
+- DependencyResultは`doc_init.py`の終了時にログメッセージとして使用される
+
+**検証ルール**:
+- `status`は4つの値のいずれかでなければならない
+- `status="installed"`の場合、`installed_packages`は空でない
+- `status != "installed"`の場合、`installed_packages`は空である
+
+**対応する要件**: FR-008b, FR-008c, FR-008d, FR-008e, SC-002b
+
+**使用例**:
+```python
+# 成功ケース
+DependencyResult(
+    status="installed",
+    message="インストール成功",
+    installed_packages=["sphinx>=7.0", "myst-parser>=2.0"]
+)
+
+# 失敗ケース
+DependencyResult(
+    status="failed",
+    message="pyproject.toml不在",
+    installed_packages=[]
+)
+
+# スキップケース
+DependencyResult(
+    status="skipped",
+    message="ユーザーが拒否",
+    installed_packages=[]
+)
+
+# 不要ケース
+DependencyResult(
+    status="not_needed",
+    message="すべてのパッケージがインストール済み",
+    installed_packages=[]
+)
+```
+
+---
+
+### PackageManager (Session 2025-10-15追加)
+
+利用可能なパッケージマネージャーの情報を表すエンティティです。代替インストール方法（FR-008d）の表示に使用されます。
+
+```python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class PackageManager:
+    """パッケージマネージャーを表すエンティティ"""
+
+    name: str
+    """パッケージマネージャー名（uv, poetry, pip等）"""
+
+    command: str
+    """インストールコマンド（例：uv add sphinx>=7.0 myst-parser>=2.0）"""
+
+    available: bool
+    """システムで利用可能かどうか（shutil.which()の結果）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        valid_names = ["uv", "poetry", "pip", "conda"]
+        if self.name not in valid_names:
+            raise ValueError(f"Invalid package manager: {self.name}. Must be one of {valid_names}")
+
+        if self.available and not self.command:
+            raise ValueError("command must not be empty when available is True")
+```
+
+**関係性**:
+- `detect_package_managers()`関数は複数のPackageManagerを返す
+- `show_alternative_methods()`関数はPackageManagerのリストを使用して代替方法を表示
+
+**検証ルール**:
+- `name`は`["uv", "poetry", "pip", "conda"]`のいずれかでなければならない
+- `available=True`の場合、`command`は空でない
+
+**対応する要件**: FR-008d
+
+**使用例**:
+```python
+# uv利用可能
+PackageManager(
+    name="uv",
+    command="uv add sphinx>=7.0 myst-parser>=2.0",
+    available=True
+)
+
+# poetry利用不可
+PackageManager(
+    name="poetry",
+    command="",
+    available=False
+)
+```
+
+---
+
+## エンティティ関係図（更新版）
+
+```
+SpecKitProject (1)
+    ├── root_dir: Path
+    ├── specify_dir: Path
+    ├── specs_dir: Path
+    ├── git_repo: bool
+    └── features: List[Feature] (0..*)
+
+Feature (0..*)
+    ├── id: str
+    ├── number: int
+    ├── name: str
+    ├── directory: Path
+    ├── spec_file: Optional[Path]
+    ├── plan_file: Optional[Path]
+    ├── tasks_file: Optional[Path]
+    ├── data_model_file: Optional[Path]
+    ├── contracts_dir: Optional[Path]
+    └── entities: List[Entity] (0..*) (P2)
+    └── api_endpoints: List[APIEndpoint] (0..*) (P2)
+
+Entity (0..*) (P2)
+    ├── name: str
+    ├── description: Optional[str]
+    ├── fields: List[EntityField]
+    ├── introduced_in: int
+    └── modified_in: Optional[List[int]]
+
+EntityField (0..*) (P2)
+    ├── name: str
+    ├── field_type: str
+    ├── is_optional: bool
+    ├── description: Optional[str]
+    ├── is_enum: bool
+    └── enum_values: Optional[List[str]]
+
+APIEndpoint (0..*) (P2)
+    ├── method: HTTPMethod
+    ├── path: str
+    ├── summary: Optional[str]
+    ├── parameters: List[APIParameter]
+    ├── request_body: Optional[str]
+    ├── response_type: Optional[str]
+    ├── introduced_in: int
+    └── modified_in: Optional[List[int]]
+
+DocumentationSite (0..1)
+    ├── root_dir: Path
+    ├── tool_type: DocToolType
+    ├── structure_type: StructureType
+    ├── project_name: str
+    ├── author: Optional[str]
+    ├── version: Optional[str]
+    ├── language: str
+    ├── site_name: Optional[str]
+    ├── repo_url: Optional[str]
+    └── feature_pages: List[Path]
+
+BaseGenerator (抽象クラス)
+    ├── initialize()
+    ├── generate_feature_page()
+    ├── update_navigation()
+    └── validate()
+    ├── implemented by: SphinxGenerator
+    └── implemented by: MkDocsGenerator
+
+SynthesisResult (1) (P2)
+    ├── entities: Dict[str, Entity]
+    ├── api_endpoints: Dict[str, APIEndpoint]
+    ├── conflicts: List[str]
+    └── breaking_changes: List[str]
+
+Audience (列挙型) (P3)
+    ├── END_USER
+    ├── DEVELOPER
+    └── CONTRIBUTOR
+
+FeatureStatus (列挙型) (P3)
+    ├── IMPLEMENTED
+    ├── IN_PROGRESS
+    ├── PLANNED
+    └── ABANDONED
+
+DependencyResult (1) (Session 2025-10-15追加)
+    ├── status: Literal["installed", "skipped", "failed", "not_needed"]
+    ├── message: str
+    └── installed_packages: list[str]
+
+PackageManager (0..*) (Session 2025-10-15追加)
+    ├── name: str
+    ├── command: str
+    └── available: bool
+```
+
 ## まとめ
 
-このデータモデルは、spec-kit-docsプロジェクトのすべての主要エンティティを定義します。すべてのエンティティは不変（`@dataclass(frozen=True)`）で、型安全（mypy互換）、かつ明確な検証ルールを持ちます。MVP（P1）段階では、SpecKitProject、Feature、DocumentationSite、BaseGeneratorが主に使用され、P2以降でEntity、APIEndpoint、SynthesisResult、P3でAudience、FeatureStatusが追加されます。
+このデータモデルは、spec-kit-docsプロジェクトのすべての主要エンティティを定義します。すべてのエンティティは不変（`@dataclass(frozen=True)`）で、型安全（mypy互換）、かつ明確な検証ルールを持ちます。MVP（P1）段階では、SpecKitProject、Feature、DocumentationSite、BaseGenerator、**DependencyResult、PackageManager**（Session 2025-10-15追加）が主に使用され、P2以降でEntity、APIEndpoint、SynthesisResult、P3でAudience、FeatureStatusが追加されます。

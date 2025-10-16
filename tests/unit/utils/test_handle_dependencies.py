@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from rich.console import Console
 
-from speckit_docs.utils.dependencies import DependencyResult, handle_dependencies
+from speckit_docs.utils.dependencies import handle_dependencies
 
 
 class TestHandleDependencies:
@@ -50,6 +50,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -74,6 +75,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -100,6 +102,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -127,6 +130,7 @@ class TestHandleDependencies:
             doc_type="mkdocs",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -142,6 +146,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=True,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -173,6 +178,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=True,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -207,6 +213,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -242,6 +249,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -274,6 +282,7 @@ class TestHandleDependencies:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -293,6 +302,7 @@ class TestHandleDependencies:
                 doc_type="invalid",
                 auto_install=False,
                 no_install=False,
+                dependency_target="optional-dependencies",
                 project_root=project_root,
                 console=console,
             )
