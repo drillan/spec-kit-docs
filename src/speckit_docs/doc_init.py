@@ -13,11 +13,14 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[3] / "src"))
 
+from rich.console import Console
+
 from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
 from speckit_docs.generators.mkdocs import MkDocsGenerator
 from speckit_docs.generators.sphinx import SphinxGenerator
 from speckit_docs.parsers.document_structure import DocumentStructure
 from speckit_docs.parsers.feature_scanner import FeatureScanner
+from speckit_docs.utils.dependencies import handle_dependencies
 from speckit_docs.utils.prompts import confirm_overwrite
 from speckit_docs.utils.validation import (
     GitValidationError,
@@ -86,6 +89,26 @@ def main() -> int:
         "--no-interaction",
         action="store_true",
         help="Disable interactive mode (use defaults)",
+    )
+
+    parser.add_argument(
+        "--dependency-target",
+        type=str,
+        default="optional-dependencies",
+        choices=["optional-dependencies", "dependency-groups"],
+        help='Dependency placement strategy (default: "optional-dependencies")',
+    )
+
+    parser.add_argument(
+        "--auto-install",
+        action="store_true",
+        help="Auto-install dependencies without confirmation (CI/CD mode)",
+    )
+
+    parser.add_argument(
+        "--no-install",
+        action="store_true",
+        help="Skip dependency installation checks",
     )
 
     args = parser.parse_args()
@@ -205,7 +228,19 @@ def main() -> int:
 
         print(f"✓ {config.tool.capitalize()}プロジェクトを初期化しました")
 
-        # Step 8: Show generated files
+        # Step 8: Handle dependency installation (FR-008f)
+        console = Console()
+        print("\n依存関係の確認中...")
+        dep_result = handle_dependencies(
+            doc_type=config.tool,
+            auto_install=args.auto_install,
+            no_install=args.no_install,
+            dependency_target=args.dependency_target,
+            project_root=Path.cwd(),
+            console=console,
+        )
+
+        # Step 9: Show generated files
         print("\n生成されたファイル:")
         if config.tool == "sphinx":
             print("  - docs/conf.py")
@@ -216,7 +251,7 @@ def main() -> int:
             print("  - mkdocs.yml")  # MkDocs config is in project root
             print("  - docs/index.md")
 
-        # Step 9: Show next steps
+        # Step 10: Show next steps
         print("\n次のステップ:")
         print("  1. /speckit.doc-update を実行してドキュメントを生成")
 

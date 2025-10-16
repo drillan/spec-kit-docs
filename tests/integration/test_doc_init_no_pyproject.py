@@ -41,6 +41,7 @@ class TestDocInitNoPyproject:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root_no_pyproject,
             console=console,
         )
@@ -67,6 +68,7 @@ class TestDocInitNoPyproject:
             doc_type="mkdocs",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root_no_pyproject,
             console=console,
         )
@@ -107,6 +109,7 @@ class TestDocInitNoPyproject:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root_no_pyproject,
             console=console,
         )
@@ -131,6 +134,7 @@ class TestDocInitNoPyproject:
             doc_type="sphinx",
             auto_install=False,
             no_install=True,
+            dependency_target="optional-dependencies",
             project_root=project_root_no_pyproject,
             console=console,
         )

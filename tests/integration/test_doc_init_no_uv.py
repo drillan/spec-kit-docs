@@ -45,6 +45,7 @@ class TestDocInitNoUv:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -73,6 +74,7 @@ class TestDocInitNoUv:
             doc_type="mkdocs",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -114,6 +116,7 @@ class TestDocInitNoUv:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -147,6 +150,7 @@ class TestDocInitNoUv:
             doc_type="sphinx",
             auto_install=False,
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
@@ -173,6 +177,7 @@ class TestDocInitNoUv:
             doc_type="sphinx",
             auto_install=True,  # CI/CD mode
             no_install=False,
+            dependency_target="optional-dependencies",
             project_root=project_root,
             console=console,
         )
