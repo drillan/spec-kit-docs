@@ -1,43 +1,54 @@
-# Implementation Plan: spec-kit-docs - AI駆動型ドキュメント生成システム
+# Implementation Plan: spec-kit-docs - 依存関係配置先選択機能の追加
 
-**Branch**: `001-draft-init-spec` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-draft-init-spec/spec.md`
+**Branch**: `001-draft-init-spec` | **Date**: 2025-10-16 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/001-draft-init-spec/spec.md` (Session 2025-10-16 clarifications)
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Note**: This plan focuses on FR-008f (dependency placement strategy) added in Session 2025-10-16.
 
 ## Summary
 
-spec-kit-docsは、spec-kitプロジェクトの仕様ファイル（spec.md、plan.md、tasks.md）から、SphinxまたはMkDocsドキュメントを自動生成・更新するCLIツールです。MVP（フェーズ1）では、基本的なドキュメント初期化（`/speckit.doc-init`）とインクリメンタル更新（`/speckit.doc-update`）、既存プロジェクトへのインストール機能を提供します。本家spec-kitとの一貫性を最優先し、非対話的実行モデル、Strategy PatternによるGenerator抽象化、TDD必須の開発プロセスを採用します。
+Session 2025-10-16の`/speckit.clarify`で明確化されたFR-008f（依存関係配置先選択機能）を実装します。この機能により、`/doc-init`コマンド実行時にユーザーがドキュメント依存関係の配置先を選択できるようになります：
+
+1. **`[project.optional-dependencies.docs]`** (推奨) - pip/poetry/uv互換、PEP 621標準
+2. **`[dependency-groups.docs]`** - uvネイティブ、PEP 735準拠
+
+この選択により、ドキュメント生成ツール（Sphinx/MkDocs）がメインアプリケーションの依存関係（`[project.dependencies]`）から分離され、アーキテクチャ的に正しい構造が実現されます。
 
 ## Technical Context
 
 **Language/Version**: Python 3.11+（spec-kit前提条件との互換性）
+
 **Primary Dependencies**:
-- **CLIフレームワーク**: typer（本家spec-kitとの一貫性、Session 2025-10-13決定によりargparseから変更）
-- **ドキュメントツール**: Sphinx 7.0+ with myst-parser 2.0+、MkDocs 1.5+
+- **CLIフレームワーク**: typer 0.12+（本家spec-kitとの一貫性）
+- **ドキュメントツール**: Sphinx 7.0+ with myst-parser 2.0+、MkDocs 1.5+ with mkdocs-material 9.0+
 - **パッケージリソース管理**: importlib.resources（Python 3.9+標準ライブラリ）
 - **Git操作**: GitPython 3.1+（変更検出とブランチ情報取得）
 - **テンプレートエンジン**: Jinja2 3.1+（設定ファイル生成）
 - **Markdown解析**: markdown-it-py 3.0+（spec.md等の解析、MyST互換性）
-- **spec-kit依存**: specify-cli @ git+https://github.com/github/spec-kit.git（型定義とユーティリティの共有、typer依存ツリーを含む）
+- **spec-kit依存**: specify-cli @ git+https://github.com/github/spec-kit.git（typer依存ツリーを含む）
+- **YAML処理**: ruamel.yaml 0.18+（mkdocs.yml解析・生成）
 
-**Storage**: N/A（ファイルシステムのみ使用、データベース不要）
-**Testing**: pytest 8.0+、pytest-cov 4.0+（単体テスト・統合テスト・契約テスト）
+**Storage**: N/A（ファイルシステムのみ使用）
+
+**Testing**: pytest 8.0+、pytest-cov 4.0+（単体テスト・統合テスト）、pyfakefs 5.0+（ファイルシステムモック）
+
 **Target Platform**: Linux/macOS/WSL2（spec-kitと同じプラットフォーム要件）
-**Project Type**: Single project（CLIツール、Pythonパッケージ）
+
+**Project Type**: Single（CLIツールとライブラリのハイブリッド）
+
 **Performance Goals**:
-- ドキュメント初期化（`/speckit.doc-init`）: 30秒以内（対話的入力時間を除く）
-- ドキュメント更新（`/speckit.doc-update`）: 5機能のプロジェクトで45秒以内（フル更新時）、1機能のみ変更時は5秒以内（インクリメンタル更新）
+- `/speckit.doc-init`: 30秒以内にドキュメントプロジェクト初期化（対話時間除く）
+- 依存関係配置先選択: 1秒以内に選択プロンプト表示
 
 **Constraints**:
-- 非対話的実行: バックエンドスクリプト（doc_init.py、doc_update.py）は標準入力（stdin）を使用せず、コマンドライン引数のみで動作
-- spec-kit Integration First: 本家spec-kitの`specify init --here`パターン、`--force`フラグセマンティクス、エラーハンドリング（ベストエフォート方式）と完全に一貫
-- Markdown形式統一: Sphinxでもデフォルトは.md（myst-parser使用）、spec.md/plan.md/tasks.mdとのフォーマット統一
+- 非対話的実行必須（CI/CD対応のため`input()`禁止）
+- spec-kit Integration First（Core Principle I準拠）
+- オフライン動作（importlib.resources使用）
 
 **Scale/Scope**:
-- MVP対象: 1-20機能のspec-kitプロジェクト
-- サポートドキュメントツール: Sphinx（MyST Markdown）、MkDocs（Material theme）
-- 拡張性: 将来的にDocusaurus、VitePressなど追加可能な設計
+- MVP範囲: 依存関係配置先選択機能の追加
+- 2つの配置先選択肢（optional-dependencies、dependency-groups）
+- 既存の自動インストール機能との統合
 
 ## Constitution Check
 
@@ -45,34 +56,49 @@ spec-kit-docsは、spec-kitプロジェクトの仕様ファイル（spec.md、p
 
 ### Core Principles Compliance
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| **I. spec-kit Integration First** | ✅ PASS | - `uv tool install`方式を標準インストール方法として採用（Session 2025-10-14決定）<br>- `speckit-docs install`コマンドは`specify init --here`パターンに従う<br>- コマンド命名規則`/speckit.doc-init`、`/speckit.doc-update`で一貫<br>- エラーハンドリングはベストエフォート方式（部分的成功状態を許容） |
-| **II. Non-Interactive Execution** | ✅ PASS | - doc_init.py、doc_update.pyは`input()`を使用しない<br>- すべての設定はコマンドライン引数またはデフォルト値から取得<br>- 対話的情報収集はAIエージェント（Claude Code）が担当 |
-| **III. Extensibility & Modularity** | ✅ PASS | - BaseGeneratorクラス（4メソッド: `initialize()`, `generate_feature_page()`, `update_navigation()`, `validate()`）<br>- SphinxGenerator、MkDocsGeneratorが独立モジュールとして実装<br>- パーサー（parsers/）とジェネレータ（generators/）を明確に分離 |
-| **IV. Incremental Delivery** | ✅ PASS | - MVP（P1）: ドキュメント初期化・更新、インストール機能のみ<br>- P2: エンティティ統合・API統合<br>- P3: 対象者別フィルタリング、バージョン履歴追跡<br>- 各ユーザーストーリーは独立してテスト可能 |
-| **V. Testability** | ✅ PASS | - TDD必須（C010）: Red-Green-Refactorサイクル<br>- pytest 8.0+で単体テスト・統合テスト・契約テスト<br>- 目標カバレッジ: 90%以上<br>- 決定的な入力（コマンドライン引数）→決定的な出力 |
+✅ **I. spec-kit Integration First**:
+- typerフレームワーク使用（本家spec-kitと一貫）
+- `typer.Option()`で配置先選択フラグを追加（本家パターン再利用）
+- AIエージェントが対話的に選択を収集し、スクリプトは引数のみを受け取る（spec-kit標準パターン）
+- 判定: **準拠** - spec-kitの標準パターンを完全に踏襲
+
+✅ **II. Non-Interactive Execution**:
+- doc_init.pyは`input()`使用禁止
+- 配置先選択は`--dependency-target`引数で受け取る
+- デフォルト値は`optional-dependencies`（引数省略時）
+- 判定: **準拠** - 非対話的実行を保証
+
+✅ **III. Extensibility & Modularity**:
+- 配置先選択機能は`handle_dependencies()`関数に統合
+- 新しい配置先（例：conda環境）追加が容易
+- 判定: **準拠** - モジュラー設計
+
+✅ **IV. Incremental Delivery**:
+- MVP範囲: 配置先選択機能のみ追加
+- 既存の依存関係自動インストール機能を破壊しない
+- 判定: **準拠** - MVP優先アプローチ
+
+✅ **V. Testability**:
+- TDD必須: テストファースト実装
+- `handle_dependencies(dependency_target="optional-dependencies")`のようにテスト可能
+- pyfakefsでファイルシステムモック
+- 判定: **準拠** - テスト容易な設計
 
 ### Critical Rules Compliance
 
-| Rule | Status | Notes |
-|------|--------|-------|
-| **C001: ルール歪曲禁止・最上位命令遵守** | ✅ PASS | すべてのルールを厳密に遵守 |
-| **C002: エラー迂回絶対禁止・主観判断排除** | ✅ PASS | すべてのエラーは`SpecKitDocsError`例外として発生、エラーメッセージに「ファイルパス」「エラー種類」「推奨アクション」を含める |
-| **C003: 冒頭表示必須** | ✅ PASS | 実装時にチャット冒頭で原則を表示 |
-| **C004: 理想実装ファースト原則** | ✅ PASS | 各機能（P1、P2、P3）は理想品質で実装、「とりあえず動く」実装は禁止 |
-| **C005: 記録管理徹底** | ✅ PASS | コミットメッセージ、コメント、spec-kitメモリーシステム（`.specify/memory/`）を活用 |
-| **C006: 堅牢コード品質** | ✅ PASS | ruff（linter/formatter）、mypy（type checker）を使用、コミット前チェック必須 |
-| **C007: 品質例外化禁止** | ✅ PASS | 時間制約・進捗圧力を理由とした品質妥協は禁止 |
-| **C008: ドキュメント整合性絶対遵守** | ✅ PASS | 実装前にspec.md、plan.md、tasks.mdを確認、仕様曖昧時は実装停止 |
-| **C009: 実装計画ブランチ作成必須** | ✅ PASS | 現在のブランチ: `001-draft-init-spec`、mainブランチへの直接コミット禁止 |
-| **C010: テスト駆動開発必須** | ✅ PASS | Red-Green-Refactorサイクル、実装前テスト作成プロトコル |
-| **C011: Data Accuracy** | ✅ PASS | 一次データ推測禁止、環境変数未設定時は明示的エラー |
-| **C012: DRY Principle** | ✅ PASS | 本家spec-kitのtyperパターン（`typer.confirm()`、`typer.Option()`）を再利用、重複実装禁止 |
-| **C013: Refactoring Standards** | ✅ PASS | V2クラス作成禁止、既存クラス修正優先 |
-| **C014: No-Compromise Implementation** | ✅ PASS | 妥協実装絶対禁止、各フェーズ（P1、P2、P3）で理想品質実装 |
+✅ **C001 (ルール歪曲禁止)**: すべてのルールを逐語的に遵守
+✅ **C002 (エラー迂回絶対禁止)**: 不正な`--dependency-target`値はエラー、継続不可
+✅ **C004 (理想実装ファースト)**: 段階的改善ではなく、最初から理想的な配置先選択実装
+✅ **C006 (堅牢コード品質)**: ruff/mypy/pytest必須
+✅ **C008 (ドキュメント整合性)**: FR-008f完全準拠
+✅ **C010 (TDD必須)**: Red-Green-Refactorサイクル
+✅ **C011 (Data Accuracy)**: `--dependency-target`値の明示的検証、デフォルト値明記
+✅ **C012 (DRY原則)**: typer.Option()再利用、重複実装なし
+✅ **C014 (No-Compromise Implementation)**: 妥協なし、理想実装のみ
 
-**Overall Gate Status**: ✅ **PASS** - 憲章違反なし、Phase 0 research開始可能
+### Gates Status
+
+🟢 **All Gates Passed** - Phase 0 research開始可能
 
 ## Project Structure
 
@@ -80,136 +106,194 @@ spec-kit-docsは、spec-kitプロジェクトの仕様ファイル（spec.md、p
 
 ```
 specs/001-draft-init-spec/
-├── spec.md              # 機能仕様書（既存、8 Clarificationセッション完了）
+├── spec.md              # Feature specification (updated in Session 2025-10-16)
 ├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command) - 次のステップで生成
-├── data-model.md        # Phase 1 output (/speckit.plan command) - Phase 0後に生成
-├── quickstart.md        # Phase 1 output (/speckit.plan command) - Phase 0後に生成
-├── contracts/           # Phase 1 output (/speckit.plan command) - Phase 0後に生成
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+├── research.md          # Phase 0 output - Technical research (to be created)
+├── data-model.md        # Phase 1 output - Entity definitions (to be created)
+├── contracts/           # Phase 1 output - API contracts (to be created)
+│   └── handle_dependencies.md  # handle_dependencies() function contract update
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT YET CREATED)
 ```
 
 ### Source Code (repository root)
 
 ```
-src/
-├── speckit_docs/                # メインパッケージ
-│   ├── __init__.py
-│   ├── cli/                     # CLIエントリポイント
-│   │   ├── __init__.py
-│   │   ├── main.py              # typer.Typer()アプリケーション、entry point
-│   │   └── install_handler.py  # speckit-docs installコマンド実装
-│   ├── commands/                # コマンドテンプレート（importlib.resources経由）
-│   │   ├── speckit.doc-init.md # /speckit.doc-initプロンプト定義
-│   │   └── speckit.doc-update.md # /speckit.doc-updateプロンプト定義
-│   ├── scripts/                 # バックエンドスクリプト（非対話的実行）
-│   │   ├── __init__.py
-│   │   ├── doc_init.py          # ドキュメント初期化（コマンドライン引数のみ）
-│   │   └── doc_update.py        # ドキュメント更新（コマンドライン引数のみ）
-│   ├── generators/              # ドキュメントジェネレータ（Strategy Pattern）
-│   │   ├── __init__.py
-│   │   ├── base.py              # BaseGenerator抽象クラス（4メソッド）
-│   │   ├── sphinx.py            # SphinxGenerator実装
-│   │   └── mkdocs.py            # MkDocsGenerator実装
-│   ├── parsers/                 # spec-kit仕様解析
-│   │   ├── __init__.py
-│   │   ├── spec_parser.py       # spec.md解析
-│   │   ├── plan_parser.py       # plan.md解析
-│   │   └── tasks_parser.py      # tasks.md解析
-│   ├── utils/                   # ユーティリティ
-│   │   ├── __init__.py
-│   │   ├── git.py               # Git操作（GitPython使用）
-│   │   ├── fs.py                # ファイルシステム操作
-│   │   └── template.py          # Jinja2テンプレートエンジン
-│   └── exceptions.py            # SpecKitDocsError例外定義
-
-tests/
-├── contract/                    # 契約テスト（CLIインターフェース検証）
-│   ├── __init__.py
-│   ├── test_cli_install.py      # speckit-docs installコマンドテスト
-│   ├── test_doc_init.py         # doc_init.pyスクリプトテスト
-│   └── test_doc_update.py       # doc_update.pyスクリプトテスト
-├── integration/                 # 統合テスト（実際のspec-kitプロジェクト使用）
-│   ├── __init__.py
-│   ├── test_sphinx_workflow.py  # Sphinx初期化→更新ワークフロー
-│   └── test_mkdocs_workflow.py  # MkDocs初期化→更新ワークフロー
-└── unit/                        # 単体テスト
-    ├── __init__.py
-    ├── test_generators_base.py  # BaseGeneratorテスト
-    ├── test_generators_sphinx.py # SphinxGeneratorテスト
-    ├── test_generators_mkdocs.py # MkDocsGeneratorテスト
-    ├── test_parsers_spec.py     # spec_parserテスト
-    ├── test_parsers_plan.py     # plan_parserテスト
-    ├── test_parsers_tasks.py    # tasks_parserテスト
-    ├── test_utils_git.py        # Gitユーティリティテスト
-    ├── test_utils_fs.py         # ファイルシステムユーティリティテスト
-    └── test_utils_template.py   # テンプレートエンジンテスト
+spec-kit-docs/                  # プロジェクトルート
+├── src/
+│   └── speckit_docs/           # メインパッケージ
+│       ├── cli/                # CLIエントリポイント
+│       │   ├── __init__.py     # typer app定義
+│       │   └── install_handler.py  # installコマンド実装
+│       ├── commands/           # コマンドテンプレート（importlib.resources）
+│       │   ├── speckit.doc-init.md  # AIエージェントプロンプト（配置先選択追加予定）
+│       │   └── speckit.doc-update.md
+│       ├── scripts/            # バックエンドスクリプト
+│       │   ├── doc_init.py     # 依存関係配置先選択機能を追加（Session 2025-10-16）
+│       │   └── doc_update.py
+│       ├── generators/         # ドキュメントジェネレータ
+│       │   ├── base.py         # BaseGenerator抽象クラス
+│       │   ├── sphinx.py       # SphinxGenerator
+│       │   └── mkdocs.py       # MkDocsGenerator
+│       ├── parsers/            # spec-kit仕様解析
+│       │   ├── spec_parser.py
+│       │   ├── plan_parser.py
+│       │   └── tasks_parser.py
+│       ├── utils/              # ユーティリティ
+│       │   ├── git.py
+│       │   ├── fs.py
+│       │   ├── template.py
+│       │   └── dependencies.py # 依存関係管理（handle_dependencies関数を更新）
+│       │       ├── handle_dependencies(dependency_target: str)  # 引数追加
+│       │       ├── detect_package_managers()
+│       │       ├── show_alternative_methods()
+│       │       └── get_required_packages()
+│       └── exceptions.py       # SpecKitDocsError例外定義
+├── tests/
+│   ├── contract/               # 契約テスト（CLIインターフェース）
+│   ├── integration/            # 統合テスト（実際のspec-kitプロジェクト使用）
+│   │   ├── test_doc_init_optional_dependencies.py  # 新規: optional-dependenciesテスト
+│   │   └── test_doc_init_dependency_groups.py      # 新規: dependency-groupsテスト
+│   └── unit/                   # 単体テスト
+│       └── utils/
+│           └── test_handle_dependencies.py  # 既存テストを更新
+├── pyproject.toml              # プロジェクト設定
+├── .specify/                   # spec-kitメタデータ
+└── specs/                      # 機能仕様
+    └── 001-draft-init-spec/    # この機能の仕様
 ```
 
-**Structure Decision**: Single project（CLIツール）構造を選択。理由：
-1. spec-kit-docsは単一のPythonパッケージとして配布される独立したCLIツール
-2. フロントエンド・バックエンド分離は不要（バックエンドスクリプトもPythonパッケージに含まれる）
-3. spec-kitの`specify-cli`パッケージと同じ構造パターンに従う（一貫性）
+**Structure Decision**: Single project構造を採用。speckit-docsは独立したCLIツールであり、frontend/backend分離は不要。既存の構造を維持し、`utils/dependencies.py`の`handle_dependencies()`関数と`.claude/commands/speckit.doc-init.md`のみを更新します。
 
 ## Complexity Tracking
 
 *Fill ONLY if Constitution Check has violations that must be justified*
 
-**該当なし** - すべての憲章原則とクリティカルルールに準拠しており、正当化が必要な違反はありません。
+該当なし - すべてのConstitution原則に準拠
+
+## Phase 0: Research (NEEDS EXECUTION)
+
+### Research Questions
+
+以下の技術的不明点をresearch.mdで解決します：
+
+1. **`uv add --optional` vs `uv add --group`の動作確認**:
+   - 実際のコマンド動作とpyproject.toml変更の違いを確認
+   - 両方のコマンドが成功するか検証
+   - エラーケース（存在しないグループ名等）の調査
+
+2. **pip/poetryとの互換性確認**:
+   - `[project.optional-dependencies.docs]`がpip/poetryで正しく動作するか
+   - `[dependency-groups.docs]`がpip/poetryで無視されるか（エラーにならないか）
+
+3. **デフォルト値の妥当性**:
+   - `optional-dependencies`をデフォルトとする根拠
+   - spec-kitユーザーの95%がuv使用という仮定の検証
+
+4. **既存実装への影響範囲**:
+   - `handle_dependencies()`関数のシグネチャ変更がテストに与える影響
+   - `.claude/commands/speckit.doc-init.md`の変更範囲
+
+**Output**: research.md
+
+## Phase 1: Design & Contracts (NEEDS EXECUTION)
+
+### Data Model Updates
+
+`data-model.md`に以下のエンティティを追加：
+
+```python
+@dataclass(frozen=True)
+class DependencyTarget:
+    """Represents where dependencies should be added in pyproject.toml.
+
+    Attributes:
+        target_type: "optional-dependencies" or "dependency-groups"
+        uv_flag: "--optional" or "--group"
+        section_path: Path in pyproject.toml (e.g., "[project.optional-dependencies.docs]")
+    """
+    target_type: Literal["optional-dependencies", "dependency-groups"]
+    uv_flag: str
+    section_path: str
+
+    def __post_init__(self) -> None:
+        """Validate DependencyTarget constraints."""
+        if self.target_type not in ["optional-dependencies", "dependency-groups"]:
+            raise ValueError(f"Invalid target_type: {self.target_type}")
+
+        if self.target_type == "optional-dependencies" and self.uv_flag != "--optional":
+            raise ValueError("optional-dependencies requires --optional flag")
+
+        if self.target_type == "dependency-groups" and self.uv_flag != "--group":
+            raise ValueError("dependency-groups requires --group flag")
+```
+
+### API Contracts
+
+`contracts/handle_dependencies.md`を更新：
+
+**Signature**:
+```python
+def handle_dependencies(
+    doc_type: str,
+    auto_install: bool,
+    no_install: bool,
+    dependency_target: Literal["optional-dependencies", "dependency-groups"],  # NEW
+    project_root: Path,
+    console: Console,
+) -> DependencyResult
+```
+
+**Contract**:
+- **Preconditions**:
+  - `doc_type` must be "sphinx" or "mkdocs"
+  - `dependency_target` must be "optional-dependencies" or "dependency-groups"
+  - `project_root` must be a valid directory
+- **Postconditions**:
+  - If `dependency_target == "optional-dependencies"`: `uv add --optional docs {packages}` executed
+  - If `dependency_target == "dependency-groups"`: `uv add --group docs {packages}` executed
+  - Returns `DependencyResult` with appropriate status
+- **Error Handling**:
+  - Raises `ValueError` if `dependency_target` is invalid
+  - Returns `DependencyResult(status="failed")` if `uv add` fails
+
+**Output**: contracts/handle_dependencies.md
+
+### Quickstart Example
+
+`quickstart.md`に以下のユーザーフローを追加：
+
+```markdown
+## 依存関係配置先の選択
+
+`/doc-init`実行時、依存関係の配置先を選択できます：
+
+### Option 1: optional-dependencies (推奨)
+- pip/poetry/uv互換
+- `uv sync --all-extras`でインストール
+
+### Option 2: dependency-groups
+- uvネイティブ、モダン
+- `uv sync --group docs`でインストール
+
+選択はAIエージェントが対話的に尋ねます。
+```
+
+**Output**: quickstart.md
+
+## Phase 2: Implementation (NOT EXECUTED BY /speckit.plan)
+
+フェーズ2は`/speckit.tasks`コマンドでtasks.mdを生成し、`/speckit.implement`で実装します。
+
+### Expected Tasks (Preview)
+
+1. **T001**: `utils/dependencies.py`の`handle_dependencies()`に`dependency_target`引数を追加
+2. **T002**: `DependencyTarget`データクラスを`utils/dependencies.py`に追加
+3. **T003**: `.claude/commands/speckit.doc-init.md`に依存関係配置先選択プロンプトを追加
+4. **T004**: `scripts/doc_init.py`に`--dependency-target`引数を追加
+5. **T005**: 単体テスト（`test_handle_dependencies.py`）を更新
+6. **T006**: 統合テスト（`test_doc_init_optional_dependencies.py`、`test_doc_init_dependency_groups.py`）を追加
+7. **T007**: ドキュメント（README.md、spec.md）を更新
 
 ---
 
-## Phase 0: Research (完了)
-
-**Status**: ✅ Completed
-
-**Artifacts**:
-- [research.md](./research.md) - 27の技術的決定を記録（8 Clarificationセッションから抽出）
-
-**Key Research Findings**:
-1. **CLIフレームワーク**: typer採用（本家spec-kitとの一貫性、argparseから変更）
-2. **ドキュメントツール**: Sphinx（MyST Markdown）、MkDocs（Material theme）
-3. **インストール方法**: `uv tool install`標準化（Session 2025-10-14決定）
-4. **アーキテクチャパターン**: BaseGenerator（4メソッド: `initialize()`, `generate_feature_page()`, `update_navigation()`, `validate()`）
-5. **非対話的実行**: バックエンドスクリプトは`input()`を使用せず、コマンドライン引数のみで動作
-6. **コード品質**: ruff（E, F, W, I）、mypy、pytest、TDD必須
-7. **Git変更検出**: GitPython 3.1+でインクリメンタル更新
-
-**Unknowns Resolved**: すべての技術的不明点が解決されました（「NEEDS CLARIFICATION」なし）。
-
----
-
-## Phase 1: Design & Contracts (完了)
-
-**Status**: ✅ Completed
-
-**Artifacts**:
-- [data-model.md](./data-model.md) - 9つのエンティティ定義（SpecKitProject、Feature、Entity、APIEndpoint、DocumentationSite、Audience、SynthesisResult、FeatureStatus、BaseGenerator）
-- [quickstart.md](./quickstart.md) - エンドユーザー向けクイックスタートガイド
-- contracts/ - **省略**（CLIツールのためAPI契約不要）
-
-**Key Design Decisions**:
-1. **Entities**: すべてPython 3.11+型ヒント、`@dataclass(frozen=True)`で不変性保証
-2. **BaseGenerator**: 抽象クラスとして4つの必須メソッドを定義（Strategy Pattern）
-3. **Error Handling**: `SpecKitDocsError`例外で統一、エラーメッセージに「ファイルパス」「エラー種類」「推奨アクション」を含める
-4. **Testing**: TDD必須、Red-Green-Refactorサイクル、90%以上のカバレッジ目標
-
-**Agent Context Update**: ✅ Completed - CLAUDE.md更新済み（Python 3.11+、依存関係追加）
-
-**Constitution Check Re-evaluation**: ✅ **PASS** - Phase 1デザイン後も憲章違反なし
-
----
-
-## Next Steps
-
-このプランニングフェーズ（`/speckit.plan`）は完了しました。次のステップ：
-
-1. **タスク生成**: `/speckit.tasks`コマンドを実行してtasks.mdを生成
-2. **実装開始**: tasks.mdに従ってMVP（P1）機能を実装
-   - US3: speckit-docs install（インストールコマンド）
-   - US1: /speckit.doc-init（ドキュメント初期化）
-   - US2: /speckit.doc-update（ドキュメント更新）
-3. **TDD適用**: 各タスクでRed-Green-Refactorサイクルを遵守
-4. **品質ゲート**: ruff、mypy、pytestすべて通過後にコミット
-
-**Estimated Implementation Time**: MVP（P1）は約2-3週間と見積もり（TDD、品質ゲート遵守含む）
+**Next Command**: `/speckit.tasks` (after Phase 0 and Phase 1 completion)

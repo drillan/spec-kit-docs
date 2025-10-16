@@ -18,6 +18,7 @@ try:
     from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
     from speckit_docs.generators.mkdocs import MkDocsGenerator
     from speckit_docs.generators.sphinx import SphinxGenerator
+    from speckit_docs.utils.dependencies import handle_dependencies
     from speckit_docs.utils.feature_discovery import FeatureDiscoverer
 except ImportError:
     # When running as script directly, try relative imports
@@ -28,6 +29,7 @@ except ImportError:
     from speckit_docs.generators.base import BaseGenerator, GeneratorConfig
     from speckit_docs.generators.mkdocs import MkDocsGenerator
     from speckit_docs.generators.sphinx import SphinxGenerator
+    from speckit_docs.utils.dependencies import handle_dependencies
     from speckit_docs.utils.feature_discovery import FeatureDiscoverer
 
 app = typer.Typer()
@@ -42,6 +44,17 @@ def main(
     version: str = typer.Option("0.1.0", "--version", help="Project version"),
     language: str = typer.Option("ja", "--language", help="Documentation language"),
     force: bool = typer.Option(False, "--force", help="Force overwrite existing files"),
+    dependency_target: str = typer.Option(
+        "optional-dependencies",
+        "--dependency-target",
+        help='Dependency placement strategy ("optional-dependencies" or "dependency-groups")',
+    ),
+    auto_install: bool = typer.Option(
+        False, "--auto-install", help="Auto-install dependencies without confirmation (CI/CD mode)"
+    ),
+    no_install: bool = typer.Option(
+        False, "--no-install", help="Skip dependency installation checks"
+    ),
 ) -> int:
     """Initialize documentation project."""
     try:
@@ -124,10 +137,34 @@ def main(
         # Generate index
         generator.generate_index()
 
+        # FR-008f: Handle dependency installation
+        console.print("\n[bold]依存関係の確認中...[/bold]")
+        dep_result = handle_dependencies(
+            doc_type=doc_type,
+            auto_install=auto_install,
+            no_install=no_install,
+            dependency_target=dependency_target,  # type: ignore
+            project_root=Path.cwd(),
+            console=console,
+        )
+
         # Success message
         console.print(
             "\n[bold green]✓ ドキュメントプロジェクトの初期化が完了しました！[/bold green]"
         )
+
+        # Show dependency installation status
+        if dep_result.status == "installed":
+            console.print(
+                f"[green]✓[/green] 依存関係のインストールが完了しました: {', '.join(dep_result.installed_packages)}"
+            )
+        elif dep_result.status == "not_needed":
+            console.print("[green]✓[/green] 依存関係は既にインストール済みです")
+        elif dep_result.status == "skipped":
+            console.print(f"[yellow]⊘[/yellow] 依存関係のインストールをスキップしました: {dep_result.message}")
+        elif dep_result.status == "failed":
+            console.print(f"[red]✗[/red] 依存関係のインストールに失敗しました: {dep_result.message}")
+
         console.print("\n[bold]次のステップ:[/bold]")
         if doc_type == "sphinx":
             console.print("  1. cd docs/")

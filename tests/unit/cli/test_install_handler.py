@@ -102,8 +102,8 @@ class TestCopyCommandTemplates:
 
         # Verify files were copied
         assert len(copied_files) == 2
-        assert (tmp_path / ".claude" / "commands" / "doc-init.md").exists()
-        assert (tmp_path / ".claude" / "commands" / "doc-update.md").exists()
+        assert (tmp_path / ".claude" / "commands" / "speckit.doc-init.md").exists()
+        assert (tmp_path / ".claude" / "commands" / "speckit.doc-update.md").exists()
 
     def test_copy_command_templates_creates_directory(self, tmp_path, monkeypatch):
         """Test that .claude/commands/ is created if it doesn't exist."""
@@ -128,7 +128,7 @@ class TestCopyCommandTemplates:
         (tmp_path / ".specify").mkdir()
         (tmp_path / ".claude").mkdir()
         (tmp_path / ".claude" / "commands").mkdir()
-        existing_file = tmp_path / ".claude" / "commands" / "doc-init.md"
+        existing_file = tmp_path / ".claude" / "commands" / "speckit.doc-init.md"
         existing_file.write_text("existing content")
         monkeypatch.chdir(tmp_path)
 
@@ -151,7 +151,7 @@ class TestCopyCommandTemplates:
         (tmp_path / ".specify").mkdir()
         (tmp_path / ".claude").mkdir()
         (tmp_path / ".claude" / "commands").mkdir()
-        existing_file = tmp_path / ".claude" / "commands" / "doc-init.md"
+        existing_file = tmp_path / ".claude" / "commands" / "speckit.doc-init.md"
         existing_file.write_text("existing content")
         monkeypatch.chdir(tmp_path)
 

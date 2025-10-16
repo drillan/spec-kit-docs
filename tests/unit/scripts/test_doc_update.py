@@ -213,10 +213,10 @@ nav:
         (tmp_path / ".specify").mkdir()
         (tmp_path / "specs" / "001-test").mkdir(parents=True)
         (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
-        
+
         # Run without docs/ directory
         result = main(incremental=False)
-        
+
         # Should return error
         assert result != 0
 
@@ -226,12 +226,12 @@ nav:
         (tmp_path / ".specify").mkdir()
         (tmp_path / "specs" / "001-test").mkdir(parents=True)
         (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
-        
+
         # Create docs/ but no conf.py or mkdocs.yml
         (tmp_path / "docs").mkdir()
-        
+
         # Run doc_update (should fail to detect tool)
         result = main(incremental=False)
-        
+
         # Should return error
         assert result != 0
