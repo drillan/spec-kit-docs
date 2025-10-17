@@ -78,8 +78,10 @@ class FeaturePageGenerator:
             if feature_key not in transformed_content_map:
                 from ..exceptions import SpecKitDocsError
                 raise SpecKitDocsError(
-                    f"機能 '{feature_key}' のLLM変換済みコンテンツが見つかりません。",
-                    "コマンドテンプレート /speckit.doc-update の Step 1（LLM変換実行）を確認してください。"
+                    message=f"機能 '{feature_key}' のLLM変換済みコンテンツが見つかりません。",
+                    suggestion="コマンドテンプレート /speckit.doc-update の Step 1（LLM変換実行）を確認してください。",
+                    file_path=feature.spec_file,
+                    error_type="Missing Transformed Content"
                 )
 
             transformed = transformed_content_map[feature_key]
@@ -87,8 +89,10 @@ class FeaturePageGenerator:
             if not transformed.get("spec_content"):
                 from ..exceptions import SpecKitDocsError
                 raise SpecKitDocsError(
-                    f"機能 '{feature_key}' のspec_contentが空です。",
-                    "LLM変換処理を確認してください。"
+                    message=f"機能 '{feature_key}' のspec_contentが空です。",
+                    suggestion="LLM変換処理を確認してください。",
+                    file_path=feature.spec_file,
+                    error_type="Empty Content"
                 )
 
             # Use LLM-transformed content only (FR-038, FR-038b)

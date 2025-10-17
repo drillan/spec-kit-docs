@@ -98,9 +98,10 @@ def select_content_source(feature_dir: Path) -> tuple[Literal["readme", "quickst
         return ("spec", spec_file)
     else:
         raise SpecKitDocsError(
-            f"No content source found in {feature_dir}. "
-            f"Expected README.md, QUICKSTART.md, or spec.md.",
-            f"Create at least one of README.md, QUICKSTART.md, or spec.md in {feature_dir}."
+            message=f"No content source found in {feature_dir}. Expected README.md, QUICKSTART.md, or spec.md.",
+            suggestion=f"Create at least one of README.md, QUICKSTART.md, or spec.md in {feature_dir}.",
+            file_path=feature_dir,
+            error_type="Missing Content Source"
         )
 
 
@@ -171,8 +172,10 @@ def parse_markdown_sections(
 
     except Exception as e:
         raise SpecKitDocsError(
-            f"Failed to parse {filename}: {e}",
-            f"Check that {filename} is valid Markdown and contains h2/h3 headings."
+            message=f"Failed to parse {filename}: {e}",
+            suggestion=f"Check that {filename} is valid Markdown and contains h2/h3 headings.",
+            file_path=filename,
+            error_type="Markdown Parse Error"
         )
 
 
@@ -520,8 +523,10 @@ def extract_spec_minimal(spec_file: Path) -> str:
         token_count = estimate_token_count(extracted_content)
         if token_count > 10000:
             raise SpecKitDocsError(
-                f"Extracted content exceeds 10,000 token limit: {token_count} tokens.",
-                "Please reduce spec.md content in User Story Purpose, Prerequisites, or Scope sections."
+                message=f"Extracted content exceeds 10,000 token limit: {token_count} tokens.",
+                suggestion="Please reduce spec.md content in User Story Purpose, Prerequisites, or Scope sections.",
+                file_path=spec_file,
+                error_type="Token Limit Exceeded"
             )
 
         return extracted_content
@@ -530,8 +535,10 @@ def extract_spec_minimal(spec_file: Path) -> str:
         raise  # Re-raise SpecKitDocsError without wrapping
     except Exception as e:
         raise SpecKitDocsError(
-            f"Failed to extract minimal content from {spec_file}: {e}",
-            f"Check that {spec_file} is valid Markdown and contains expected sections."
+            message=f"Failed to extract minimal content from {spec_file}: {e}",
+            suggestion=f"Check that {spec_file} is valid Markdown and contains expected sections.",
+            file_path=spec_file,
+            error_type="Content Extraction Error"
         )
 
 
