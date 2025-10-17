@@ -91,17 +91,27 @@ echo "LLM変換完了: $transformed_file"
 
 変換済みコンテンツをバックエンドスクリプトに渡す：
 
+### 標準モード（全機能更新）
+
 ```bash
 # FR-038e: --transformed-contentパラメータは必須
-uv run python -m speckit_docs.scripts.doc_update --transformed-content "$transformed_file"
+uv run python -m speckit_docs.scripts.doc_update --full --transformed-content "$transformed_file"
+```
+
+### クイックモード（変更検出）- T074, T075実装
+
+```bash
+# --incrementalフラグでGit diff変更検出
+uv run python -m speckit_docs.scripts.doc_update --incremental --transformed-content "$transformed_file"
 ```
 
 **このコマンドが実行すること**（バックエンドスクリプト）：
 1. 変換済みコンテンツをJSONファイルから読み込み
-2. Git diffで変更された機能を検出（インクリメンタル更新）
-3. docs/以下にMarkdownページを生成（変換済みコンテンツを使用）
-4. ナビゲーション（index.md / mkdocs.yml）を更新
-5. 更新サマリーを表示（LLM変換統計含む）
+2. **--incrementalモード**: Git diffで変更された機能のみを検出
+3. **--fullモード**: すべての機能を処理
+4. docs/以下にMarkdownページを生成（変換済みコンテンツを使用）
+5. ナビゲーション（index.md / mkdocs.yml）を更新
+6. 更新サマリーを表示（LLM変換統計含む）
 
 **実行後の出力例**：
 ```

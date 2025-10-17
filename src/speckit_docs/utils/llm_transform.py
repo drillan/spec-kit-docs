@@ -518,6 +518,86 @@ def extract_spec_minimal(spec_file: Path) -> str:
         raise SpecKitDocsError(f"Failed to extract minimal content from {spec_file}: {e}")
 
 
+# T069: LLM transformation quality check
+def validate_transformed_content(
+    transformed_content: str, source_type: str
+) -> tuple[bool, str | None]:
+    """Validate LLM-transformed content quality.
+
+    Quality checks:
+    1. Not empty string
+    2. Minimum 50 characters
+    3. No error patterns (e.g., "I cannot", "I'm unable", "error occurred")
+    4. Valid Markdown (basic linting)
+
+    Args:
+        transformed_content: LLM-transformed content to validate
+        source_type: Source type for error messages (e.g., "README.md", "spec.md")
+
+    Returns:
+        Tuple of (is_valid, error_message)
+        - (True, None) if valid
+        - (False, error_message) if invalid
+
+    Raises:
+        SpecKitDocsError: If validation fails with critical errors
+    """
+    # Check 1: Empty string
+    if not transformed_content or not transformed_content.strip():
+        return (
+            False,
+            f"LLM変換結果が空文字列です（ソース: {source_type}）。変換を再実行してください。",
+        )
+
+    # Check 2: Minimum 50 characters
+    if len(transformed_content.strip()) < 50:
+        return (
+            False,
+            f"LLM変換結果が短すぎます（{len(transformed_content.strip())}文字、最小50文字必要）（ソース: {source_type}）。",
+        )
+
+    # Check 3: Error patterns
+    error_patterns = [
+        "I cannot",
+        "I'm unable",
+        "I can't",
+        "error occurred",
+        "failed to",
+        "申し訳ございません",
+        "エラーが発生",
+    ]
+    content_lower = transformed_content.lower()
+    for pattern in error_patterns:
+        if pattern.lower() in content_lower:
+            return (
+                False,
+                f"LLM変換結果にエラーパターン「{pattern}」が含まれています（ソース: {source_type}）。変換を再実行してください。",
+            )
+
+    # Check 4: Basic Markdown validation
+    # Check for unclosed code blocks
+    code_block_count = transformed_content.count("```")
+    if code_block_count % 2 != 0:
+        return (
+            False,
+            f"Markdownコードブロックが閉じられていません（ソース: {source_type}）。",
+        )
+
+    # Check for unclosed inline code
+    inline_code_count = transformed_content.count("`")
+    # Single backticks should be even (opening and closing)
+    # Triple backticks are already checked above
+    single_backtick_count = inline_code_count - (code_block_count * 3)
+    if single_backtick_count % 2 != 0:
+        return (
+            False,
+            f"Markdownインラインコードが閉じられていません（ソース: {source_type}）。",
+        )
+
+    # All checks passed
+    return (True, None)
+
+
 # T065 + T066 + T067 + T068: README/QUICKSTART integration
 def integrate_readme_quickstart(
     readme_file: Path, quickstart_file: Path, client: "Anthropic"

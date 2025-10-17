@@ -98,6 +98,10 @@ def main(
         console.print("\n[bold]機能を検出中...[/bold]")
         discoverer = FeatureDiscoverer()
 
+        # T075: Track all features for skip statistics
+        all_features = discoverer.discover_features()
+        total_features_count = len(all_features)
+
         if incremental:
             # FR-019: Incremental update using Git diff
             try:
@@ -106,8 +110,12 @@ def main(
 
                 if changed_features:
                     features = changed_features
+                    skipped_count = total_features_count - len(features)
                     console.print(
                         f"[green]✓[/green] {len(features)} 個の変更された機能を検出しました（インクリメンタル更新）"
+                    )
+                    console.print(
+                        f"[dim]  {skipped_count} 個の機能をスキップしました（変更なし）[/dim]"
                     )
                 else:
                     console.print(
@@ -119,10 +127,12 @@ def main(
                 console.print(
                     "[yellow]Note:[/yellow] Git履歴が見つかりません。フル更新にフォールバックします。"
                 )
-                features = discoverer.discover_features()
+                features = all_features
+                skipped_count = 0
         else:
             # Full update
-            features = discoverer.discover_features()
+            features = all_features
+            skipped_count = 0
             console.print(f"[green]✓[/green] {len(features)} 個の機能を検出しました（フル更新）")
 
         if not features:
@@ -171,6 +181,10 @@ def main(
         console.print("\n[bold]サマリー:[/bold]")
         console.print(f"  • 更新された機能: {len(features)}")
         console.print(f"  • 生成されたページ: {len(feature_pages)}")
+
+        # T075: Display skip statistics (incremental mode only)
+        if incremental and 'skipped_count' in locals():
+            console.print(f"  • スキップ（変更なし）: {skipped_count}")
 
         # T074: Display LLM transform statistics
         if transformed_content_map:
