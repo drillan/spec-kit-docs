@@ -51,8 +51,8 @@ def main(
     incremental: bool = typer.Option(
         True, "--incremental/--full", help="Incremental or full update"
     ),
-    transformed_content: Path | None = typer.Option(
-        None, "--transformed-content", help="Path to JSON file with LLM-transformed content (FR-038e: REQUIRED)"
+    transformed_content: Path = typer.Option(
+        ..., "--transformed-content", help="Path to JSON file with LLM-transformed content"
     ),
 ) -> int:
     """Update documentation from spec-kit specifications.
@@ -66,16 +66,7 @@ def main(
         LLM transformation is always executed by the command template before calling this script.
     """
     try:
-        # FR-038e: Validate transformed_content parameter is provided
-        if transformed_content is None:
-            console.print(
-                "[red]✗[/red] --transformed-contentパラメータは必須です。",
-                style="bold",
-            )
-            console.print("  LLM変換を実行してから.specify/scripts/docs/doc_update.pyを呼び出してください。")
-            console.print("  推奨: /speckit.doc-update コマンドテンプレートのワークフローに従って実行してください。")
-            return 1
-
+        # FR-038e: Parameter is now required by typer.Option(...), no manual check needed
         # FR-010: Validate documentation project exists
         docs_dir = Path("docs")
         if not docs_dir.exists():
@@ -143,24 +134,28 @@ def main(
             console.print("  /speckit.specify を実行して機能仕様を作成してください。")
             return 1
 
-        # T071: Load LLM-transformed content if provided (FR-038f)
-        transformed_content_map: dict[str, dict[str, str]] | None = None
+        # T071: Load LLM-transformed content (FR-038e: always provided)
         llm_stats = {"total_features": len(features), "transformed_features": 0, "original_features": 0}
 
-        if transformed_content:
-            console.print(f"\n[bold]LLM変換済みコンテンツを読み込み中...[/bold] ({transformed_content})")
-            try:
-                with open(transformed_content, encoding="utf-8") as f:
-                    transformed_content_map = json.load(f)
+        console.print(f"\n[bold]LLM変換済みコンテンツを読み込み中...[/bold] ({transformed_content})")
+        try:
+            with open(transformed_content, encoding="utf-8") as f:
+                transformed_content_map = json.load(f)
 
-                llm_stats["transformed_features"] = len(transformed_content_map)
-                llm_stats["original_features"] = len(features) - llm_stats["transformed_features"]
+            llm_stats["transformed_features"] = len(transformed_content_map)
+            llm_stats["original_features"] = len(features) - llm_stats["transformed_features"]
 
-                console.print(f"[green]✓[/green] {llm_stats['transformed_features']} 件の変換済みコンテンツを読み込みました")
-            except FileNotFoundError:
-                console.print(f"[yellow]警告:[/yellow] {transformed_content} が見つかりません。元のコンテンツを使用します。")
-            except json.JSONDecodeError as e:
-                console.print(f"[yellow]警告:[/yellow] JSON解析エラー: {e}。元のコンテンツを使用します。")
+            console.print(f"[green]✓[/green] {llm_stats['transformed_features']} 件の変換済みコンテンツを読み込みました")
+        except FileNotFoundError:
+            raise SpecKitDocsError(
+                f"LLM変換済みコンテンツファイルが見つかりません: {transformed_content}",
+                "コマンドテンプレート /speckit.doc-update の Step 1（LLM変換実行）を確認してください。"
+            )
+        except json.JSONDecodeError as e:
+            raise SpecKitDocsError(
+                f"LLM変換済みコンテンツのJSON解析に失敗しました: {e}",
+                f"ファイル {transformed_content} のJSON形式を確認してください。"
+            )
 
         # FR-012, FR-013, FR-014: Generate feature pages with optional LLM-transformed content (T073)
         console.print("\n[bold]ドキュメントページを生成中...[/bold]")
