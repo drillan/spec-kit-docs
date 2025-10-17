@@ -44,7 +44,13 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generated_pages = generator.generate_pages(features)
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-feature-one": {"spec_content": "# Feature One\n\n## Overview\n\nFirst feature"},
+            "002-feature-two": {"spec_content": "# Feature Two\n\n## Overview\n\nSecond feature"},
+        }
+
+        generated_pages = generator.generate_pages(features, transformed_content_map)
 
         # Verify pages were generated in flat structure
         assert len(generated_pages) == 2
@@ -82,7 +88,12 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generated_pages = generator.generate_pages(features)
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\nContent"},
+        }
+
+        generated_pages = generator.generate_pages(features, transformed_content_map)
 
         # Verify page was generated in features/ subdirectory
         assert len(generated_pages) == 1
@@ -119,19 +130,22 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generated_pages = generator.generate_pages(features)
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-complete-feature": {"spec_content": "# Complete Feature\n\n## Requirements"},
+        }
+
+        generated_pages = generator.generate_pages(features, transformed_content_map)
 
         # Verify page was generated
         assert len(generated_pages) == 1
         page_path = docs_dir / "complete-feature.md"
         assert page_path.exists()
 
-        # Verify all content is included
+        # Verify spec content is included (Session 2025-10-17: plan/tasks excluded)
         content = page_path.read_text()
         assert "Complete Feature" in content
         assert "Requirements" in content
-        assert "Architecture" in content or "Layered" in content
-        assert "T001" in content or "Tasks" in content
 
     def test_generate_pages_descriptive_filename(self, tmp_path):
         """Test that filenames are descriptive without numbers (FR-013, FR-014)."""
@@ -159,7 +173,12 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generated_pages = generator.generate_pages(features)
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "042-user-authentication": {"spec_content": "# User Authentication"},
+        }
+
+        generated_pages = generator.generate_pages(features, transformed_content_map)
 
         # Verify filename uses descriptive name (without number prefix)
         assert len(generated_pages) == 1
@@ -177,7 +196,10 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generated_pages = generator.generate_pages([])
+        # Empty transformed content map for empty features list
+        transformed_content_map = {}
+
+        generated_pages = generator.generate_pages([], transformed_content_map)
 
         assert len(generated_pages) == 0
 
@@ -206,7 +228,12 @@ class TestFeaturePageGenerator:
             tool=GeneratorTool.SPHINX,
         )
 
-        generator.generate_pages(features)
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test": {"spec_content": "# Test"},
+        }
+
+        generator.generate_pages(features, transformed_content_map)
 
         # Verify features/ subdirectory was created
         assert (docs_dir / "features").exists()

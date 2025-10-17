@@ -75,10 +75,8 @@ After T001-T003, verify core functionality works.
 
         TDD Red phase: This test should FAIL until T085-T086 are implemented.
         """
-        from speckit_docs.generators.document import DocumentGenerator
         from speckit_docs.generators.feature_page import FeaturePageGenerator
-        from speckit_docs.models import Feature, FeatureStatus, GeneratorConfig, GeneratorTool
-        from speckit_docs.parsers.markdown_parser import MarkdownParser
+        from speckit_docs.models import Feature, FeatureStatus, GeneratorTool
 
         # Create feature object
         specs_dir = temp_project_dir / "specs" / "001-test-feature"
@@ -104,8 +102,13 @@ After T001-T003, verify core functionality works.
             tool=GeneratorTool.SPHINX,
         )
 
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\nThis is the spec content."},
+        }
+
         # Generate feature pages
-        pages = feature_page_generator.generate_pages([feature])
+        pages = feature_page_generator.generate_pages([feature], transformed_content_map)
         assert len(pages) == 1, "Should generate exactly one page"
 
         # Read generated content from file
@@ -130,10 +133,8 @@ After T001-T003, verify core functionality works.
 
         TDD Red phase: This test should FAIL until T086 is implemented.
         """
-        from speckit_docs.generators.document import DocumentGenerator
         from speckit_docs.generators.feature_page import FeaturePageGenerator
-        from speckit_docs.models import Feature, FeatureStatus, GeneratorConfig, GeneratorTool
-        from speckit_docs.parsers.markdown_parser import MarkdownParser
+        from speckit_docs.models import Feature, FeatureStatus, GeneratorTool
 
         # Create feature object
         specs_dir = temp_project_dir / "specs" / "001-test-feature"
@@ -159,8 +160,13 @@ After T001-T003, verify core functionality works.
             tool=GeneratorTool.SPHINX,
         )
 
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\nThis is the spec content."},
+        }
+
         # Generate feature pages
-        pages = feature_page_generator.generate_pages([feature])
+        pages = feature_page_generator.generate_pages([feature], transformed_content_map)
         # Read generated content from file
         generated_content = pages[0].read_text()
 
@@ -180,10 +186,8 @@ After T001-T003, verify core functionality works.
 
         TDD Red phase: This test should FAIL until T086 is implemented.
         """
-        from speckit_docs.generators.document import DocumentGenerator
         from speckit_docs.generators.feature_page import FeaturePageGenerator
-        from speckit_docs.models import Feature, FeatureStatus, GeneratorConfig, GeneratorTool
-        from speckit_docs.parsers.markdown_parser import MarkdownParser
+        from speckit_docs.models import Feature, FeatureStatus, GeneratorTool
 
         # Create feature object
         specs_dir = temp_project_dir / "specs" / "001-test-feature"
@@ -209,8 +213,13 @@ After T001-T003, verify core functionality works.
             tool=GeneratorTool.SPHINX,
         )
 
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\nThis is the spec content."},
+        }
+
         # Generate feature pages
-        pages = feature_page_generator.generate_pages([feature])
+        pages = feature_page_generator.generate_pages([feature], transformed_content_map)
         # Read generated content from file
         generated_content = pages[0].read_text()
 
@@ -230,10 +239,8 @@ After T001-T003, verify core functionality works.
 
         TDD Red phase: This test should PASS even after T085-T086 (Feature Files preserved).
         """
-        from speckit_docs.generators.document import DocumentGenerator
         from speckit_docs.generators.feature_page import FeaturePageGenerator
-        from speckit_docs.models import Feature, FeatureStatus, GeneratorConfig, GeneratorTool
-        from speckit_docs.parsers.markdown_parser import MarkdownParser
+        from speckit_docs.models import Feature, FeatureStatus, GeneratorTool
 
         # Create feature object
         specs_dir = temp_project_dir / "specs" / "001-test-feature"
@@ -259,8 +266,13 @@ After T001-T003, verify core functionality works.
             tool=GeneratorTool.SPHINX,
         )
 
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\nThis is the spec content."},
+        }
+
         # Generate feature pages
-        pages = feature_page_generator.generate_pages([feature])
+        pages = feature_page_generator.generate_pages([feature], transformed_content_map)
         # Read generated content from file
         generated_content = pages[0].read_text()
 
@@ -289,10 +301,8 @@ After T001-T003, verify core functionality works.
 
         TDD Red phase: This test should PASS (spec.md content is preserved).
         """
-        from speckit_docs.generators.document import DocumentGenerator
         from speckit_docs.generators.feature_page import FeaturePageGenerator
-        from speckit_docs.models import Feature, FeatureStatus, GeneratorConfig, GeneratorTool
-        from speckit_docs.parsers.markdown_parser import MarkdownParser
+        from speckit_docs.models import Feature, FeatureStatus, GeneratorTool
 
         # Create feature object
         specs_dir = temp_project_dir / "specs" / "001-test-feature"
@@ -318,8 +328,13 @@ After T001-T003, verify core functionality works.
             tool=GeneratorTool.SPHINX,
         )
 
+        # Create transformed content map (FR-038e: required)
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\n## Specification\n\nThis is a user-friendly description of the test feature.\n\n### User Stories\n\nUser story content here."},
+        }
+
         # Generate feature pages
-        pages = feature_page_generator.generate_pages([feature])
+        pages = feature_page_generator.generate_pages([feature], transformed_content_map)
         # Read generated content from file
         generated_content = pages[0].read_text()
 
