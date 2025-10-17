@@ -1,6 +1,6 @@
 # spec-kit-docs Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-10-13
+Auto-generated from all feature plans. Last updated: 2025-10-17
 
 ## Active Technologies
 - Python 3.11+（spec-kitの前提条件と互換性を保つ） (001-draft-init-spec)
@@ -18,6 +18,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 - **Git操作**: GitPython 3.1+（変更検出とブランチ情報取得）
 - **テンプレートエンジン**: Jinja2 3.1+（設定ファイル生成）
 - **Markdown解析**: markdown-it-py 3.0+（spec.md等の解析、MyST互換性）
+- **LLM統合**: anthropic 0.28+（オプショナル依存、README/QUICKSTART統合とコンテンツ変換用）
 - **spec-kit依存**: specify-cli @ git+https://github.com/github/spec-kit.git（型定義とユーティリティの共有、typer依存ツリーを含む）
 
 **Testing**: pytest 8.0+、pytest-cov 4.0+（単体テスト・統合テスト・契約テスト）
@@ -35,7 +36,8 @@ spec-kit-docs/                        # プロジェクトルート
 │       ├── scripts/                  # バックエンドスクリプト
 │       ├── generators/               # ドキュメントジェネレータ（base.py, sphinx.py, mkdocs.py）
 │       ├── parsers/                  # spec-kit仕様解析（spec_parser.py, plan_parser.py, tasks_parser.py）
-│       ├── utils/                    # ユーティリティ（git.py, fs.py, template.py）
+│       ├── utils/                    # ユーティリティ（git.py, fs.py, template.py, llm_transform.py）
+│       ├── llm_entities.py           # LLM統合エンティティ（Session 2025-10-17追加）
 │       └── exceptions.py             # SpecKitDocsError例外定義
 ├── tests/
 │   ├── contract/                     # 契約テスト（CLIインターフェース）
@@ -101,9 +103,16 @@ speckit-docs install
 **Non-Interactive Execution**: バックエンドスクリプト（doc_init.py、doc_update.py）は標準入力（stdin）を使用せず、コマンドライン引数のみで動作（II. Non-Interactive Execution原則）
 
 ## Recent Changes
-- 001-draft-init-spec: Added Python 3.11+ （spec-kit前提条件との互換性）
-- 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
-- 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
+
+**Session 2025-10-17**:
+- FR-022b: LLM変換ワークフローをコマンドテンプレートに実装（/speckit.doc-update）
+- FR-038e: transformed_contentパラメータを必須化（doc_update.py）
+- T062-T068: LLM変換機能実装（コンテンツソース選択、不整合検出、セクション優先順位判定）
+- T069: LLM変換品質チェック実装
+- T074-T075: クイックモード（--incrementalフラグ）とスキップ統計実装
+- T080-T081: コード品質向上（ruff lint 0警告、mypy type check 0エラー）
+- Added: llm_entities.py（LLMSection, InconsistencyDetectionResult, LLMTransformResult等）
+- Added: utils/llm_transform.py（コンテンツソース選択、不整合検出、セクション統合等）
 
 
 <!-- MANUAL ADDITIONS START -->

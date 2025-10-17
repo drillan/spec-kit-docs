@@ -16,16 +16,21 @@ Implementation tasks:
 import json
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 try:
-    from anthropic import Anthropic, APIError, APITimeoutError, RateLimitError
+    from anthropic import (  # type: ignore[import-not-found]
+        Anthropic,
+        APIError,
+        APITimeoutError,
+        RateLimitError,
+    )
 except ImportError:
     # Anthropic is optional for non-LLM workflows
-    Anthropic = None  # type: ignore
-    APIError = Exception  # type: ignore
-    APITimeoutError = Exception  # type: ignore
-    RateLimitError = Exception  # type: ignore
+    Anthropic = None
+    APIError = Exception
+    APITimeoutError = Exception
+    RateLimitError = Exception
 
 from markdown_it import MarkdownIt
 
@@ -94,7 +99,8 @@ def select_content_source(feature_dir: Path) -> tuple[Literal["readme", "quickst
     else:
         raise SpecKitDocsError(
             f"No content source found in {feature_dir}. "
-            f"Expected README.md, QUICKSTART.md, or spec.md."
+            f"Expected README.md, QUICKSTART.md, or spec.md.",
+            f"Create at least one of README.md, QUICKSTART.md, or spec.md in {feature_dir}."
         )
 
 
@@ -120,24 +126,24 @@ def parse_markdown_sections(
         sections = []
         current_heading = None
         current_level = None
-        current_content = []
+        current_content: list[str] = []
 
         for token in tokens:
             if token.type == "heading_open" and token.tag in ["h2", "h3"]:
                 # Save previous section
-                if current_heading:
+                if current_heading and current_level:
                     content = "".join(current_content)
                     sections.append(
                         LLMSection(
                             file=filename,
                             heading=current_heading,
-                            level=current_level,  # type: ignore
+                            level=cast(Literal["h2", "h3"], current_level),
                             content=content,
                             token_count=estimate_token_count(content),
                         )
                     )
                 # Start new section
-                current_level = token.tag  # type: ignore
+                current_level = token.tag
                 current_content = []
             elif token.type == "heading_close":
                 pass  # Skip closing tags
@@ -149,13 +155,13 @@ def parse_markdown_sections(
                 current_content.append(token.content or "")
 
         # Save last section
-        if current_heading:
+        if current_heading and current_level:
             content = "".join(current_content)
             sections.append(
                 LLMSection(
                     file=filename,
                     heading=current_heading,
-                    level=current_level,  # type: ignore
+                    level=cast(Literal["h2", "h3"], current_level),
                     content=content,
                     token_count=estimate_token_count(content),
                 )
@@ -164,7 +170,10 @@ def parse_markdown_sections(
         return sections
 
     except Exception as e:
-        raise SpecKitDocsError(f"Failed to parse {filename}: {e}")
+        raise SpecKitDocsError(
+            f"Failed to parse {filename}: {e}",
+            f"Check that {filename} is valid Markdown and contains h2/h3 headings."
+        )
 
 
 # T065: Inconsistency detection (using LLM API)
@@ -229,7 +238,7 @@ def detect_inconsistency(
     """
     if Anthropic is None:
         raise SpecKitDocsError(
-            "anthropic package is not installed. "
+            "anthropic package is not installed.",
             "Install it with: uv add anthropic"
         )
 
@@ -260,16 +269,18 @@ def detect_inconsistency(
 
     except RateLimitError as e:
         raise SpecKitDocsError(
-            f"Anthropic API rate limit exceeded: {e}. Please wait and retry later."
+            f"Anthropic API rate limit exceeded: {e}.",
+            "Please wait a few minutes and retry later."
         )
     except APITimeoutError as e:
         raise SpecKitDocsError(
-            f"Anthropic API timeout after {timeout_seconds} seconds: {e}. "
-            f"Please check your network connection."
+            f"Anthropic API timeout after {timeout_seconds} seconds: {e}.",
+            "Please check your network connection and retry."
         )
     except APIError as e:
         raise SpecKitDocsError(
-            f"Anthropic API error: {e}. Please check your API key and account status."
+            f"Anthropic API error: {e}.",
+            "Please check your API key and account status. Set ANTHROPIC_API_KEY environment variable."
         )
 
 
@@ -323,7 +334,7 @@ def prioritize_sections(
     """
     if Anthropic is None:
         raise SpecKitDocsError(
-            "anthropic package is not installed. "
+            "anthropic package is not installed.",
             "Install it with: uv add anthropic"
         )
 
@@ -388,16 +399,18 @@ def prioritize_sections(
 
     except RateLimitError as e:
         raise SpecKitDocsError(
-            f"Anthropic API rate limit exceeded: {e}. Please wait and retry later."
+            f"Anthropic API rate limit exceeded: {e}.",
+            "Please wait a few minutes and retry later."
         )
     except APITimeoutError as e:
         raise SpecKitDocsError(
-            f"Anthropic API timeout after {timeout_seconds} seconds: {e}. "
-            f"Please check your network connection."
+            f"Anthropic API timeout after {timeout_seconds} seconds: {e}.",
+            "Please check your network connection and retry."
         )
     except APIError as e:
         raise SpecKitDocsError(
-            f"Anthropic API error: {e}. Please check your API key and account status."
+            f"Anthropic API error: {e}.",
+            "Please check your API key and account status. Set ANTHROPIC_API_KEY environment variable."
         )
 
 
@@ -413,16 +426,15 @@ def get_anthropic_client() -> "Anthropic":
     """
     if Anthropic is None:
         raise SpecKitDocsError(
-            "anthropic package is not installed. "
+            "anthropic package is not installed.",
             "Install it with: uv add anthropic"
         )
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise SpecKitDocsError(
-            "ANTHROPIC_API_KEY environment variable is not set. "
-            "Please set it to your Anthropic API key. "
-            "Example: export ANTHROPIC_API_KEY='sk-...'"
+            "ANTHROPIC_API_KEY environment variable is not set.",
+            "Set it to your Anthropic API key: export ANTHROPIC_API_KEY='sk-...'"
         )
     return Anthropic(api_key=api_key)
 
@@ -508,14 +520,19 @@ def extract_spec_minimal(spec_file: Path) -> str:
         token_count = estimate_token_count(extracted_content)
         if token_count > 10000:
             raise SpecKitDocsError(
-                f"Extracted content exceeds 10,000 token limit: {token_count} tokens. "
-                f"Please reduce spec.md content."
+                f"Extracted content exceeds 10,000 token limit: {token_count} tokens.",
+                "Please reduce spec.md content in User Story Purpose, Prerequisites, or Scope sections."
             )
 
         return extracted_content
 
+    except SpecKitDocsError:
+        raise  # Re-raise SpecKitDocsError without wrapping
     except Exception as e:
-        raise SpecKitDocsError(f"Failed to extract minimal content from {spec_file}: {e}")
+        raise SpecKitDocsError(
+            f"Failed to extract minimal content from {spec_file}: {e}",
+            f"Check that {spec_file} is valid Markdown and contains expected sections."
+        )
 
 
 # T069: LLM transformation quality check
@@ -629,11 +646,16 @@ def integrate_readme_quickstart(
         critical_count = len(
             [i for i in inconsistency_result.inconsistencies if i.severity == "critical"]
         )
+        inconsistency_details = "\n".join(
+            f"  • {i.type}: README says '{i.readme_claim}' but QUICKSTART says '{i.quickstart_claim}'"
+            for i in inconsistency_result.inconsistencies[:3]  # Show first 3
+        )
         raise SpecKitDocsError(
             f"Inconsistency detected between {readme_file} and {quickstart_file}:\n"
             f"{inconsistency_result.summary}\n"
             f"Critical inconsistencies: {critical_count}\n"
-            f"Please resolve inconsistencies and retry."
+            f"Examples:\n{inconsistency_details}",
+            "Resolve inconsistencies in README.md and QUICKSTART.md, then retry."
         )
 
     # 4. Parse sections
