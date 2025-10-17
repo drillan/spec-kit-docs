@@ -8,7 +8,7 @@ FR-014: MkDocs nav update
 import re
 from pathlib import Path
 
-import yaml
+from ruamel.yaml import YAML
 
 from ..models import GeneratorTool
 
@@ -110,8 +110,12 @@ class NavigationUpdater:
             raise FileNotFoundError(f"mkdocs.yml not found at {mkdocs_yml}")
 
         # Load existing config
+        yaml = YAML()
+        yaml.preserve_quotes = True
+        yaml.default_flow_style = False
+
         with open(mkdocs_yml) as f:
-            config = yaml.safe_load(f)
+            config = yaml.load(f)
 
         if config is None:
             config = {}
@@ -146,4 +150,4 @@ class NavigationUpdater:
 
         # Write updated config
         with open(mkdocs_yml, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+            yaml.dump(config, f)
