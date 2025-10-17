@@ -84,8 +84,15 @@ nav:
             "# Test Feature\n\n## Requirements"
         )
 
+        # Create transformed content JSON (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature\n\n## Requirements"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run doc_update (full mode)
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -114,8 +121,15 @@ nav:
         (tmp_path / "specs" / "001-test-feature").mkdir(parents=True)
         (tmp_path / "specs" / "001-test-feature" / "spec.md").write_text("# Test Feature")
 
+        # Create transformed content JSON (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run doc_update (full mode)
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -143,17 +157,27 @@ nav:
         (feature_dir / "plan.md").write_text("# Plan\n\n## Architecture\n\nLayered")
         (feature_dir / "tasks.md").write_text("# Tasks\n\n## T001: First Task")
 
+        # Create transformed content JSON (FR-038e: required)
+        # Session 2025-10-17: plan.md and tasks.md excluded from generated docs
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-complete-feature": {"spec_content": "# Complete Feature\n\n## Overview"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run doc_update (full mode)
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
 
-        # Verify page includes all content
+        # Verify page includes spec content only (Session 2025-10-17: plan/tasks excluded)
         page_content = (docs_dir / "complete-feature.md").read_text()
         assert "Complete Feature" in page_content
-        assert "Architecture" in page_content or "Layered" in page_content
-        assert "T001" in page_content or "Tasks" in page_content
+        assert "Overview" in page_content
+        # Plan and tasks content should NOT be in generated docs
+        assert "Architecture" not in page_content
+        assert "T001" not in page_content
 
     def test_doc_update_no_docs_directory(self, tmp_path, monkeypatch):
         """Test error when docs/ directory doesn't exist."""
@@ -161,8 +185,12 @@ nav:
         monkeypatch.chdir(tmp_path)
         (tmp_path / ".specify").mkdir()
 
+        # Create dummy transformed content (FR-038e: required, but error occurs before use)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_file.write_text(json.dumps({}))
+
         # Run doc_update
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Should return error code
         assert result != 0
@@ -182,8 +210,12 @@ nav:
         # No specs/ directory or empty
         (tmp_path / "specs").mkdir()
 
+        # Create dummy transformed content (FR-038e: required, but error occurs before use)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_file.write_text(json.dumps({}))
+
         # Run doc_update
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Should return error code
         assert result != 0
@@ -206,8 +238,17 @@ nav:
             feature_dir.mkdir(parents=True)
             (feature_dir / "spec.md").write_text(f"# Feature {i}")
 
+        # Create transformed content JSON (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-feature-1": {"spec_content": "# Feature 1"},
+            "002-feature-2": {"spec_content": "# Feature 2"},
+            "003-feature-3": {"spec_content": "# Feature 3"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run doc_update in full mode
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -224,8 +265,12 @@ nav:
         (tmp_path / "specs" / "001-test").mkdir(parents=True)
         (tmp_path / "specs" / "001-test" / "spec.md").write_text("# Test")
 
+        # Create dummy transformed content (FR-038e: required, but error occurs before use)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_file.write_text(json.dumps({}))
+
         # Run without docs/ directory
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Should return error
         assert result != 0
@@ -240,8 +285,12 @@ nav:
         # Create docs/ but no conf.py or mkdocs.yml
         (tmp_path / "docs").mkdir()
 
+        # Create dummy transformed content (FR-038e: required, but error occurs before use)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_file.write_text(json.dumps({}))
+
         # Run doc_update (should fail to detect tool)
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Should return error
         assert result != 0

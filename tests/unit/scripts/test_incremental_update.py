@@ -1,5 +1,7 @@
 """Unit tests for incremental update functionality (T026)."""
 
+import json
+
 from git import Repo
 
 from speckit_docs.scripts.doc_update import main
@@ -39,8 +41,16 @@ class TestIncrementalUpdate:
         repo.index.add(["*"])
         repo.index.commit("Initial commit")
 
+        # Create transformed content JSON for initial update (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-feature-one": {"spec_content": "# Feature One\n\nInitial version"},
+            "002-feature-two": {"spec_content": "# Feature Two\n\nInitial version"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run initial full update
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
         assert result == 0
 
         # Modify only one feature
@@ -52,8 +62,14 @@ class TestIncrementalUpdate:
         repo.index.add(["specs/001-feature-one/spec.md"])
         repo.index.commit("Update feature one")
 
+        # Update transformed content for incremental update
+        transformed_content_map = {
+            "001-feature-one": {"spec_content": "# Feature One\n\nUpdated version"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run incremental update
-        result = main(incremental=True)
+        result = main(incremental=True, transformed_content=transformed_content_file)
 
         # Should succeed
         assert result == 0
@@ -86,8 +102,12 @@ class TestIncrementalUpdate:
         repo.index.add(["*"])
         repo.index.commit("Initial commit")
 
+        # Create dummy transformed content (FR-038e: required, but no changes detected)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_file.write_text(json.dumps({}))
+
         # Run incremental update with no changes
-        result = main(incremental=True)
+        result = main(incremental=True, transformed_content=transformed_content_file)
 
         # Should succeed and skip update
         assert result == 0
@@ -119,8 +139,16 @@ class TestIncrementalUpdate:
         repo.index.add(["*"])
         repo.index.commit("Initial commit")
 
+        # Create transformed content JSON (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-feature-one": {"spec_content": "# Feature One"},
+            "002-feature-two": {"spec_content": "# Feature Two"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run full update
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Should succeed
         assert result == 0
@@ -161,8 +189,15 @@ class TestIncrementalUpdate:
         repo.index.add(["specs/002-new-feature"])
         repo.index.commit("Add new feature")
 
+        # Create transformed content for new feature (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "002-new-feature": {"spec_content": "# New Feature"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run incremental update
-        result = main(incremental=True)
+        result = main(incremental=True, transformed_content=transformed_content_file)
 
         # Should succeed
         assert result == 0
@@ -193,8 +228,15 @@ class TestIncrementalUpdate:
         # Add but don't commit yet
         repo.index.add(["*"])
 
+        # Create transformed content JSON (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-test-feature": {"spec_content": "# Test Feature"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run incremental update (should fall back to full update)
-        result = main(incremental=True)
+        result = main(incremental=True, transformed_content=transformed_content_file)
 
         # Should succeed (falls back to full update since no commits)
         assert result == 0
