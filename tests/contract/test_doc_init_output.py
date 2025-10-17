@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 
 class TestSphinxOutputContract:
@@ -182,9 +182,10 @@ class TestMkDocsOutputContract:
 
         # Validate YAML syntax
         try:
+            yaml = YAML()
             with open(mkdocs_yml_path) as f:
-                config = yaml.safe_load(f)
-        except yaml.YAMLError as e:
+                config = yaml.load(f)
+        except Exception as e:
             pytest.fail(f"mkdocs.yml contains invalid YAML syntax: {e}")
 
         # Validate required keys

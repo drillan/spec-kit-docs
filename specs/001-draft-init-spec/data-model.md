@@ -1038,6 +1038,334 @@ PackageManager (0..*) (Session 2025-10-15追加)
     └── available: bool
 ```
 
+---
+
+## LLM統合エンティティ（Session 2025-10-17追加）
+
+Session 2025-10-17で追加された、README/QUICKSTART統合、不整合検出、セクション優先順位判定、spec.md抽出に関連するエンティティを定義します。
+
+### InconsistencyDetectionResult
+
+README/QUICKSTART不整合検出結果を表すエンティティです。
+
+```python
+from dataclasses import dataclass
+from typing import List, Literal
+
+@dataclass(frozen=True)
+class Inconsistency:
+    """不整合項目を表すエンティティ"""
+
+    type: Literal["technology_stack", "features", "purpose"]
+    """不整合タイプ"""
+
+    readme_claim: str
+    """README.mdの主張"""
+
+    quickstart_claim: str
+    """QUICKSTART.mdの主張"""
+
+    severity: Literal["critical", "minor"]
+    """重大度"""
+
+
+@dataclass(frozen=True)
+class InconsistencyDetectionResult:
+    """README/QUICKSTART不整合検出結果を表すエンティティ"""
+
+    is_consistent: bool
+    """整合性があるか"""
+
+    inconsistencies: List[Inconsistency]
+    """不整合項目リスト"""
+
+    summary: str
+    """分析結果サマリー"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if not self.is_consistent and len(self.inconsistencies) == 0:
+            raise ValueError(
+                "is_consistent=False but inconsistencies list is empty"
+            )
+```
+
+### Section
+
+Markdownセクションを表すエンティティです（markdown-it-pyでパース）。
+
+```python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class Section:
+    """Markdownセクションを表すエンティティ"""
+
+    file: Literal["README.md", "QUICKSTART.md"]
+    """ファイル名"""
+
+    heading: str
+    """見出しテキスト（例: "## Installation"）"""
+
+    level: Literal["h2", "h3"]
+    """見出しレベル"""
+
+    content: str
+    """セクション本文"""
+
+    token_count: int
+    """トークン数（概算、文字数/4で計算）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if self.token_count < 0:
+            raise ValueError(f"token_count must be non-negative: {self.token_count}")
+        if not self.heading.strip():
+            raise ValueError("heading must not be empty")
+```
+
+### SectionPriorityResult
+
+セクション優先順位判定結果を表すエンティティです。
+
+```python
+from dataclasses import dataclass
+from typing import List
+
+@dataclass(frozen=True)
+class PrioritizedSection:
+    """優先順位付きセクションを表すエンティティ"""
+
+    section: Section
+    """元となるセクション"""
+
+    priority: int
+    """優先順位（1が最高）"""
+
+    reason: str
+    """優先順位理由（LLMが提供）"""
+
+
+@dataclass(frozen=True)
+class SectionPriorityResult:
+    """セクション優先順位判定結果を表すエンティティ"""
+
+    prioritized_sections: List[PrioritizedSection]
+    """優先順位付きセクションリスト（優先順位順）"""
+
+    total_sections: int
+    """全セクション数"""
+
+    included_sections: int
+    """10,000トークン以内に含まれたセクション数"""
+
+    excluded_sections: List[Section]
+    """10,000トークン超過により除外されたセクションリスト"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if self.total_sections != self.included_sections + len(self.excluded_sections):
+            raise ValueError(
+                f"total_sections ({self.total_sections}) != "
+                f"included_sections ({self.included_sections}) + "
+                f"excluded_sections ({len(self.excluded_sections)})"
+            )
+```
+
+### LLMTransformResult
+
+LLM変換結果を表すエンティティです（不整合検出、優先順位判定、spec.md抽出すべてに使用）。
+
+```python
+from dataclasses import dataclass
+from typing import Literal, Optional
+
+LLMTransformType = Literal[
+    "inconsistency_detection",
+    "section_priority",
+    "spec_md_extraction",
+    "readme_only",
+    "quickstart_only",
+]
+
+
+@dataclass(frozen=True)
+class LLMTransformResult:
+    """LLM変換結果を表すエンティティ"""
+
+    transform_type: LLMTransformType
+    """変換タイプ"""
+
+    source_content: str
+    """元となるコンテンツ（README.md、QUICKSTART.md、spec.md等）"""
+
+    transformed_content: str
+    """LLM変換後のコンテンツ"""
+
+    token_count: int
+    """変換後コンテンツのトークン数（概算）"""
+
+    inconsistency_result: Optional[InconsistencyDetectionResult] = None
+    """不整合検出結果（transform_type="inconsistency_detection"の場合のみ）"""
+
+    section_priority_result: Optional[SectionPriorityResult] = None
+    """セクション優先順位判定結果（transform_type="section_priority"の場合のみ）"""
+
+    def __post_init__(self) -> None:
+        """検証ルール"""
+        if self.token_count > 10000:
+            raise ValueError(
+                f"transformed_content exceeds 10,000 token limit: {self.token_count}"
+            )
+
+        # transform_typeに応じた結果の存在検証
+        if self.transform_type == "inconsistency_detection" and self.inconsistency_result is None:
+            raise ValueError(
+                "inconsistency_result is required when transform_type='inconsistency_detection'"
+            )
+        if self.transform_type == "section_priority" and self.section_priority_result is None:
+            raise ValueError(
+                "section_priority_result is required when transform_type='section_priority'"
+            )
+```
+
+### LLM統合エンティティの使用例
+
+#### 不整合検出フロー
+
+```python
+# 1. README.mdとQUICKSTART.mdを読み込む
+readme_content = feature.readme_file.read_text()
+quickstart_content = feature.quickstart_file.read_text()
+
+# 2. LLM APIで不整合検出
+llm_client = get_anthropic_client()
+response = llm_client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=4096,
+    messages=[{"role": "user", "content": INCONSISTENCY_DETECTION_PROMPT.format(
+        readme_content=readme_content,
+        quickstart_content=quickstart_content
+    )}],
+    timeout=30
+)
+
+# 3. レスポンスをパースしてInconsistencyDetectionResultを作成
+result_json = json.loads(response.content[0].text)
+detection_result = InconsistencyDetectionResult(
+    is_consistent=result_json["is_consistent"],
+    inconsistencies=[
+        Inconsistency(**item) for item in result_json["inconsistencies"]
+    ],
+    summary=result_json["summary"]
+)
+
+# 4. 不整合がある場合はエラーで中断
+if not detection_result.is_consistent:
+    raise SpecKitDocsError(
+        f"Inconsistency detected between README.md and QUICKSTART.md:\n"
+        f"{detection_result.summary}\n"
+        f"Critical inconsistencies: {len([i for i in detection_result.inconsistencies if i.severity == 'critical'])}"
+    )
+```
+
+#### セクション優先順位判定フロー
+
+```python
+# 1. markdown-it-pyで両方のファイルをセクション単位でパース
+from markdown_it import MarkdownIt
+
+def parse_sections(markdown_content: str, filename: str) -> List[Section]:
+    md = MarkdownIt()
+    tokens = md.parse(markdown_content)
+    sections = []
+    current_heading = None
+    current_content = []
+
+    for token in tokens:
+        if token.type == "heading_open" and token.tag in ["h2", "h3"]:
+            if current_heading:
+                sections.append(Section(
+                    file=filename,
+                    heading=current_heading,
+                    level=token.tag,
+                    content="".join(current_content),
+                    token_count=len("".join(current_content)) // 4
+                ))
+            current_heading = token.content
+            current_content = []
+        elif current_heading:
+            current_content.append(token.content or "")
+
+    return sections
+
+readme_sections = parse_sections(readme_content, "README.md")
+quickstart_sections = parse_sections(quickstart_content, "QUICKSTART.md")
+all_sections = readme_sections + quickstart_sections
+
+# 2. LLM APIでセクション優先順位判定
+section_list = [
+    {"file": s.file, "heading": s.heading, "content_preview": s.content[:200]}
+    for s in all_sections
+]
+response = llm_client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=4096,
+    messages=[{"role": "user", "content": SECTION_PRIORITY_PROMPT.format(
+        sections_list=json.dumps(section_list, ensure_ascii=False)
+    )}],
+    timeout=45
+)
+
+# 3. 優先順位に従ってセクションを追加（10,000トークン以内）
+priority_result = SectionPriorityResult(...)
+transform_result = LLMTransformResult(
+    transform_type="section_priority",
+    source_content=readme_content + quickstart_content,
+    transformed_content="...",  # 優先順位に従って統合されたコンテンツ
+    token_count=9500,
+    section_priority_result=priority_result
+)
+```
+
+---
+
+### エンティティ関係図（Session 2025-10-17更新）
+
+```
+Feature
+  ├── readme_file: Optional[Path]
+  └── quickstart_file: Optional[Path]
+      ↓
+      ↓ (両方存在する場合)
+      ↓
+InconsistencyDetectionResult ← (LLM API呼び出し)
+  ├── is_consistent: bool
+  └── inconsistencies: List[Inconsistency]
+      ↓
+      ↓ (整合性OK)
+      ↓
+Section ← (markdown-it-pyでパース)
+  ├── file: "README.md" | "QUICKSTART.md"
+  ├── heading: str
+  └── content: str
+      ↓
+      ↓ (LLM API呼び出し)
+      ↓
+SectionPriorityResult
+  ├── prioritized_sections: List[PrioritizedSection]
+  └── excluded_sections: List[Section]
+      ↓
+      ↓
+LLMTransformResult
+  ├── transformed_content: str (統合されたコンテンツ)
+  ├── token_count: int (<= 10,000)
+  └── section_priority_result: SectionPriorityResult
+```
+
+---
+
 ## まとめ
 
-このデータモデルは、spec-kit-docsプロジェクトのすべての主要エンティティを定義します。すべてのエンティティは不変（`@dataclass(frozen=True)`）で、型安全（mypy互換）、かつ明確な検証ルールを持ちます。MVP（P1）段階では、SpecKitProject、Feature、DocumentationSite、BaseGenerator、**DependencyResult、PackageManager**（Session 2025-10-15追加）が主に使用され、P2以降でEntity、APIEndpoint、SynthesisResult、P3でAudience、FeatureStatusが追加されます。
+このデータモデルは、spec-kit-docsプロジェクトのすべての主要エンティティを定義します。すべてのエンティティは不変（`@dataclass(frozen=True)`）で、型安全（mypy互換）、かつ明確な検証ルールを持ちます。MVP（P1）段階では、SpecKitProject、Feature、DocumentationSite、BaseGenerator、**DependencyResult、PackageManager**（Session 2025-10-15追加）、**InconsistencyDetectionResult、Section、SectionPriorityResult、LLMTransformResult**（Session 2025-10-17追加）が主に使用され、P2以降でEntity、APIEndpoint、SynthesisResult、P3でAudience、FeatureStatusが追加されます。

@@ -1,50 +1,413 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version: 1.0.0 → 1.1.0 (MINOR bump)
+- Change Type: Integration of critical-rules.xml
+- Rationale: Adding Critical Rules section and Code Quality Standards to enforce stricter development practices
+- Modified Principles:
+  - V. Testability: Enhanced with TDD requirements (Red-Green-Refactor cycle) from C010
+- Added Sections:
+  - Critical Rules (14 rules: C001-C014)
+  - Code Quality Standards (Data accuracy, DRY, refactoring, no-compromise implementation)
+- Removed Sections: None
+- Enhanced Sections:
+  - Development Workflow > Error Handling: Strengthened with C002 (no error workarounds)
+  - Development Workflow > Implementation Process: Added branching requirements from C009
+  - Governance > Compliance Review: Added critical rules enforcement
+- Templates Requiring Updates:
+  - ✅ .specify/templates/plan-template.md (verified - contains Constitution Check section)
+  - ✅ .specify/templates/spec-template.md (verified - compatible with enhanced principles)
+  - ✅ .specify/templates/tasks-template.md (verified - compatible with TDD and quality standards)
+- Follow-up TODOs: None
+- Last Sync: 2025-10-13
+-->
+
+# speckit-docs Project Constitution
+
+## Critical Rules
+
+このセクションは`.claude/critical-rules.xml`から統合された、絶対遵守すべきクリティカルルールです。これらのルールは最上位命令として扱われ、他のすべての原則やガイドラインに優先します。
+
+### C001: ルール歪曲禁止・最上位命令遵守
+
+**Rule**: ルールを歪曲・解釈変更してはならず、最上位命令として遵守しなければならない。
+
+**Enforcement**: このルール自体が、他のすべてのルールの基盤となります。都合の良い解釈や例外化は認められません。
+
+---
+
+### C002: エラー迂回絶対禁止・主観判断排除
+
+**Rule**: エラー発生時は一切迂回してはならない。「軽微」「十分」等の主観的判断は一切認めず、修正可能なものは即座に修正し、対応不可能なものは作業を完全停止して次の計画を提示し確認を取らなければならない。
+
+**Sub-rules**:
+- ログファイル優先確認原則: エラー発生時は必ずログファイルを確認し、根本原因を特定する
+
+**Enforcement**: エラーが発生した場合、以下の対応が必須：
+1. エラーメッセージとスタックトレースを完全に読み取る
+2. ログファイルが存在する場合は優先的に確認する
+3. 修正可能な場合は即座に修正する
+4. 修正不可能な場合は作業を停止し、ユーザーに状況と次の計画を提示する
+5. 「おそらく大丈夫」「影響は小さい」などの主観的判断で継続してはならない
+
+---
+
+### C003: 冒頭表示必須
+
+**Rule**: チャットの冒頭にはこの原則を逐語的に必ず画面出力してから対応しなければならない。
+
+**Format**:
+```
+[Active Rules: C001-C014]
+**CRITICAL原則**: ルール歪曲禁止・エラー迂回禁止・理想実装ファースト・記録管理・
+品質基準遵守・ドキュメント整合性・TDD必須・DRY原則・破壊的リファクタリング推奨・妥協実装絶対禁止
+```
+
+---
+
+### C004: 理想実装ファースト原則
+
+**Rule**: 計画・設計を立てる際は、最初から理想の実装を設計し、妥協や段階的改善を一切排除しなければならない。
+
+**Sub-rules**:
+- Extended Thinking適用による理想設計の追求: 複雑な設計判断では深い思考モードを活用する
+- 簡易版・暫定版の作成禁止: 「とりあえず動く」実装は認められない
+- 「後で改善」思考の完全排除: 技術的負債を前提とした設計は禁止
+- 実装工程は明確化するが、実装自体は理想形で一括実施: 段階的な品質向上ではなく、最初から最高品質で実装する
+
+**Rationale**: 「まず動くものを作って後で改善」というアプローチは、技術的負債を蓄積し、将来のリファクタリングコストを増大させます。最初から理想的な設計を行うことで、長期的な保守性とコード品質を保証します。
+
+**Note**: この原則は、既存の「IV. Incremental Delivery」原則と補完関係にあります。Incremental Deliveryは**機能の段階的配信**を指し、理想実装ファーストは**各機能の実装品質**を指します。つまり、「P1機能を理想品質で実装→リリース→P2機能を理想品質で実装→リリース」という流れです。
+
+---
+
+### C005: 記録管理徹底
+
+**Rule**: 記録を残さなければならない（即座記録、知見管理システム活用）。
+
+**Implementation**:
+- 重要な決定や技術的判断は、即座にコミットメッセージ、コメント、またはドキュメントに記録する
+- spec-kitのメモリーシステム（`.specify/memory/`）を活用して、プロジェクト全体の知見を蓄積する
+
+---
+
+### C006: 堅牢コード品質
+
+**Rule**: 堅牢なコードを書かなければならない（品質基準完全遵守、コミット時チェック必須）。
+
+**Implementation**:
+- すべてのコードは、linter（ruff）、formatter（black）、type checker（mypy）を通過しなければならない
+- コミット前に自動チェックを実行し、警告やエラーがある場合はコミットしてはならない
+- コードレビューでは、品質基準への準拠を確認する
+
+---
+
+### C007: 品質例外化禁止
+
+**Rule**: 品質基準例外化を禁止する（時間制約・進捗圧力・緊急性を理由とした品質妥協は一切認めない）。
+
+**Rationale**: 「緊急だから」「時間がないから」という理由で品質を妥協すると、将来的により大きな問題を引き起こします。品質は交渉不可能です。
+
+---
+
+### C008: ドキュメント整合性絶対遵守
+
+**Rule**: 実装前の仕様確認必須、ドキュメント変更時のユーザー承認必須、ドキュメント更新完了後の実装着手を義務付ける。
+
+**Sub-rules**:
+- 仕様曖昧性検出プロトコル: spec.mdに不明瞭な箇所がある場合は実装を停止し、clarificationを求める
+- 仕様確認必須チェックリスト: 実装前に、spec.md、plan.md、tasks.mdをすべて読み、理解したことを確認する
+
+**Implementation**:
+1. 実装を開始する前に、必ず関連するspec.md、plan.md、tasks.mdを読む
+2. 仕様が曖昧な場合は、`/speckit.clarify`コマンドで明確化する
+3. ドキュメントを変更する必要がある場合は、必ずユーザーの承認を得る
+4. ドキュメント更新後、再度レビューしてから実装を開始する
+
+---
+
+### C009: 実装計画ブランチ作成必須
+
+**Rule**: main/masterブランチでの直接作業を禁止し、feature/XXX形式のブランチ作成を義務付ける。
+
+**Implementation**:
+- すべての機能開発は、`feature/###-feature-name`形式のブランチで行う（`###`は機能番号）
+- mainブランチへの直接コミットは禁止
+- プルリクエストを通じてのみmainブランチにマージする
+
+---
+
+### C010: テスト駆動開発必須
+
+**Rule**: ドキュメント仕様準拠テスト優先実装を義務付ける。
+
+**Sub-rules**:
+- 実装前テスト作成プロトコル（Red-Green-Refactor）:
+  1. **Red**: テストを書き、失敗することを確認する
+  2. **Green**: テストを通過する最小限の実装を行う
+  3. **Refactor**: コードを改善し、テストが通過し続けることを確認する
+- 仕様不明瞭時のテスト作成停止: テストを書けない場合は、仕様が不十分である証拠であり、実装を停止する
+
+**Rationale**: テストを先に書くことで、仕様の理解を深め、設計の問題を早期に発見し、リファクタリングの安全性を保証します。
+
+---
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. spec-kit Integration First
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Principle**: spec-kit-docsは、spec-kitエコシステムの拡張として設計され、spec-kitの標準パターンと完全に一貫していなければならない。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rules**:
+- `specify init --here`パターンに従い、既存プロジェクトへの追加インストールをサポートしなければならない
+- `--force`フラグによる上書き動作は、本家spec-kitと同じセマンティクスを持たなければならない
+- エラーハンドリングはspec-kitと一貫し、ベストエフォート方式（部分的な成功状態を許容）を採用しなければならない
+- `specs/`ディレクトリ構造（`.specify/specs/`ではなくルート直下の`specs/`）を正しく認識しなければならない
+- コマンド命名規則は`/speckit.*`パターンに従わなければならない
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: spec-kit-docsは独立したツールではなく、spec-kitプロジェクトのドキュメント生成機能を提供する拡張です。ユーザーはspec-kitとspec-kit-docsの両方を使用する際に、一貫した操作体験を得る必要があります。パターンの不一致はユーザーの混乱と学習コストの増加を招きます。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+---
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### II. Non-Interactive Execution
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Principle**: すべてのバックエンドスクリプト（doc_init.py、doc_update.py）は、標準入力（stdin）を使用せず、コマンドライン引数のみで動作しなければならない。
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rules**:
+- Pythonスクリプトは`input()`関数を使用してはならない
+- すべての設定はコマンドライン引数またはデフォルト値から取得しなければならない
+- 対話的な情報収集はAIエージェント（Claude Code）が担当し、スクリプトは非対話的に実行されなければならない
+- エラーは構造化された終了コードとメッセージで返され、AIエージェントが解釈可能でなければならない
+- スクリプトは決定的であり、同じ入力に対して同じ出力を生成しなければならない
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale**: CI/CD環境、バックグラウンドジョブ、自動化ワークフローでは標準入力が利用できないため、`input()`は`EOFError`を引き起こします。非対話的設計により、単体テスト容易性と拡張性（将来の他のAIエージェントサポート）が向上します。
+
+---
+
+### III. Extensibility & Modularity
+
+**Principle**: システムは、新しいドキュメントツール（Sphinx、MkDocs以外）と新しいAIエージェント（Claude Code以外）のサポート追加を容易にする設計でなければならない。
+
+**Rules**:
+- ドキュメントジェネレータは抽象ベースクラス（`generators/base.py`）を継承し、共通インターフェースを実装しなければならない
+- 各ドキュメントツール（Sphinx、MkDocs）は独立したモジュール（`generators/sphinx.py`、`generators/mkdocs.py`）として実装しなければならない
+- コマンドテンプレート（`doc-init.md`、`doc-update.md`）はAIエージェント固有の参照（例："Claude"）を避け、汎用的なプロンプトを記述しなければならない
+- パーサーとジェネレータは明確に分離され、他のコンポーネントへの依存を最小化しなければならない
+- 新しい機能追加は既存のコードを破壊してはならない（後方互換性の維持）
+
+**Rationale**: ドキュメントツールとAIエージェントのエコシステムは急速に進化しています。モジュラー設計により、既存機能を破壊せずに新しいツールやエージェントをサポートできます。これは長期的な保守性とコミュニティ貢献の受け入れに不可欠です。
+
+---
+
+### IV. Incremental Delivery
+
+**Principle**: 機能開発はMVP優先で進め、各フェーズで独立してテスト可能な価値を提供しなければならない。
+
+**Rules**:
+- ユーザーストーリーは優先度（P1、P2、P3）でマークされ、P1が完成するまでP2に進んではならない
+- MVP（フェーズ1）は、基本的なドキュメント初期化と更新機能のみを含み、高度な統合機能は含まない
+- 各ユーザーストーリーは独立してテスト可能でなければならない
+- 新機能追加はオプショナルであり、既存のワークフローを破壊してはならない
+- アンインストール機能やアップグレード機能などの二次的機能は、MVP範囲外として明確に定義される
+
+**Rationale**: MVPアプローチにより、早期にユーザーフィードバックを得て、実際に必要な機能に焦点を当てることができます。すべての機能を一度に実装しようとすると、リリースが遅れ、未使用の機能に時間を浪費するリスクがあります。段階的配信により、各ステップで具体的な価値を提供できます。
+
+**Relationship to C004 (理想実装ファースト)**: Incremental Deliveryは**機能の段階的配信**を指し、C004は**各機能の実装品質**を指します。P1機能を理想品質で実装→リリース→P2機能を理想品質で実装→リリースという流れで、段階的に機能を追加しながら、各機能は最初から理想的な品質で実装します。
+
+---
+
+### V. Testability
+
+**Principle**: すべてのコードは単体テストと統合テストが容易でなければならない。**テスト駆動開発（TDD）は必須であり、Red-Green-Refactorサイクルに従わなければならない**。
+
+**Rules**:
+- **TDD必須（C010）**: 実装前にテストを書き、テストが失敗することを確認してから実装を開始しなければならない
+- **Red-Green-Refactorサイクル**:
+  1. **Red**: テストを書き、失敗することを確認する
+  2. **Green**: テストを通過する最小限の実装を行う
+  3. **Refactor**: コードを改善し、テストが通過し続けることを確認する
+- スクリプトは決定的な入力（コマンドライン引数）を受け取り、決定的な出力を生成しなければならない
+- ファイルシステム操作は抽象化され、テスト時にモック可能でなければならない
+- パーサーとジェネレータは純粋関数として実装され、副作用を最小化しなければならない
+- 統合テストは、実際のspec-kitプロジェクト構造を使用して実行されなければならない
+- テストカバレッジは、主要なコードパス（ドキュメント初期化、更新、エラーハンドリング）の90%以上でなければならない
+
+**Rationale**: テストはコードの品質と信頼性を保証します。spec-kit-docsは様々なプロジェクト構造とドキュメントツールをサポートするため、自動テストなしでは回帰を防ぐことが困難です。決定的な設計により、テストは予測可能で再現可能になります。TDDにより、仕様の理解を深め、設計の問題を早期に発見し、リファクタリングの安全性を保証します。
+
+---
+
+## Code Quality Standards
+
+このセクションは、コードの品質を保証するための具体的な標準を定義します。
+
+### Data Accuracy (C011)
+
+**Rule**: 一次データ推測禁止、フォールバック禁止、設定値ハードコード禁止を義務付ける。
+
+**Sub-rules**:
+- **一次データ推測禁止プロトコル**: 環境変数、設定ファイル、コマンドライン引数などの一次データソースから値を取得する際、値が存在しない場合は推測やデフォルト値で補完してはならず、明示的なエラーを発生させなければならない
+- **フォールバック禁止プロトコル**: データ取得に失敗した場合、代替値や空文字列で隠蔽してはならず、エラーを伝播させなければならない
+- **設定値ハードコード禁止プロトコル**: マジックナンバーや固定文字列を直接コードに埋め込んではならず、環境変数、設定ファイル、または名前付き定数として定義しなければならない
+
+**Implementation**:
+```python
+# 悪い例（禁止）
+timeout = 30  # ハードコード
+if not data:
+    data = "default"  # 暗黙のフォールバック
+
+# 良い例（推奨）
+TIMEOUT_SECONDS = int(os.environ["API_TIMEOUT"])  # 環境変数から取得
+if not data:
+    raise ValueError("Required data is missing")  # 明示的なエラー
+```
+
+**Rationale**: 一次データの推測やフォールバックは、エラーを隠蔽し、デバッグを困難にします。明示的なエラーにより、問題を早期に発見できます。
+
+---
+
+### DRY Principle (C012)
+
+**Rule**: Don't Repeat Yourself・コード重複実装を絶対禁止する。
+
+**Sub-rules**:
+- **事前調査必須プロトコル**: 新しい関数やクラスを実装する前に、既存のコードベースで類似の実装が存在しないか必ず調査する
+- **共通パターン認識必須**: 3回以上繰り返されるコードパターンは、関数またはクラスとして抽出しなければならない
+- **重複実装時の強制停止条件**: 既存の実装と90%以上類似するコードを発見した場合、実装を停止し、既存コードの再利用または抽象化を検討する
+- **実装前チェックリスト必須**: 実装前に、既存のユーティリティ、ライブラリ、抽象ベースクラスを確認する
+- **ドキュメント駆動DRY原則プロトコル**: plan.mdとdata-model.mdで定義されたエンティティと関数は、コード内で一度だけ定義されなければならない
+
+**Implementation**:
+- 新しいパーサーを実装する前に、`parsers/`ディレクトリの既存パーサーを確認する
+- 複数のジェネレータで共通のロジックがある場合、`generators/base.py`に抽出する
+- ユーティリティ関数は`utils/`ディレクトリに集約する
+
+**Rationale**: コードの重複は、保守性を低下させ、バグ修正やリファクタリングのコストを増大させます。DRY原則により、単一の信頼できる情報源（Single Source of Truth）を維持します。
+
+---
+
+### Refactoring Standards (C013)
+
+**Rule**: V2クラス作成を禁止し、既存クラス修正を優先する（破壊的リファクタリング推奨）。
+
+**Sub-rules**:
+- **既存クラス修正優先プロトコル**: 機能拡張や改善が必要な場合、`FooV2`や`NewFoo`のような新しいクラスを作成するのではなく、既存の`Foo`クラスを直接修正する
+- **V2クラス作成禁止プロトコル**: バージョン番号や`New`プレフィックスを持つクラス名は禁止（例外: 公開APIの後方互換性維持が必須の場合のみ）
+- **破壊的変更推奨条件**: 以下の場合、破壊的変更を推奨する：
+  - 既存の設計が根本的に間違っている
+  - 新しい要件が既存の設計と大きく異なる
+  - V2クラスの作成が技術的負債を増やす
+- **リファクタリング前チェックリスト**:
+  1. すべてのテストが通過していることを確認
+  2. リファクタリング範囲を明確に定義
+  3. テストを維持しながら段階的にリファクタリング
+  4. 各ステップでテストが通過することを確認
+
+**Rationale**: V2クラスの作成は、古いコードを放置し、技術的負債を蓄積させます。既存クラスを直接修正することで、コードベースの一貫性と保守性を維持します。
+
+---
+
+### No-Compromise Implementation (C014)
+
+**Rule**: 妥協実装を絶対禁止し、簡易版・暫定版・段階的改善を前提とした実装を完全排除する。最初から最高品質の実装のみを許可する。
+
+**Sub-rules**:
+- **「とりあえず動く」実装の禁止**: 「まず動くものを作って後で改善」というアプローチは禁止
+- **技術的負債を前提とした設計の禁止**: 「後でリファクタリングする」という前提での設計は禁止
+- **リファクタリング前提の初期実装禁止**: 「初期実装は簡易版で、後で本格版に置き換える」という計画は禁止
+- **理想実装が不明な場合は設計段階で停止**: 理想的な設計が明確でない場合は、実装を開始せず、設計をさらに検討する
+
+**Implementation**:
+- plan.mdで理想的なアーキテクチャを定義する
+- tasks.mdで実装工程を明確化するが、各タスクは理想品質で実装する
+- 「TODO: 後で改善」や「FIXME: 暫定実装」などのコメントは禁止
+
+**Rationale**: 妥協した実装は、技術的負債を生み、将来のリファクタリングコストを増大させます。最初から理想的な実装を行うことで、長期的な保守性とコード品質を保証します。
+
+**Relationship to IV. Incremental Delivery**: この原則は、Incremental Deliveryと矛盾しません。Incremental Deliveryは**機能の段階的配信**を指し、No-Compromise Implementationは**各機能の実装品質**を指します。P1機能を理想品質で実装→リリース→P2機能を理想品質で実装→リリースという流れで、段階的に機能を追加しながら、各機能は最初から最高品質で実装します。
+
+---
+
+## Development Workflow
+
+### Implementation Process
+
+1. **Feature Specification**: すべての機能は`/speckit.specify`コマンドで仕様書（spec.md）を作成する
+2. **Implementation Plan**: 仕様書に基づき、`/speckit.plan`コマンドで実装計画（plan.md）を作成する
+3. **Task Generation**: 実装計画に基づき、`/speckit.tasks`コマンドでタスクリスト（tasks.md）を生成する
+4. **Branch Creation (C009)**: `feature/###-feature-name`形式のブランチを作成する
+5. **Test-First Implementation (C010)**:
+   - Red: テストを書き、失敗することを確認する
+   - Green: テストを通過する最小限の実装を行う
+   - Refactor: コードを改善し、テストが通過し続けることを確認する
+6. **Implementation**: タスクリストに従って実装を進める。各タスク完了後はコミットする
+7. **Testing**: 単体テストと統合テストを実行し、すべてのテストが通過することを確認する
+8. **Documentation**: 必要に応じてプロジェクトドキュメントを更新する
+
+### Quality Gates
+
+- **Constitution Check**: 実装計画（plan.md）作成時に、この憲章の原則に違反していないことを確認する
+- **Specification Verification (C008)**: 実装前に、spec.md、plan.md、tasks.mdを読み、理解したことを確認する
+- **Test Pass**: すべての単体テストと統合テストが通過しなければ、次のフェーズに進まない
+- **Code Quality Check (C006)**: linter、formatter、type checkerがすべて通過しなければコミットしない
+- **Code Review**: プルリクエストは、少なくとも1人のレビューアの承認が必要
+- **Backward Compatibility**: 既存機能を破壊する変更は、明確な移行パスとドキュメントが必要
+
+### Complexity Justification
+
+複雑さの導入は、明確な根拠が必要です。plan.mdの「Complexity Tracking」セクションに以下を記録する：
+- どの原則に違反しているか
+- なぜその複雑さが必要か
+- よりシンプルな代替案を拒否した理由
+
+### Error Handling (Enhanced with C002)
+
+**Rules**:
+- すべてのエラーは`SpecKitDocsError`例外として発生させる
+- エラーメッセージには「ファイルパス」「エラーの種類」「ユーザーへの推奨アクション」を含める
+- **エラー迂回絶対禁止（C002）**: エラー発生時は一切迂回せず、以下の対応を取る：
+  1. エラーメッセージとスタックトレースを完全に読み取る
+  2. ログファイルが存在する場合は優先的に確認する
+  3. 修正可能な場合は即座に修正する
+  4. 修正不可能な場合は作業を停止し、ユーザーに状況と次の計画を提示する
+  5. 「おそらく大丈夫」「影響は小さい」などの主観的判断で継続してはならない
+- 部分的な失敗は許容される（ベストエフォート方式）が、明確なフィードバックを提供する
+
+---
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Amendment Procedure
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+この憲章の修正は、以下の手順に従う：
+
+1. **提案**: 修正提案をGitHub Issueとして提出し、変更の理由と影響範囲を説明する
+2. **議論**: コミュニティメンバーが少なくとも1週間議論する
+3. **承認**: メンテナーの過半数の承認が必要
+4. **実装**: 承認後、憲章を更新し、影響を受けるテンプレートとドキュメントを同期する
+5. **バージョン**: セマンティックバージョニングに従い、憲章のバージョンを更新する
+
+### Versioning Policy
+
+憲章のバージョンは、セマンティックバージョニング（MAJOR.MINOR.PATCH）に従う：
+
+- **MAJOR**: 後方互換性のない原則の削除または再定義
+- **MINOR**: 新しい原則/セクションの追加、または既存の原則の大幅な拡張
+- **PATCH**: 明確化、文言修正、誤字修正、非意味的な改良
+
+### Compliance Review
+
+- すべてのプルリクエストは、この憲章への準拠を確認する
+- **Critical Rules (C001-C014)の遵守は必須**: 違反は即座に却下される
+- 実装計画（plan.md）には「Constitution Check」セクションが必須
+- 憲章違反が正当化される場合、plan.mdの「Complexity Tracking」セクションに記録する
+
+### Relationship to Other Documents
+
+- **優先順位**: この憲章は、他のすべてのプロジェクトドキュメントとガイドラインに優先する
+- **Critical Rules最優先（C001）**: Critical Rulesは、この憲章内の他のセクションにも優先する
+- **ランタイムガイダンス**: 日常的な開発ガイダンスは`CLAUDE.md`と`.claude/critical-rules.xml`を参照する（コーディング規則、コマンド実行など）
+- **テンプレート**: spec-template.md、plan-template.md、tasks-template.mdは、この憲章の原則を反映する
+
+---
+
+**Version**: 1.1.0 | **Ratified**: 2025-10-13 | **Last Amended**: 2025-10-13
