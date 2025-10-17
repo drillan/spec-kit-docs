@@ -9,15 +9,16 @@
 
 spec-kit-docsは、spec-kitプロジェクトの仕様ファイル（spec.md、plan.md、tasks.md）から、SphinxまたはMkDocs形式の包括的なドキュメントを自動生成するツールです。主な機能：
 
-1. **LLM駆動のドキュメント変換**（デフォルト有効）: Functional Requirements等の技術的な仕様をエンドユーザーフレンドリーな自然言語に変換
-2. **インクリメンタル更新**: Git diffベースで変更された機能のみを更新し、LLM変換結果をキャッシュして再利用
+1. **LLM駆動のドキュメント変換**（常に有効）: README.md/QUICKSTART.md/spec.mdの技術的な仕様をエンドユーザーフレンドリーな自然言語に変換
+2. **インクリメンタル更新**: Git diffベースで変更された機能のみを更新（`--quick`フラグ使用時）
 3. **マルチフォーマットサポート**: SphinxとMkDocsの両方に対応し、Strategy Patternで拡張可能
-4. **spec-kit統合**: スラッシュコマンド（`/doc-init`、`/doc-update`）経由でClaude Code環境から直接実行
+4. **spec-kit統合**: スラッシュコマンド（`/speckit.doc-init`、`/speckit.doc-update`）経由でClaude Code環境から直接実行
 
-技術的アプローチ：
-- AIエージェント（Claude Code）がLLM変換とユーザー対話を担当
-- バックエンドスクリプト（Python）が非対話的にドキュメント生成を実行
-- `.claude/.cache/llm-transforms.json`にMD5ハッシュベースのキャッシュを永続化
+技術的アプローチ（Session 2025-10-17明確化）：
+- AIエージェント（Claude Code）がLLM変換を実行し、変換済みコンテンツをスクリプトに渡す（コマンド定義FR-022bで明示）
+- バックエンドスクリプト（Python）が変換済みコンテンツを必須パラメータとして受け取り、非対話的にドキュメント生成を実行（FR-038e）
+
+**注意**: Session 2025-10-17 決定39により、`--no-llm-transform`フラグと永続的キャッシング機能（`.claude/.cache/llm-transforms.json`）は削除されました。
 
 ## Technical Context
 
@@ -42,7 +43,7 @@ spec-kit-docsは、spec-kitプロジェクトの仕様ファイル（spec.md、p
 
 **Performance Goals**:
 - ドキュメント生成時間: 小規模プロジェクト（10機能未満）は10秒以内、中規模プロジェクト（10-50機能）は60秒以内
-- LLM変換: キャッシュ再利用率95%以上（Git diff統合により達成）
+- インクリメンタル更新（`--quick`モード）: 変更された機能のみを処理し、応答時間を短縮
 - インストール時間: 10秒以内
 
 **Constraints**:
@@ -143,9 +144,10 @@ spec-kit-docs/                        # プロジェクトルート
 │       ├── utils/                    # ユーティリティ
 │       │   ├── git.py                # Git diff検出
 │       │   ├── fs.py                 # ファイルシステム操作
-│       │   ├── template.py           # Jinja2テンプレート処理
-│       │   └── cache.py              # LLM変換キャッシュ管理
+│       │   └── template.py           # Jinja2テンプレート処理
 │       └── exceptions.py             # SpecKitDocsError例外定義
+
+**注意**: `cache.py`（LLM変換キャッシュ管理）はSession 2025-10-17 決定40で削除されました。
 ├── tests/
 │   ├── contract/                     # 契約テスト（CLIインターフェース）
 │   │   ├── test_install_command.py
@@ -188,13 +190,21 @@ N/A - All gates passed without violations.
 - CLI Framework: typer 0.9+ （spec-kit一貫性）
 - Documentation Generators: Sphinx 7.0+ + MkDocs 1.5+ （Strategy Pattern）
 - Markdown Parser: markdown-it-py 3.0+ （MyST互換）
-- Git Operations: GitPython 3.1+ （インクリメンタル更新）
+- Git Operations: GitPython 3.1+ （インクリメンタル更新、`--quick`フラグで有効化）
 - Template Engine: Jinja2 3.1+ （設定ファイル生成）
-- LLM Cache: JSON + MD5 （高速、人間可読）
 - Error Handling: SpecKitDocsError （構造化メッセージ）
 - Testing: pytest 8.0+ （TDD準拠）
-- LLM Default: デフォルト有効（opt-out via `--no-llm-transform`）
+- LLM Transform Execution: コマンド定義で明示的に実行（FR-022b）、バックエンドスクリプトは変換済みコンテンツを必須パラメータとして受け取る（FR-038e）
 - Execution Model: 非対話的（憲章準拠）
+
+**Session 2025-10-17 明確化**:
+- FR-022b: コマンド定義（`.claude/commands/speckit.doc-update.md`）に、LLM変換実行ワークフローを明示的に追加
+  - (1) docs/存在確認 → (2) LLM変換実行 → (3) 変換済みコンテンツ準備 → (4) スクリプト呼び出し（`--transformed-content <path>`）
+- FR-038e: `transformed_content`パラメータを必須（`typer.Option(...)`）に変更し、変換実行を保証
+
+**注意**: 以下の技術決定は後に削除されました：
+- ~~LLM Cache: JSON + MD5~~ → Session 2025-10-17 決定40で削除
+- ~~LLM Default: opt-out via `--no-llm-transform`~~ → Session 2025-10-17 決定39で削除
 
 すべての技術選定は代替案との比較、根拠、ベストプラクティスを記録済み。
 
@@ -214,8 +224,9 @@ N/A - All gates passed without violations.
 - **BaseGenerator**: 抽象ベースクラス（Strategy Pattern）
 - **SphinxGenerator / MkDocsGenerator**: 具体的実装
 - **SpecParser / PlanParser / TasksParser**: Markdown解析
-- **LLMTransformCache**: キャッシュ管理（MD5ハッシュ、JSON永続化）
 - **SpecKitDocsError**: 構造化エラー
+
+**注意**: ~~**LLMTransformCache**~~（キャッシュ管理）はSession 2025-10-17 決定40で削除されました。
 
 ### contracts/
 CLIインターフェース契約を定義：
@@ -261,9 +272,15 @@ CLIインターフェース契約を定義：
 
 ## Next Steps
 
-1. **Phase 2**: `/speckit.tasks`コマンドを実行してtasks.mdを生成
+1. **Phase 2**: `/speckit.tasks`コマンドを実行してtasks.mdを再生成
 2. **Implementation**: `/speckit.implement`コマンドでタスクを順次実行
 3. **Testing**: TDDサイクルに従い、各タスク実装前にテストを作成
 
-**注意**: tasks.mdは既に存在していますが、最新のspec.md（LLM変換デフォルト有効化）とplan.mdを反映させるため、`/speckit.tasks`の再実行を推奨。
+**tasks.md再生成の必要性**:
+tasks.mdは既に存在していますが、Session 2025-10-17のspec.md更新（FR-022b、FR-038e追加）を反映させるため、`/speckit.tasks`の再実行が**必須**です。
+
+**主な変更点**:
+- FR-022b: コマンド定義にLLM変換実行ワークフローを追加（AIエージェントがLLM変換を実行し、変換済みコンテンツをスクリプトに渡す）
+- FR-038e: `transformed_content`パラメータを必須（`typer.Option(...)`）に変更
+- `.claude/commands/speckit.doc-update.md`と`doc_update.py`の実装が、明確な責務分担を反映する必要がある
 
