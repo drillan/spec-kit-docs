@@ -1,10 +1,9 @@
 {#
 Feature Page Template
-Combines spec.md, plan.md, and tasks.md into a single documentation page
-FR-015: Spec extraction
-FR-016: Plan architecture sections
-FR-017: Tasks summary
-FR-018: Missing file notes
+Generates end-user documentation from spec.md (LLM-transformed content)
+FR-015: Spec extraction with LLM transformation
+Session 2025-10-17: plan.md and tasks.md excluded from end-user documentation
+FR-018: Missing file notes (spec.md only)
 #}
 # {{ feature.name | replace("-", " ") | title }}
 
@@ -19,31 +18,13 @@ FR-018: Missing file notes
 
 ---
 
-{% if plan_content %}
-## Implementation Plan
-
-{{ plan_content }}
+{# FR-038d: Link to original spec.md for detailed technical information #}
+**詳細な技術仕様**: 元の技術仕様書は [`{{ feature.spec_file.name }}`]を参照してください。
 
 ---
-{% else %}
-{# FR-018: Show note for missing plan #}
-> **Note**: Implementation plan (plan.md) is not yet available for this feature.
 
----
-{% endif %}
-
-{% if tasks_content %}
-## Implementation Tasks
-
-{{ tasks_content }}
-
----
-{% else %}
-{# FR-018: Show note for missing tasks #}
-> **Note**: Implementation tasks (tasks.md) have not been generated for this feature yet.
-
----
-{% endif %}
+{# Session 2025-10-17: plan.md and tasks.md are excluded from end-user documentation #}
+{# Developer-facing information is available via the original spec files linked below #}
 
 ## Feature Files
 

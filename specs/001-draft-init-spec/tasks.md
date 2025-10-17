@@ -367,3 +367,45 @@ MVP完成後の追加機能（P2、P3）:
 ---
 
 **注意**: このtasks.mdは、Session 2025-10-17の最新の明確化（FR-022b、FR-038e）を反映しています。コマンド定義（`.claude/commands/speckit.doc-update.md`）がLLM変換実行ワークフローを含み、バックエンドスクリプト（`doc_update.py`）が`transformed_content`を必須パラメータとして受け取る設計になっています。
+
+---
+
+## Phase 8: Session 2025-10-17 Content Filtering Strategy
+
+**Purpose**: Session 2025-10-17 Content Filtering Strategy対応 - エンドユーザー向けドキュメントから開発者向け情報（plan.md、tasks.md）を除外
+
+**Session 2025-10-17 Decision**: plan.md と tasks.md をエンドユーザー向けドキュメントから除外し、元の仕様書へのリンク（Feature Filesセクション）経由でアクセス可能にする
+
+### Implementation Tasks (Session 2025-10-17)
+
+- [X] T085 [P] [Session-2025-10-17] テンプレート修正: src/speckit_docs/templates/feature-page.md.jinja2から`{% if plan_content %}`ブロックと`{% if tasks_content %}`ブロックを完全に削除し、Feature Filesセクションのみ保持（元の仕様書へのリンク提供）
+- [X] T086 [P] [Session-2025-10-17] FeaturePageGenerator修正: src/speckit_docs/generators/feature_page.pyの`generate_pages()`メソッド内で`plan_doc = None`、`tasks_doc = None`を設定し、plan.md/tasks.mdの読み込みを完全にスキップ（87-111行目を修正）
+- [X] T087 [P] [Session-2025-10-17] DocumentGenerator修正: src/speckit_docs/generators/document.pyの`generate_feature_page()`メソッドで、plan_doc/tasks_docパラメータがNoneの場合でもエラーにならないことを確認（既に対応済み、docstring更新のみ）
+- [X] T088 [P] [Session-2025-10-17] 契約テスト更新: tests/contract/test_doc_update_command.pyに「生成されたドキュメントにplan.mdとtasks.mdの内容が含まれないことを確認」テストを追加（5つのテストケース作成）
+- [X] T089 [P] [Session-2025-10-17] 統合テスト更新: tests/integration/test_sphinx_generation.pyとtest_mkdocs_generation.pyに「plan.md/tasks.mdの技術的詳細が含まれていない」assertion追加
+- [X] T090 [P] [Session-2025-10-17] 受け入れシナリオ検証: User Story 2の新しい受け入れシナリオ（LLM変換済みコンテンツ含む、plan.md/tasks.md除外）が満たされることを検証
+
+**Checkpoint**: Session 2025-10-17 Content Filtering Strategy実装完了、全テストパス ✅
+
+### Verification Results (Session 2025-10-17)
+
+1. ✅ 生成されたドキュメントに「## Implementation Plan」セクションが存在しない
+2. ✅ 生成されたドキュメントに「## Implementation Tasks」セクションが存在しない
+3. ✅ 「## Feature Files」セクションが存在し、spec.md/plan.md/tasks.mdへのリンクが含まれる
+4. ✅ LLM変換済みのユーザーフレンドリーなコンテンツ（機能の目的、使い方、価値）が含まれる
+5. ✅ 契約テストと統合テストが全てパスする（5つの契約テスト、2つの統合テスト）
+
+---
+
+## Updated Total Tasks
+
+- **Phase 1 (Setup)**: 5タスク（完了5/5）
+- **Phase 2 (Foundational)**: 7タスク（完了7/7）
+- **Phase 3 (US3)**: 10タスク（完了9/10、T018のみ未完了）
+- **Phase 4 (US1)**: 14タスク（完了14/14）
+- **Phase 5 (US2)**: 16タスク（完了16/16）
+- **Phase 6 (US7)**: 16タスク（完了3/16、T053-T070未完了）
+- **Phase 7 (Polish)**: 9タスク（完了4/9）
+- **Phase 8 (Session 2025-10-17)**: 6タスク（完了6/6） ✅
+
+**合計**: 83タスク（完了64/83、残り19タスク）

@@ -162,6 +162,15 @@ User can test the system.
             index_content = (docs_dir / "index.md").read_text()
             assert "test-feature" in index_content, "index.md should reference feature page"
 
+            # Session 2025-10-17: Verify plan.md/tasks.md content is excluded
+            feature_content = feature_page.read_text()
+            assert (
+                "## Implementation Plan" not in feature_content
+            ), "Feature page must NOT contain Implementation Plan section"
+            assert (
+                "## Implementation Tasks" not in feature_content
+            ), "Feature page must NOT contain Implementation Tasks section"
+
         finally:
             os.chdir(original_dir)
 

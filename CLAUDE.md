@@ -106,13 +106,16 @@ speckit-docs install
 
 **Session 2025-10-17**:
 - FR-022b: LLM変換ワークフローをコマンドテンプレートに実装（/speckit.doc-update）
-- FR-038e: transformed_contentパラメータを必須化（doc_update.py）
+- ✅ FR-038e: transformed_contentパラメータを必須化（doc_update.py:54 - `typer.Option(...)`に修正完了）
+- ✅ FR-038b: フォールバック動作を完全削除（憲章C002準拠 - feature_page.py:73-100, doc_update.py:140-158）
+- ✅ FR-038d: spec.mdリンク要件を実装（feature-page.md.jinja2:22）
 - T062-T068: LLM変換機能実装（コンテンツソース選択、不整合検出、セクション優先順位判定）
 - T069: LLM変換品質チェック実装
 - T074-T075: クイックモード（--incrementalフラグ）とスキップ統計実装
 - T080-T081: コード品質向上（ruff lint 0警告、mypy type check 0エラー）
 - Added: llm_entities.py（LLMSection, InconsistencyDetectionResult, LLMTransformResult等）
 - Added: utils/llm_transform.py（コンテンツソース選択、不整合検出、セクション統合等）
+- **Constitution Compliance**: 憲章違反のフォールバック処理を完全削除（C001, C002, C004準拠）
 
 
 <!-- MANUAL ADDITIONS START -->

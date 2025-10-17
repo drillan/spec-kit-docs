@@ -2,10 +2,9 @@
 DocumentGenerator - Generate feature documentation pages.
 
 FR-012: Feature page generation
-FR-015: Spec content extraction
-FR-016: Plan architecture sections
-FR-017: Tasks summary
-FR-018: Missing file notes
+FR-015: Spec content extraction (LLM-transformed)
+Session 2025-10-17: plan.md and tasks.md excluded from end-user documentation
+FR-018: Missing file notes (spec.md only)
 """
 
 from jinja2 import Environment, PackageLoader
@@ -32,22 +31,21 @@ class DocumentGenerator:
         tasks_doc: Document | None = None,
     ) -> str:
         """
-        Generate a feature documentation page from spec, plan, and tasks documents.
+        Generate a feature documentation page from spec document.
 
         Args:
             feature: Feature object containing metadata
-            spec_doc: Specification document (required)
-            plan_doc: Plan document (optional, FR-016)
-            tasks_doc: Tasks document (optional, FR-017)
+            spec_doc: Specification document (required, LLM-transformed)
+            plan_doc: Deprecated parameter (Session 2025-10-17, always None)
+            tasks_doc: Deprecated parameter (Session 2025-10-17, always None)
 
         Returns:
             Generated Markdown content for the feature page
 
         FR-012: Generate comprehensive feature page
-        FR-015: Extract all sections from spec.md
-        FR-016: Include architecture from plan.md if available
-        FR-017: Include task summary from tasks.md if available
-        FR-018: Show notes for missing files
+        FR-015: Extract all sections from spec.md (LLM-transformed)
+        Session 2025-10-17: plan.md and tasks.md excluded from end-user documentation
+        FR-018: Show notes for missing spec.md
         """
         template = self.env.get_template("feature-page.md.jinja2")
 
