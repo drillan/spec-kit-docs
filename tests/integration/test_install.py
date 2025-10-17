@@ -127,7 +127,7 @@ class TestInstallIntegration:
         assert "sphinx" in result.stdout.lower()
         assert "ドキュメントプロジェクトの初期化が完了しました" in result.stdout
 
-        # Test doc_update.py with arguments
+        # Test doc_update.py requires --transformed-content (FR-038e)
         script_path = tmp_path / ".specify" / "scripts" / "docs" / "doc_update.py"
         result = subprocess.run(
             ["uv", "run", "python", str(script_path), "--full"],
@@ -135,5 +135,6 @@ class TestInstallIntegration:
             text=True,
         )
 
-        assert result.returncode == 0
-        assert "フル" in result.stdout or "full" in result.stdout.lower()
+        # FR-038e: Should fail without --transformed-content parameter
+        assert result.returncode != 0
+        assert "transformed-content" in result.stderr.lower() or "required" in result.stderr.lower()
