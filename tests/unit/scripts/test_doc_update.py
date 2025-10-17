@@ -1,5 +1,7 @@
 """Unit tests for doc_update.py (T025)."""
 
+import json
+
 from speckit_docs.scripts.doc_update import main
 
 
@@ -29,8 +31,16 @@ class TestDocUpdate:
             "# Feature Two\n\n## Overview\n\nSecond feature"
         )
 
+        # Create transformed content JSON (FR-038e: required)
+        transformed_content_file = tmp_path / "transformed_content.json"
+        transformed_content_map = {
+            "001-feature-one": {"spec_content": "# Feature One\n\n## Overview\n\nFirst feature"},
+            "002-feature-two": {"spec_content": "# Feature Two\n\n## Overview\n\nSecond feature"},
+        }
+        transformed_content_file.write_text(json.dumps(transformed_content_map))
+
         # Run doc_update (full mode to avoid git dependency)
-        result = main(incremental=False)
+        result = main(incremental=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
