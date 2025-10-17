@@ -231,7 +231,7 @@ def main() -> int:
         # Step 8: Handle dependency installation (FR-008f)
         console = Console()
         print("\n依存関係の確認中...")
-        dep_result = handle_dependencies(
+        _ = handle_dependencies(
             doc_type=config.tool,
             auto_install=args.auto_install,
             no_install=args.no_install,
