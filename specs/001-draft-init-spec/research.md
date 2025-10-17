@@ -1295,4 +1295,334 @@ def handle_dependencies(
 
 ---
 
-**Version**: 1.2.0 | **Last Updated**: 2025-10-16 | **Contributor**: AI Agent (Claude Code)
+## 9. LLM統合とREADME/QUICKSTART統合の技術決定
+
+### Session 2025-10-17 (No-Transform Flag Removal & Quick Mode)
+
+#### 決定39: `--no-llm-transform`フラグの削除
+
+**決定**: `--no-llm-transform`フラグを完全に削除し、LLM変換のみをサポートする。
+
+**根拠**:
+- ユーザーストーリーとの不整合：メカニカルなドキュメントコピー機能は本来の目的（ユーザーフレンドリーなドキュメント生成）に反する
+- 機能の焦点明確化：LLM変換に特化することで、機能の目的が明確になる
+- メンテナンスコスト削減：2つのモード（LLM変換 + メカニカルコピー）を維持する複雑性を排除
+
+**検討された代替案**:
+- `--no-llm-transform`を保持してメカニカルコピーを提供 → ユーザーストーリーとの不整合が継続
+- LLM変換をオプション化 → デフォルト動作が不明確になる
+
+**トレードオフ**:
+- LLM API依存が必須になる（ANTHROPIC_API_KEY環境変数必須）
+- オフライン環境での使用ができない
+
+**実装ノート**:
+- FR-038から`--no-llm-transform`参照を削除
+- FR-038e（キャッシュ機能）とFR-038h（`--clear-cache`フラグ）を削除（キャッシュは`--no-llm-transform`と連動していた）
+- SC-025（キャッシュ関連成功基準）を削除
+
+---
+
+#### 決定40: LLM変換失敗時の厳格なエラーハンドリング
+
+**決定**: LLM API呼び出し失敗時は、プロセスを完全に中断し、明確なエラーメッセージを表示する（リトライなし、フォールバックなし）。
+
+**根拠**:
+- 憲章原則「Primary Data Non-Assumption Principle」準拠：暗黙的なフォールバックやデフォルト値の使用を禁止
+- エラー削減優先：不完全なドキュメント生成を避け、明確なエラーで失敗を通知
+- 明示的なエラー伝播：ユーザーが問題の原因と対処方法を理解できるエラーメッセージ
+
+**検討された代替案**:
+- リトライ戦略を実装 → 憲章原則違反（暗黙的フォールバック）
+- デフォルトコンテンツで続行 → 憲章原則違反、不完全なドキュメント生成
+
+**トレードオフ**:
+- ユーザーは手動でリトライする必要がある
+- LLMレート制限超過時は即座に失敗する
+
+**実装ノート**:
+```python
+try:
+    response = client.messages.create(...)
+except APIError as e:
+    raise SpecKitDocsError(
+        f"LLM API call failed: {e}. "
+        f"Please check your ANTHROPIC_API_KEY and retry."
+    )
+```
+
+---
+
+#### 決定41: キャッシュ機能の削除
+
+**決定**: FR-038e（キャッシュ機能）とFR-038h（`--clear-cache`フラグ）を削除する。
+
+**根拠**:
+- キャッシュは`--no-llm-transform`モードと連動していた（メカニカルコピーの高速化）
+- `--no-llm-transform`削除により、キャッシュの主要ユースケースが消失
+- LLM変換は毎回実行されるべき（仕様変更を反映するため）
+
+**検討された代替案**:
+- LLM変換結果をキャッシュ → 仕様変更時にキャッシュ無効化が必要で複雑化
+
+**トレードオフ**:
+- LLM変換が毎回実行されるため、処理時間が増加する可能性
+- `--quick`モードで変更検出により処理量を削減（代替策）
+
+**実装ノート**:
+- FR-038e、FR-038h削除
+- SC-025（キャッシュ統計）、SC-025b（`--clear-cache`）削除
+
+---
+
+#### 決定42: `--quick`フラグによる変更検出モード
+
+**決定**: デフォルトで全機能変換、`--quick`フラグでGit diff検出による変更機能のみ処理。
+
+**根拠**:
+- 開発中の頻繁なドキュメント更新では、変更検出が有効（パフォーマンス向上）
+- コミットごとに全機能を変換する必要がないケースが多い（通常は1-2機能の変更）
+- `--quick`をオプション化することで、デフォルト動作（全機能変換）が明確
+
+**検討された代替案**:
+- デフォルトで変更検出、`--full`フラグで全機能変換 → デフォルト動作が不明確
+- 常に全機能変換 → パフォーマンスが低下
+
+**トレードオフ**:
+- ユーザーは`--quick`フラグの存在を知る必要がある
+- Git diff検出が正確でない場合（未コミット変更等）、変更が反映されない可能性
+
+**実装ノート**:
+- FR-038g: `--quick`フラグサポート
+- GitPython 3.1+で`git diff --name-only HEAD~1 HEAD`を実行
+- 変更されたspec.md/README.md/QUICKSTART.mdを検出
+
+---
+
+#### 決定43: モード別統計情報表示
+
+**決定**: `--quick`モード使用時は処理対象機能数とスキップ数を表示、通常モードは全機能数を表示。
+
+**根拠**:
+- ユーザーがどの機能が処理されたかを把握できる
+- `--quick`モードの効果（スキップ数）を可視化
+
+**実装ノート**:
+```
+処理完了:
+- 処理対象機能: 3機能
+- スキップ: 7機能（変更なし）
+- 合計: 10機能
+```
+
+---
+
+### Session 2025-10-17 (README/QUICKSTART Integration Strategy)
+
+#### 決定44: README/QUICKSTART統合戦略
+
+**決定**: README.md/QUICKSTART.mdが両方存在する場合、不整合検出（FR-038-integ-a）を実行後、セクション単位の統合（FR-038-integ-b）により両方の内容を統合する。
+
+**根拠**:
+- 重要な情報が分散している場合、両方を統合することで完全なドキュメント生成が可能
+- 不整合（技術スタック、主要機能、目的の食い違い）がある場合は警告を出して中止（データ品質保証）
+- 完全優先（README.mdのみ使用）では、QUICKSTART.mdの重要情報が失われる可能性
+
+**検討された代替案**:
+- README.md完全優先 → QUICKSTART.mdの情報が失われる
+- QUICKSTART.md完全優先 → README.mdの情報が失われる
+- 手動選択をユーザーに求める → 非対話型実行原則に違反
+
+**トレードオフ**:
+- セクション統合処理の複雑性が増加
+- LLM呼び出し回数が増加（不整合検出 + 優先順位判定）
+
+**実装ノート**:
+- FR-038: 4つのシナリオ（統合、README.mdのみ、QUICKSTART.mdのみ、spec.md抽出）
+- FR-038-integ-a: LLMによる不整合検出
+- FR-038-integ-b: markdown-it-pyによるセクションパース + LLM優先順位判定
+
+---
+
+#### 決定45: LLMによる不整合検出（FR-038-integ-a）
+
+**決定**: README.mdとQUICKSTART.mdの両方をLLMに渡し、「これら2つのファイルは同じプロジェクトを説明していますか？重大な矛盾がありますか？」と判定を依頼する。
+
+**根拠**:
+- 技術スタック、主要機能、プロジェクト目的の矛盾を自動検出
+- 許容される差異（表記揺れ、詳細度の違い）と重大な矛盾を区別
+- 日本語を含む多言語対応（LLMの自然言語理解能力を活用）
+
+**許容される差異**:
+- 表記揺れ（「Python」vs「python」）
+- 詳細度の違い（片方が詳細、片方が概要）
+- 補完的な情報（片方が技術詳細、片方がユーザーガイド）
+
+**不整合とみなす**:
+- 異なる技術スタック（「Pythonプロジェクト」vs「Rustプロジェクト」）
+- 矛盾する機能説明
+- 異なるプロジェクト目的
+
+**実装ノート**:
+```python
+INCONSISTENCY_DETECTION_PROMPT = """
+You are a technical documentation analyzer...
+**Response format (JSON):**
+{
+  "is_consistent": true/false,
+  "inconsistencies": [...],
+  "summary": "..."
+}
+"""
+```
+
+---
+
+#### 決定46: セクション単位の統合とLLM優先順位判定（FR-038-integ-b）
+
+**決定**: markdown-it-pyを使用して両方のファイルをセクション（見出し`##`, `###`）単位でパースし、LLMに優先順位判定を依頼。
+
+**処理手順**:
+1. markdown-it-pyで両方のファイルをセクション単位でパース
+2. 抽出した全ての見出しリスト（ファイル名と見出しテキストのペア）をLLMに渡す
+3. LLM: 「エンドユーザー（非技術者を含む）にとって重要度が高い順に並び替えてください」と依頼
+4. 優先順位に従ってセクションを順次追加し、合計10,000トークン以内に収める
+5. 10,000トークン超過によりセクションが除外された場合、警告メッセージで除外セクションを表示
+
+**根拠**:
+- エンドユーザー視点での重要度判定（LLMの文脈理解能力を活用）
+- 10,000トークン制限内での最適なコンテンツ選択
+- 日本語見出しを含む多言語対応
+
+**検討された代替案**:
+- ファイル順固定（README.md → QUICKSTART.md） → 重要度に基づかない
+- トークン数比率で分割（50%ずつ） → 重要度に基づかない
+- ルールベース優先順位（「Installation」優先等） → 柔軟性に欠ける
+
+**トレードオフ**:
+- LLM呼び出し1回追加（優先順位判定）
+- markdown-it-py依存追加
+
+**実装ノート**:
+```python
+from markdown_it import MarkdownIt
+
+def parse_sections(markdown_content: str, filename: str) -> list[dict]:
+    md = MarkdownIt()
+    tokens = md.parse(markdown_content)
+    sections = []
+    for token in tokens:
+        if token.type == "heading_open" and token.tag in ["h2", "h3"]:
+            sections.append({
+                "file": filename,
+                "heading": token.content,
+                "level": token.tag
+            })
+    return sections
+```
+
+---
+
+#### 決定47: LLM統合の技術選定
+
+**決定**: anthropic-sdk-python（公式SDK）を採用。
+
+**根拠**:
+- 公式サポート、型ヒント完備、エラーハンドリング組み込み
+- 憲章原則「Primary Data Non-Assumption」に適合（明示的なエラー伝播）
+- ストリーミング対応（将来的な拡張性）
+
+**検討された代替案**:
+- httpx + 手動実装 → エラーハンドリング、リトライ等を自前実装（複雑性増加）
+
+**実装ノート**:
+```python
+import anthropic
+import os
+
+def get_anthropic_client() -> anthropic.Anthropic:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise SpecKitDocsError(
+            "ANTHROPIC_API_KEY environment variable is not set. "
+            "Please set it to your Anthropic API key."
+        )
+    return anthropic.Anthropic(api_key=api_key)
+```
+
+**pyproject.toml更新**:
+```toml
+dependencies = [
+    "anthropic>=0.18.0",
+    # ...
+]
+```
+
+---
+
+#### 決定48: Claude APIレート制限対応
+
+**決定**: 逐次処理を採用し、レート制限超過時は明確なエラーメッセージで中断（リトライなし）。
+
+**根拠**:
+- Claude API Tier 1制限: 50 RPM、40,000 TPM
+- `/doc-update`で5機能処理: 5リクエスト × 10,000トークン = 50,000トークン（TPM超過の可能性）
+- 並列処理はレート制限超過リスクが高い
+- 憲章原則「Primary Data Non-Assumption」準拠（リトライは暗黙的フォールバック）
+
+**対策**:
+1. 逐次処理: 1機能ずつ処理
+2. `--quick`モード推奨: 変更検出により処理対象機能を削減
+
+**実装ノート**:
+```python
+try:
+    response = client.messages.create(...)
+except RateLimitError as e:
+    raise SpecKitDocsError(
+        f"Anthropic API rate limit exceeded: {e}. "
+        f"Please wait and retry later."
+    )
+```
+
+---
+
+#### 決定49: タイムアウト設定
+
+**決定**: LLM API呼び出しにタイムアウトを設定（30-60秒、処理内容により可変）。
+
+**推奨タイムアウト値**:
+- 不整合検出（FR-038-integ-a）: 30秒
+- セクション優先順位判定（FR-038-integ-b）: 45秒
+- spec.md抽出: 60秒
+
+**実装ノート**:
+```python
+response = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=4096,
+    messages=[{"role": "user", "content": prompt}],
+    timeout=60  # seconds
+)
+```
+
+---
+
+### 技術的決定のまとめ（Session 2025-10-17）
+
+| 項目 | 決定 | 根拠 |
+|------|------|------|
+| `--no-llm-transform`フラグ | 削除 | ユーザーストーリーとの整合性、機能焦点明確化 |
+| LLM変換失敗時 | 厳格なエラー中断 | 憲章原則「Primary Data Non-Assumption」準拠 |
+| キャッシュ機能 | 削除 | `--no-llm-transform`削除により不要 |
+| `--quick`フラグ | 追加（変更検出モード） | 開発効率向上、パフォーマンス最適化 |
+| README/QUICKSTART統合 | 不整合検出 + セクション統合 | 完全なドキュメント生成、データ品質保証 |
+| 不整合検出 | LLMによる判定 | 多言語対応、文脈理解 |
+| セクション優先順位 | LLMによる判定 | エンドユーザー視点の重要度評価 |
+| LLM SDK | anthropic-sdk-python | 公式サポート、型安全性 |
+| レート制限対応 | 逐次処理 + エラー中断 | レート制限超過リスク回避 |
+| タイムアウト | 30-60秒（可変） | 処理内容により調整 |
+
+---
+
+**Version**: 1.3.0 | **Last Updated**: 2025-10-17 | **Contributor**: AI Agent (Claude Code)

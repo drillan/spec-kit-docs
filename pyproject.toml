@@ -24,6 +24,7 @@ dependencies = [
     "GitPython>=3.1",
     "Jinja2>=3.1",
     "ruamel.yaml>=0.18",
+    "PyYAML>=6.0",
     "specify-cli",
 ]
 
@@ -35,6 +36,12 @@ dev = [
     "mypy>=1.0",
     "types-PyYAML>=6.0",
     "pyfakefs>=5.0",
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.0",
+]
+docs = [
+    "myst-parser>=2.0",
+    "sphinx>=7.0",
 ]
 
 [project.scripts]

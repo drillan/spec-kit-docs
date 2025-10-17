@@ -44,38 +44,70 @@ class FeaturePageGenerator:
         self.document_generator = DocumentGenerator()
         self.markdown_parser = MarkdownParser()
 
-    def generate_pages(self, features: list[Feature]) -> list[Path]:
+    def generate_pages(
+        self,
+        features: list[Feature],
+        transformed_content_map: dict[str, dict[str, str]],
+    ) -> list[Path]:
         """
         Generate feature pages for all features.
 
         Args:
             features: List of Feature objects to generate pages for
+            transformed_content_map: Required mapping of feature directory names to LLM-transformed content
+                Format: {"001-user-auth": {"spec_content": "..."}}
+                (FR-038e, FR-038f: LLM transformation is always executed)
+
+        Raises:
+            SpecKitDocsError: If transformed_content_map is None or missing required feature keys
 
         Returns:
             List of generated page file paths
 
         FR-013: FLAT structure - pages in docs/ root
         FR-014: COMPREHENSIVE structure - pages in docs/features/
+        FR-038f: LLM-transformed content integration
         """
         generated_pages: list[Path] = []
 
         for feature in features:
-            # Parse spec.md (required)
-            spec_doc = self._parse_document(feature.spec_file, DocumentType.SPEC)
+            # FR-038e: transformed_content_map is always provided (required parameter)
+            # FR-038b: No fallback - raise error if content missing
+            feature_key = f"{feature.id}-{feature.name}"
 
-            # Parse plan.md (optional, FR-016)
-            plan_doc = (
-                self._parse_document(feature.plan_file, DocumentType.PLAN)
-                if feature.plan_file and feature.plan_file.exists()
-                else None
+            if feature_key not in transformed_content_map:
+                from ..exceptions import SpecKitDocsError
+                raise SpecKitDocsError(
+                    message=f"機能 '{feature_key}' のLLM変換済みコンテンツが見つかりません。",
+                    suggestion="コマンドテンプレート /speckit.doc-update の Step 1（LLM変換実行）を確認してください。",
+                    file_path=feature.spec_file,
+                    error_type="Missing Transformed Content"
+                )
+
+            transformed = transformed_content_map[feature_key]
+
+            if not transformed.get("spec_content"):
+                from ..exceptions import SpecKitDocsError
+                raise SpecKitDocsError(
+                    message=f"機能 '{feature_key}' のspec_contentが空です。",
+                    suggestion="LLM変換処理を確認してください。",
+                    file_path=feature.spec_file,
+                    error_type="Empty Content"
+                )
+
+            # Use LLM-transformed content only (FR-038, FR-038b)
+            spec_doc = Document(
+                file_path=feature.spec_file,
+                type=DocumentType.SPEC,
+                content=transformed["spec_content"],
+                sections=self.markdown_parser.parse(transformed["spec_content"]),
             )
 
-            # Parse tasks.md (optional, FR-017)
-            tasks_doc = (
-                self._parse_document(feature.tasks_file, DocumentType.TASKS)
-                if feature.tasks_file and feature.tasks_file.exists()
-                else None
-            )
+            # Session 2025-10-17: plan.md and tasks.md are excluded from end-user documentation
+            # FR-016 (deleted), FR-017 (deleted): Developer-facing information is available
+            # via links in the Feature Files section
+            plan_doc = None
+            tasks_doc = None
 
             # Generate page content
             page_content = self.document_generator.generate_feature_page(

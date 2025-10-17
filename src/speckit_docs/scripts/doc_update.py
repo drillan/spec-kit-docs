@@ -11,8 +11,11 @@ FR-013: FLAT structure navigation update
 FR-014: COMPREHENSIVE structure navigation update
 FR-019: Incremental update
 FR-020: Update summary display
+FR-038f: LLM-transformed content integration (T071-T074)
+FR-038g: Skip LLM transformation option (T072)
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -48,9 +51,22 @@ def main(
     incremental: bool = typer.Option(
         True, "--incremental/--full", help="Incremental or full update"
     ),
+    transformed_content: Path = typer.Option(
+        ..., "--transformed-content", help="Path to JSON file with LLM-transformed content"
+    ),
 ) -> int:
-    """Update documentation from spec-kit specifications."""
+    """Update documentation from spec-kit specifications.
+
+    Args:
+        incremental: Enable incremental update using Git diff
+        transformed_content: Path to JSON file containing LLM-transformed content per feature (FR-038e: REQUIRED)
+
+    Note:
+        Session 2025-10-17 FR-038e: --transformed-content parameter is now REQUIRED.
+        LLM transformation is always executed by the command template before calling this script.
+    """
     try:
+        # FR-038e: Parameter is now required by typer.Option(...), no manual check needed
         # FR-010: Validate documentation project exists
         docs_dir = Path("docs")
         if not docs_dir.exists():
@@ -73,6 +89,10 @@ def main(
         console.print("\n[bold]機能を検出中...[/bold]")
         discoverer = FeatureDiscoverer()
 
+        # T075: Track all features for skip statistics
+        all_features = discoverer.discover_features()
+        total_features_count = len(all_features)
+
         if incremental:
             # FR-019: Incremental update using Git diff
             try:
@@ -81,8 +101,12 @@ def main(
 
                 if changed_features:
                     features = changed_features
+                    skipped_count = total_features_count - len(features)
                     console.print(
                         f"[green]✓[/green] {len(features)} 個の変更された機能を検出しました（インクリメンタル更新）"
+                    )
+                    console.print(
+                        f"[dim]  {skipped_count} 個の機能をスキップしました（変更なし）[/dim]"
                     )
                 else:
                     console.print(
@@ -94,10 +118,12 @@ def main(
                 console.print(
                     "[yellow]Note:[/yellow] Git履歴が見つかりません。フル更新にフォールバックします。"
                 )
-                features = discoverer.discover_features()
+                features = all_features
+                skipped_count = 0
         else:
             # Full update
-            features = discoverer.discover_features()
+            features = all_features
+            skipped_count = 0
             console.print(f"[green]✓[/green] {len(features)} 個の機能を検出しました（フル更新）")
 
         if not features:
@@ -108,10 +134,33 @@ def main(
             console.print("  /speckit.specify を実行して機能仕様を作成してください。")
             return 1
 
-        # FR-012, FR-013, FR-014: Generate feature pages
+        # T071: Load LLM-transformed content (FR-038e: always provided)
+        llm_stats = {"total_features": len(features), "transformed_features": 0, "original_features": 0}
+
+        console.print(f"\n[bold]LLM変換済みコンテンツを読み込み中...[/bold] ({transformed_content})")
+        try:
+            with open(transformed_content, encoding="utf-8") as f:
+                transformed_content_map = json.load(f)
+
+            llm_stats["transformed_features"] = len(transformed_content_map)
+            llm_stats["original_features"] = len(features) - llm_stats["transformed_features"]
+
+            console.print(f"[green]✓[/green] {llm_stats['transformed_features']} 件の変換済みコンテンツを読み込みました")
+        except FileNotFoundError:
+            raise SpecKitDocsError(
+                f"LLM変換済みコンテンツファイルが見つかりません: {transformed_content}",
+                "コマンドテンプレート /speckit.doc-update の Step 1（LLM変換実行）を確認してください。"
+            )
+        except json.JSONDecodeError as e:
+            raise SpecKitDocsError(
+                f"LLM変換済みコンテンツのJSON解析に失敗しました: {e}",
+                f"ファイル {transformed_content} のJSON形式を確認してください。"
+            )
+
+        # FR-012, FR-013, FR-014: Generate feature pages with optional LLM-transformed content (T073)
         console.print("\n[bold]ドキュメントページを生成中...[/bold]")
         page_generator = FeaturePageGenerator(docs_dir, structure_type, tool)
-        feature_pages = page_generator.generate_pages(features)
+        feature_pages = page_generator.generate_pages(features, transformed_content_map)
 
         console.print(f"[green]✓[/green] {len(feature_pages)} ページを生成しました")
 
@@ -122,11 +171,25 @@ def main(
 
         console.print("[green]✓[/green] ナビゲーションを更新しました")
 
-        # FR-020: Display update summary
+        # FR-020: Display update summary with LLM transform statistics (T074)
         console.print("\n[bold green]✓ ドキュメント更新が完了しました！[/bold green]")
         console.print("\n[bold]サマリー:[/bold]")
         console.print(f"  • 更新された機能: {len(features)}")
         console.print(f"  • 生成されたページ: {len(feature_pages)}")
+
+        # T075: Display skip statistics (incremental mode only)
+        if incremental and 'skipped_count' in locals():
+            console.print(f"  • スキップ（変更なし）: {skipped_count}")
+
+        # T074: Display LLM transform statistics
+        if transformed_content_map:
+            console.print("\n[bold]LLM変換統計:[/bold]")
+            console.print(f"  • 合計機能数: {llm_stats['total_features']}")
+            console.print(f"  • LLM変換済み: {llm_stats['transformed_features']}")
+            console.print(f"  • 元のコンテンツ: {llm_stats['original_features']}")
+            if llm_stats["transformed_features"] > 0:
+                percentage = (llm_stats["transformed_features"] / llm_stats["total_features"]) * 100
+                console.print(f"  • 変換率: {percentage:.1f}%")
 
         return 0
 

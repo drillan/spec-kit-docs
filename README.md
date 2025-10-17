@@ -209,10 +209,11 @@ The system is designed for easy extension:
 
 ### Automatic Feature Documentation
 
+- **LLM-transformed content**: Converts technical specifications into user-friendly documentation
 - Extracts user stories, requirements, and technical details from spec.md
-- Generates implementation guides from plan.md
-- Creates task lists and progress tracking from tasks.md
+- **Developer resources**: Links to plan.md and tasks.md for technical details (not included in end-user docs)
 - Maintains cross-references between features
+- **Content source selection**: Automatically chooses between README.md, QUICKSTART.md, or spec.md based on availability
 
 ### Flexible Configuration
 
@@ -244,7 +245,8 @@ The current MVP version of spec-kit-docs includes:
 #### Core Functionality
 - ✅ **Documentation Initialization**: Set up Sphinx or MkDocs projects
 - ✅ **Feature Documentation Generation**: Automatically generate docs from spec.md
-- ✅ **Incremental Updates**: Update only changed features
+- ✅ **LLM Content Transformation**: Convert technical specifications to user-friendly documentation with AI
+- ✅ **Incremental Updates**: Update only changed features with Git diff detection
 - ✅ **CLI Installation**: Install slash commands via `install_handler()`
 - ✅ **Template System**: Jinja2-based templates for customization
 
@@ -254,16 +256,16 @@ The current MVP version of spec-kit-docs includes:
 
 #### Quality Assurance
 - ✅ **Type Safety**: Full mypy --strict compliance
-- ✅ **Code Quality**: Ruff linting and Black formatting
-- ✅ **Test Coverage**: 46% test coverage (151 passing tests)
-- ✅ **CI/CD**: GitHub Actions workflow for automated testing
+- ✅ **Code Quality**: Ruff linting (E, F, W, I rules)
+- ✅ **Test Coverage**: 427 passing tests, 1 skipped (65% coverage, target: 90%)
+- ✅ **Dependency Management**: Automatic dependency installation with uv
 
 ### Known Limitations
 
 #### MVP Constraints
 - ⚠️ **Manual Edit Preservation**: Basic marker support only (not fully tested in all scenarios)
 - ⚠️ **Document Structure Detection**: COMPREHENSIVE structure is default (SIMPLE, STANDARD not fully implemented)
-- ⚠️ **Git Change Detection**: Implemented but not fully integrated with update workflow
+- ⚠️ **Test Coverage**: Currently at 65%, targeting 90% (LLM transformation tests pending)
 - ⚠️ **Build Automation**: HTML builds work but may have warnings in some configurations
 
 #### Not Yet Implemented

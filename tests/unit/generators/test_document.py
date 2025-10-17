@@ -35,7 +35,7 @@ class TestDocumentGenerator:
         assert "REQ-001" in page_content
 
     def test_generate_feature_page_with_plan(self):
-        """Test feature page generation with plan.md."""
+        """Test feature page generation with plan.md (Session 2025-10-17: plan excluded)."""
         feature = Feature(
             id="001",
             name="test-feature",
@@ -62,13 +62,15 @@ class TestDocumentGenerator:
         generator = DocumentGenerator()
         page_content = generator.generate_feature_page(feature, spec_doc, plan_doc=plan_doc)
 
-        # Verify both spec and plan content are included
+        # Session 2025-10-17: plan.md content is excluded from end-user docs
         assert "# Test Feature" in page_content
-        assert "Architecture" in page_content
-        assert "Layered architecture" in page_content
+        assert "Architecture" not in page_content
+        assert "Layered architecture" not in page_content
+        # Feature Files section should still link to plan.md
+        assert "plan.md" in page_content
 
     def test_generate_feature_page_with_tasks(self):
-        """Test feature page generation with tasks.md."""
+        """Test feature page generation with tasks.md (Session 2025-10-17: tasks excluded)."""
         feature = Feature(
             id="001",
             name="test-feature",
@@ -95,12 +97,14 @@ class TestDocumentGenerator:
         generator = DocumentGenerator()
         page_content = generator.generate_feature_page(feature, spec_doc, tasks_doc=tasks_doc)
 
-        # Verify both spec and tasks content are included
+        # Session 2025-10-17: tasks.md content is excluded from end-user docs
         assert "# Test Feature" in page_content
-        assert "T001" in page_content or "Tasks" in page_content
+        assert "T001" not in page_content
+        # Feature Files section should still link to tasks.md
+        assert "tasks.md" in page_content
 
     def test_generate_feature_page_complete(self):
-        """Test feature page generation with spec.md, plan.md, and tasks.md."""
+        """Test feature page generation with spec.md, plan.md, and tasks.md (Session 2025-10-17: plan/tasks excluded)."""
         feature = Feature(
             id="001",
             name="test-feature",
@@ -137,11 +141,14 @@ class TestDocumentGenerator:
             feature, spec_doc, plan_doc=plan_doc, tasks_doc=tasks_doc
         )
 
-        # Verify all content is included
+        # Session 2025-10-17: Only spec content included, plan/tasks excluded
         assert "# Test Feature" in page_content
         assert "Overview" in page_content
-        assert "Architecture" in page_content or "Plan" in page_content
-        assert "T001" in page_content or "Tasks" in page_content
+        assert "Architecture" not in page_content
+        assert "T001" not in page_content
+        # Feature Files section should still link to plan.md and tasks.md
+        assert "plan.md" in page_content
+        assert "tasks.md" in page_content
 
     def test_generate_feature_page_missing_plan(self):
         """Test that missing plan.md shows a note (FR-018)."""

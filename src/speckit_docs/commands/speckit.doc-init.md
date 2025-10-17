@@ -20,53 +20,63 @@ This follows the same pattern as spec-kit's `uv tool install specify-cli` (Sessi
 
 ## Command
 
-Execute the following command to initialize a Sphinx or MkDocs documentation project:
+Execute the following command to initialize a Sphinx documentation project with default settings:
 
-```bash
-uv run python .specify/scripts/docs/doc_init.py {{ARGS}}
-```
-
-Where {{ARGS}} are the user-provided arguments (e.g., `--type sphinx`).
-
-## Workflow
-1. Ask the user which documentation tool to use (Sphinx or MkDocs)
-2. Collect project metadata interactively (project name, author, version, language)
-3. **Ask the user about dependency installation** (FR-008c, FR-008f):
-   - Explain that documentation tool dependencies need to be installed
-   - Ask which dependency placement strategy to use:
-     - **`optional-dependencies`** (推奨): pip/poetry/uv互換、PEP 621標準、`[project.optional-dependencies.docs]`セクションに配置
-     - **`dependency-groups`**: uvネイティブ、PEP 735準拠、`[dependency-groups.docs]`セクションに配置
-   - Show which packages will be installed based on doc_type:
-     - Sphinx: `sphinx>=7.0`, `myst-parser>=2.0`
-     - MkDocs: `mkdocs>=1.5`, `mkdocs-material>=9.0`
-   - Get user confirmation for automatic installation:
-     - If user agrees → add `--auto-install --dependency-target {choice}`
-     - If user declines → add `--no-install`
-4. Execute the script with appropriate arguments
-   - **CRITICAL**: ALWAYS include either `--auto-install` or `--no-install` flag
-   - DO NOT run without one of these flags (causes stdin blocking in AI environment)
-5. Display the results to the user
-6. If errors occur, show clear error messages and next steps
-
-## Example Commands
-
-**With auto-install (recommended)**:
 ```bash
 uv run python .specify/scripts/docs/doc_init.py --type sphinx --auto-install --dependency-target optional-dependencies
 ```
 
-**Skip installation**:
+**Default values**:
+- Documentation tool: `sphinx` (Sphinx with MyST Markdown support)
+- Auto-install: `--auto-install` (automatically install dependencies without confirmation)
+- Dependency target: `optional-dependencies` (PEP 621 standard, pip/poetry/uv compatible)
+- Project metadata: Auto-detected from directory name and git config
+
+**Customization options**:
+- Change documentation tool: Replace `--type sphinx` with `--type mkdocs`
+- Change dependency target: Replace `--dependency-target optional-dependencies` with `--dependency-target dependency-groups`
+- Skip installation: Replace `--auto-install` with `--no-install`
+- Override metadata: Add `--project-name "MyProject" --author "Your Name" --version "1.0.0"`
+
+## Workflow
+1. Execute the script with default values (Sphinx, auto-install, optional-dependencies)
+2. The script will:
+   - Auto-detect project name from directory name
+   - Auto-detect author from `git config user.name`
+   - Discover features from `.specify/specs/` directory
+   - Create `docs/` directory structure
+   - Generate configuration files (conf.py or mkdocs.yml)
+   - Install required dependencies via `uv add --optional docs <packages>`
+3. Display the results to the user
+4. If errors occur, show clear error messages and next steps
+
+**CRITICAL**: ALWAYS include either `--auto-install` or `--no-install` flag. DO NOT run without one of these flags (causes stdin blocking in AI environment).
+
+## Example Commands
+
+**Default (Sphinx with auto-install - RECOMMENDED)**:
 ```bash
-uv run python .specify/scripts/docs/doc_init.py --type mkdocs --no-install
+uv run python .specify/scripts/docs/doc_init.py --type sphinx --auto-install --dependency-target optional-dependencies
 ```
 
-**With dependency-groups**:
+**MkDocs with auto-install**:
+```bash
+uv run python .specify/scripts/docs/doc_init.py --type mkdocs --auto-install --dependency-target optional-dependencies
+```
+
+**Skip dependency installation**:
+```bash
+uv run python .specify/scripts/docs/doc_init.py --type sphinx --no-install
+```
+
+**Use dependency-groups (uv native, PEP 735)**:
 ```bash
 uv run python .specify/scripts/docs/doc_init.py --type sphinx --auto-install --dependency-target dependency-groups
 ```
 
 ## Important Notes
 
-- The script uses `typer.confirm()` when `auto_install=False` and `no_install=False`, which requires stdin
-- In AI agent environments (Claude Code), stdin is not available, so ALWAYS use `--auto-install` or `--no-install`
-- Default values: `auto_install=False`, `no_install=False`, `dependency_target="optional-dependencies"`
+- **CRITICAL**: In AI agent environments (Claude Code), stdin is not available
+- **MUST ALWAYS** include either `--auto-install` or `--no-install` flag
+- **DO NOT** run without these flags → causes `typer.confirm()` to block waiting for stdin
+- Default execution: `--type sphinx --auto-install --dependency-target optional-dependencies`

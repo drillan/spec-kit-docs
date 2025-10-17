@@ -156,6 +156,15 @@ User can test the system.
             mkdocs_content = (temp_project / "mkdocs.yml").read_text()
             assert "test-feature" in mkdocs_content, "mkdocs.yml should reference feature page"
 
+            # Session 2025-10-17: Verify plan.md/tasks.md content is excluded
+            feature_content = feature_page.read_text()
+            assert (
+                "## Implementation Plan" not in feature_content
+            ), "Feature page must NOT contain Implementation Plan section"
+            assert (
+                "## Implementation Tasks" not in feature_content
+            ), "Feature page must NOT contain Implementation Tasks section"
+
         finally:
             os.chdir(original_dir)
 
