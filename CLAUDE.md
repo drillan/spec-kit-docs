@@ -104,15 +104,24 @@ speckit-docs install
 
 ## Recent Changes
 
-**Session 2025-10-17**:
-- FR-022b: LLM変換ワークフローをコマンドテンプレートに実装（/speckit.doc-update）
-- ✅ FR-038e: transformed_contentパラメータを必須化（doc_update.py:54 - `typer.Option(...)`に修正完了）
-- ✅ FR-038b: フォールバック動作を完全削除（憲章C002準拠 - feature_page.py:73-100, doc_update.py:140-158）
-- ✅ FR-038d: spec.mdリンク要件を実装（feature-page.md.jinja2:22）
+**Session 2025-10-17 (Updated)**:
+- ✅ **FR-022b**: LLM変換ワークフローをコマンドテンプレートに実装（/speckit.doc-update）
+- ✅ **FR-038e**: transformed_contentパラメータを必須化（doc_update.py:54 - `typer.Option(...)`完了）
+- ✅ **FR-038b**: フォールバック動作を完全削除（憲章C002準拠 - feature_page.py:78-92, doc_update.py:149-158）
+- ✅ **FR-038d**: spec.mdリンク要件を実装（feature-page.md.jinja2:22）
+- ✅ **T080**: mypy型チェック完了（0エラー）
+- ✅ **T081**: ruff lint完了（0警告）
+- ✅ **plan.md復元**: 誤って削除されたplan.mdを復元（commit b49e6cf）
+- ✅ **全テスト修正完了**: 427 passed, 1 skipped（FR-038e対応、Session 2025-10-17 plan/tasks除外対応）
+  - test_feature_page.py: 全6テスト（transformed_content_map追加）
+  - test_doc_update_command.py: 全5テスト（transformed_content_map追加）
+  - test_doc_update.py: 全9テスト（transformed_content必須パラメータ）
+  - test_incremental_update.py: 全5テスト（transformed_content必須パラメータ）
+  - test_document.py: 全6テスト（plan/tasks除外対応）
+  - test_install.py: 1テスト（必須パラメータ検証）
 - T062-T068: LLM変換機能実装（コンテンツソース選択、不整合検出、セクション優先順位判定）
 - T069: LLM変換品質チェック実装
-- T074-T075: クイックモード（--incrementalフラグ）とスキップ統計実装
-- T080-T081: コード品質向上（ruff lint 0警告、mypy type check 0エラー）
+- T074-T075: インクリメンタル更新（--incrementalフラグ）とスキップ統計実装
 - Added: llm_entities.py（LLMSection, InconsistencyDetectionResult, LLMTransformResult等）
 - Added: utils/llm_transform.py（コンテンツソース選択、不整合検出、セクション統合等）
 - **Constitution Compliance**: 憲章違反のフォールバック処理を完全削除（C001, C002, C004準拠）
