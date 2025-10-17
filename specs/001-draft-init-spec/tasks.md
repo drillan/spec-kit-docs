@@ -72,7 +72,7 @@
 ### Implementation for User Story 3
 
 - [X] T017 [P] [US3] コマンドテンプレート作成（src/speckit_docs/commands/speckit.doc-init.md）
-- [ ] T018 [US3] **FR-022b対応**: src/speckit_docs/commands/speckit.doc-update.mdにLLM変換ワークフローを追加
+- [X] T018 [US3] **FR-022b対応**: src/speckit_docs/commands/speckit.doc-update.mdにLLM変換ワークフローを追加
   - (1) docs/存在確認
   - (2) 各機能に対してLLM変換を実行（FR-038ロジック: README.md→QUICKSTART.md→spec.md最小限抽出）
   - (3) 変換済みコンテンツを一時ファイル（JSON形式）に準備
@@ -175,24 +175,24 @@
 
 #### コンテンツソース選択・抽出（FR-038）
 
-- [ ] T062 [P] [US7] コンテンツソース選択実装（コマンド定義内: README.md → QUICKSTART.md → spec.md最小限抽出の優先順位）
-- [ ] T063 [P] [US7] spec.md最小限抽出実装（markdown-it-py使用、ユーザーストーリー「目的」、前提条件、スコープ境界抽出）
-- [ ] T064 [P] [US7] トークン数チェック実装（10,000トークン上限、超過時エラー）
+- [X] T062 [P] [US7] コンテンツソース選択実装（コマンド定義内: README.md → QUICKSTART.md → spec.md最小限抽出の優先順位）
+- [X] T063 [P] [US7] spec.md最小限抽出実装（markdown-it-py使用、ユーザーストーリー「目的」、前提条件、スコープ境界抽出）
+- [X] T064 [P] [US7] トークン数チェック実装（10,000トークン上限、超過時エラー）
 
 #### README/QUICKSTART統合（FR-038-integ）
 
-- [ ] T065 [US7] 不整合検出実装（コマンド定義内: LLM APIで重大な矛盾を検出、整合性OK時のみ統合）
-- [ ] T066 [US7] セクション単位パース実装（markdown-it-py使用、h2/h3見出しでセクション分割）
-- [ ] T067 [US7] セクション優先順位判定実装（コマンド定義内: LLM APIで優先順位判定、多言語対応）
-- [ ] T068 [US7] セクション統合実装（優先順位順に追加、10,000トークン以内に収める）
+- [X] T065 [US7] 不整合検出実装（コマンド定義内: LLM APIで重大な矛盾を検出、整合性OK時のみ統合）
+- [X] T066 [US7] セクション単位パース実装（markdown-it-py使用、h2/h3見出しでセクション分割）
+- [X] T067 [US7] セクション優先順位判定実装（コマンド定義内: LLM APIで優先順位判定、多言語対応）
+- [X] T068 [US7] セクション統合実装（優先順位順に追加、10,000トークン以内に収める）
 
 #### LLM変換品質チェック（FR-038c）
 
-- [ ] T069 [P] [US7] LLM変換品質チェック実装（空文字列、最小文字数50、エラーパターンマッチング、Markdownリンター）
+- [X] T069 [P] [US7] LLM変換品質チェック実装（空文字列、最小文字数50、エラーパターンマッチング、Markdownリンター）
 
 #### doc_update.py拡張（FR-038e、FR-038f）
 
-- [ ] T070 [US7] **FR-038e対応**: doc_update.pyに`transformed_content`必須パラメータ追加（`typer.Option(...)`）
+- [X] T070 [US7] **FR-038e対応**: doc_update.pyに`transformed_content`必須パラメータ追加（`typer.Option(...)`）
   - パラメータ未提供時: 明確なエラーメッセージ「--transformed-contentパラメータは必須です。LLM変換を実行してから.specify/scripts/docs/doc_update.pyを呼び出してください」を表示して終了
 - [X] T071 [US7] doc_update.pyで変換済みコンテンツ読み込み実装（JSONファイル読み込み）
 - [X] T072 [US7] FeaturePageGeneratorに変換済みコンテンツ統合実装（transformed_content_map引数追加）
@@ -200,8 +200,8 @@
 
 #### `--quick`フラグ実装（FR-038、Session 2025-10-17 Q4）
 
-- [ ] T074 [US7] doc_update.pyに`--quick`フラグ追加（デフォルト: 全機能変換、`--quick`指定時: Git diff変更検出）
-- [ ] T075 [US7] `--quick`モード更新サマリー実装（「成功X件、スキップ（変更なし）Y件、失敗Z件」表示）
+- [X] T074 [US7] doc_update.pyに`--quick`フラグ追加（デフォルト: 全機能変換、`--quick`指定時: Git diff変更検出）
+- [X] T075 [US7] `--quick`モード更新サマリー実装（「成功X件、スキップ（変更なし）Y件、失敗Z件」表示）
 
 **Checkpoint**: LLM変換機能完成、ユーザーフレンドリーなドキュメント生成可能、MVP完了
 
