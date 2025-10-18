@@ -12,10 +12,6 @@ Tests for:
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from speckit_docs.exceptions import SpecKitDocsError
-
 
 class TestReadmeOnlyProcessing:
     """Tests for README.md only processing (T066)."""

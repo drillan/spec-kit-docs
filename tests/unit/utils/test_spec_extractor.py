@@ -4,16 +4,14 @@ TDDアプローチ（Red-Green-Refactor）に従い、実装前にテストを�
 すべてのテストは最初は失敗する必要があります（Red）。
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
+from speckit_docs.exceptions import SpecKitDocsError
 from speckit_docs.utils.spec_extractor import (
     extract_spec_minimal,
-    SpecExtractionResult,
-    UserStoryPurpose,
 )
-from speckit_docs.exceptions import SpecKitDocsError
-
 
 # テストフィクスチャのパス
 FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "sample_specs"

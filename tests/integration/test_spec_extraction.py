@@ -3,12 +3,12 @@
 実際のspec.mdファイルを使用してエンドツーエンドのテストを実行します。
 """
 
-import pytest
 from pathlib import Path
 
-from speckit_docs.utils.spec_extractor import extract_spec_minimal
-from speckit_docs.exceptions import SpecKitDocsError
+import pytest
 
+from speckit_docs.exceptions import SpecKitDocsError
+from speckit_docs.utils.spec_extractor import extract_spec_minimal
 
 # 実際のプロジェクトspec.md
 REAL_SPEC = Path(__file__).parent.parent.parent / "specs" / "001-draft-init-spec" / "spec.md"

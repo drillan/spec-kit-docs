@@ -12,11 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from speckit_docs.exceptions import SpecKitDocsError
 from speckit_docs.llm_entities import (
-    InconsistencyDetectionResultV2,
     SectionClassification,
-    SectionPriority,
     TargetAudienceResult,
 )
 

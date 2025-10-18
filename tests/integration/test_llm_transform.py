@@ -254,7 +254,6 @@ class TestSpecMinimalExtraction:
 
     def test_extract_spec_minimal_within_token_limit(self, tmp_path: Path):
         """Test spec.md extraction stays within token limit (~4,500 tokens)."""
-        from speckit_docs.utils.llm_transform import estimate_token_count
         from speckit_docs.utils.spec_extractor import extract_spec_minimal
 
         # Given: spec.md with Japanese content (implementation expects Japanese keywords)
@@ -266,35 +265,38 @@ class TestSpecMinimalExtraction:
 
 ## ユーザーストーリー
 
-### 目的
-ユーザーは、メールアドレスとパスワードでログインして、24時間有効なセッションを開始できます。
+### ユーザーストーリー1: ログイン機能 (優先度: P0)
+
+**目的**: ユーザーは、メールアドレスとパスワードでログインして、24時間有効なセッションを開始できます。
 
 ## 前提条件
 - Python 3.11以上
 - bcryptライブラリ
 - PyJWTライブラリ
 
-## スコープ
-含まれる機能:
+## スコープ境界
+
+**スコープ内**:
 - ログイン機能
 - トークン生成
 - セッション管理
 
-含まれない機能:
-- OAuth認証
-- ソーシャルログイン
+**スコープ外**:
+- OAuth認証は含まれません
+- ソーシャルログインは含まれません
 """
         spec_file.write_text(spec_content)
 
         # When: Extract minimal spec content
-        extracted = extract_spec_minimal(spec_file)
+        result = extract_spec_minimal(spec_file)
 
         # Then: Should extract content (Japanese keywords matched)
-        assert len(extracted) > 0, "Extracted content should not be empty"
+        assert result.user_story_purposes, "User story purposes should not be empty"
+        assert result.prerequisites, "Prerequisites should not be empty"
+        assert result.scope_boundaries, "Scope boundaries should not be empty"
 
         # Verify token count is reasonable (< 10,000)
-        token_count = estimate_token_count(extracted)
-        assert token_count < 10000, f"Token count {token_count} should be < 10,000"
+        assert result.total_token_count < 10000, f"Token count {result.total_token_count} should be < 10,000"
 
     def test_extract_spec_minimal_large_spec(self, tmp_path: Path):
         """Test spec.md extraction raises error when extracted content exceeds 10,000 tokens."""
@@ -304,9 +306,9 @@ class TestSpecMinimalExtraction:
 
         # Given: Large spec.md with Japanese content (extracted sections > 10,000 tokens)
         spec_file = tmp_path / "spec.md"
-        large_content = "# 機能タイトル\n\n## ユーザーストーリー\n\n### 目的\n\n" + ("詳細な説明が続きます。これは長い文章です。" * 2000)
+        large_content = "# 機能タイトル\n\n## ユーザーストーリー\n\n### ユーザーストーリー1: 大量データ処理 (優先度: P0)\n\n**目的**: " + ("詳細な説明が続きます。これは長い文章です。" * 2000)
         large_content += "\n\n## 前提条件\n\n" + ("前提条件の詳細が続きます。これは長い文章です。" * 2000)
-        large_content += "\n\n## スコープ\n\n" + ("スコープの詳細が続きます。これは長い文章です。" * 2000)
+        large_content += "\n\n## スコープ境界\n\n**スコープ外**:\n" + ("スコープ外の詳細が続きます。これは長い文章です。" * 2000)
         spec_file.write_text(large_content)
 
         # Verify input is large
