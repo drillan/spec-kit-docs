@@ -60,7 +60,7 @@ class TestInstallIntegration:
             text=True,
         )
         assert result.returncode == 0
-        assert "--incremental" in result.stdout or "full" in result.stdout
+        assert "--quick" in result.stdout or "Quick mode" in result.stdout
 
     def test_install_creates_directories(self, tmp_path, monkeypatch):
         """Test that install command creates necessary directories."""
@@ -130,7 +130,7 @@ class TestInstallIntegration:
         # Test doc_update.py requires --transformed-content (FR-038e)
         script_path = tmp_path / ".specify" / "scripts" / "docs" / "doc_update.py"
         result = subprocess.run(
-            ["uv", "run", "python", str(script_path), "--full"],
+            ["uv", "run", "python", str(script_path)],  # Default mode (no --quick flag)
             capture_output=True,
             text=True,
         )

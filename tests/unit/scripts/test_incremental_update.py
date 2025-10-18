@@ -50,7 +50,7 @@ class TestIncrementalUpdate:
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
         # Run initial full update
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
         assert result == 0
 
         # Modify only one feature
@@ -62,14 +62,14 @@ class TestIncrementalUpdate:
         repo.index.add(["specs/001-feature-one/spec.md"])
         repo.index.commit("Update feature one")
 
-        # Update transformed content for incremental update
+        # Update transformed content for quick mode
         transformed_content_map = {
             "001-feature-one": {"spec_content": "# Feature One\n\nUpdated version"},
         }
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
-        # Run incremental update
-        result = main(incremental=True, transformed_content=transformed_content_file)
+        # Run quick mode update
+        result = main(quick=True, transformed_content=transformed_content_file)
 
         # Should succeed
         assert result == 0
@@ -79,7 +79,7 @@ class TestIncrementalUpdate:
         assert "Updated version" in feature_one_content
 
     def test_incremental_update_skips_if_no_changes(self, tmp_path, monkeypatch):
-        """Test that incremental update skips if no changes detected."""
+        """Test that quick mode skips if no changes detected."""
         # Setup Git repository
         repo = Repo.init(tmp_path)
         repo.config_writer().set_value("user", "name", "Test User").release()
@@ -106,14 +106,14 @@ class TestIncrementalUpdate:
         transformed_content_file = tmp_path / "transformed_content.json"
         transformed_content_file.write_text(json.dumps({}))
 
-        # Run incremental update with no changes
-        result = main(incremental=True, transformed_content=transformed_content_file)
+        # Run quick mode with no changes
+        result = main(quick=True, transformed_content=transformed_content_file)
 
         # Should succeed and skip update
         assert result == 0
 
     def test_full_update_processes_all_features(self, tmp_path, monkeypatch):
-        """Test that --full flag processes all features regardless of changes."""
+        """Test that default mode (no --quick flag) processes all features regardless of changes."""
         # Setup Git repository
         repo = Repo.init(tmp_path)
         repo.config_writer().set_value("user", "name", "Test User").release()
@@ -147,8 +147,8 @@ class TestIncrementalUpdate:
         }
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
-        # Run full update
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        # Run full update (default mode)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Should succeed
         assert result == 0
@@ -158,7 +158,7 @@ class TestIncrementalUpdate:
         assert (docs_dir / "feature-two.md").exists()
 
     def test_incremental_update_handles_new_feature(self, tmp_path, monkeypatch):
-        """Test that incremental update handles newly added features."""
+        """Test that quick mode handles newly added features."""
         # Setup Git repository
         repo = Repo.init(tmp_path)
         repo.config_writer().set_value("user", "name", "Test User").release()
@@ -196,8 +196,8 @@ class TestIncrementalUpdate:
         }
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
-        # Run incremental update
-        result = main(incremental=True, transformed_content=transformed_content_file)
+        # Run quick mode
+        result = main(quick=True, transformed_content=transformed_content_file)
 
         # Should succeed
         assert result == 0
@@ -206,7 +206,7 @@ class TestIncrementalUpdate:
         assert (docs_dir / "new-feature.md").exists()
 
     def test_incremental_update_first_commit(self, tmp_path, monkeypatch):
-        """Test incremental update on first commit (no HEAD~1)."""
+        """Test quick mode on first commit (no HEAD~1)."""
         # Setup Git repository (no commits yet)
         repo = Repo.init(tmp_path)
         repo.config_writer().set_value("user", "name", "Test User").release()
@@ -235,8 +235,8 @@ class TestIncrementalUpdate:
         }
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
-        # Run incremental update (should fall back to full update)
-        result = main(incremental=True, transformed_content=transformed_content_file)
+        # Run quick mode (should fall back to full update)
+        result = main(quick=True, transformed_content=transformed_content_file)
 
         # Should succeed (falls back to full update since no commits)
         assert result == 0

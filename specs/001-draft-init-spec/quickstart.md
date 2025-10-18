@@ -1,616 +1,288 @@
-# クイックスタートガイド: spec-kit-docs
+# Quickstart: spec.md最小限抽出機能の使用方法
 
-**Branch**: `001-draft-init-spec` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)
-**Audience**: spec-kitユーザー（開発者、プロジェクトマネージャー）
+**作成日**: 2025-10-17
+**対象**: spec.mdから必要な情報のみを抽出してエンドユーザー向けドキュメントを生成する機能
 
 ## 概要
 
-spec-kit-docsは、spec-kitプロジェクトのMarkdown仕様（spec.md、plan.md、tasks.md）から、SphinxまたはMkDocsを使用して統一されたドキュメントサイトを自動生成するツールです。このガイドでは、インストールから基本的な使用方法までを学べます。
+この機能は、spec.mdの技術的な詳細（Clarificationsセクション等）を除外し、エンドユーザー向けに必要な情報のみを抽出します。
 
-**主な機能**:
-- spec-kit仕様からのドキュメント自動生成
-- SphinxまたはMkDocsのサポート
-- Git diffによるインクリメンタル更新
-- Claude Codeスラッシュコマンド（`/speckit.doc-init`、`/speckit.doc-update`）との統合
+**抽出対象**（FR-038準拠）:
+1. ユーザーストーリーの「**目的**」部分
+2. 前提条件セクション全体
+3. スコープ境界の「**スコープ外**」部分
 
----
-
-## Prerequisites
-
-spec-kit-docsを使用する前に、以下の前提条件を満たしていることを確認してください:
-
-1. **spec-kitプロジェクトが初期化されている**:
-   ```bash
-   ls .specify/  # .specifyディレクトリが存在すること
-   ```
-
-2. **Gitリポジトリが初期化されている**:
-   ```bash
-   git status  # Gitリポジトリであること
-   ```
-
-3. **Python 3.11以上がインストールされている**:
-   ```bash
-   python3 --version  # Python 3.11以上
-   ```
-
-4. **Claude Codeが実行可能である**:
-   - Claude Codeセッション内でこのガイドを実行していること
-
-5. **少なくとも1つの機能仕様が存在する**:
-   ```bash
-   ls .specify/specs/  # 001-xxx等のディレクトリが存在すること
-   ```
+**目的**: 600行以上のClarifications（技術的Q&A）がドキュメントに出力される問題を解決
 
 ---
 
-## インストール
+## 使用方法
 
-### ステップ1: spec-kit-docs CLIツールのインストール
-
-`uv tool install`コマンドを使用して、spec-kit-docsをグローバルCLIツールとしてインストールします：
+### 基本的な使い方
 
 ```bash
-uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git
-```
+# 1. spec-kitプロジェクトのドキュメントを初期化
+/speckit.doc-init
 
-これにより、`speckit-docs`コマンドがシステム全体で利用可能になります。
-
-**注**: この方法は本家spec-kitの`uv tool install specify-cli`パターンと一貫性があり、プロジェクト環境を汚染しません（Session 2025-10-14決定、FR-021）。
-
-### ステップ2: spec-kitプロジェクトへのコマンド追加
-
-既存のspec-kitプロジェクトのルートディレクトリに移動し、`speckit-docs install`を実行します：
-
-```bash
-# プロジェクトルートに移動
-cd your-spec-kit-project
-
-# spec-kit-docsコマンドをプロジェクトにインストール
-speckit-docs install
-```
-
-これにより、以下のファイルがプロジェクトに追加されます：
-- `.claude/commands/speckit.doc-init.md` - `/speckit.doc-init`コマンド定義
-- `.claude/commands/speckit.doc-update.md` - `/speckit.doc-update`コマンド定義
-- `.specify/scripts/docs/doc_init.py` - ドキュメント初期化スクリプト
-- `.specify/scripts/docs/doc_update.py` - ドキュメント更新スクリプト
-
-インストール成功のメッセージが表示されます：
-
-```
-✓ Commands installed to .claude/commands/
-✓ Scripts installed to .specify/scripts/docs/
-✓ spec-kit-docs installation complete!
-
-Next steps:
-1. Open Claude Code in this project
-2. Run /speckit.doc-init to initialize documentation
-```
-
-**注**: 既にインストールされている場合、上書き確認が表示されます。`--force`フラグを使用すると確認をスキップできます（FR-023b）。
-
-**所要時間**: 2-3分
-
----
-
-## Quick Start: Sphinxでドキュメント生成
-
-### Step 1: ドキュメントプロジェクトの初期化
-
-Claude Code内で以下のコマンドを実行します:
-
-```
-/speckit.doc-init --type sphinx
-```
-
-対話的プロンプトが表示されますので、必要な情報を入力します:
-
-```
-どのドキュメント生成ツールを使用しますか？
-1) Sphinx (推奨 - MyST Markdown対応)
-2) MkDocs (シンプル)
-選択 [1]: 1
-
-プロジェクト名を入力してください [spec-kit-docs]: my-project
-
-著者名を入力してください [Your Name]: John Doe
-
-初期バージョン番号を入力してください [0.1.0]: 0.1.0
-
-ドキュメント言語を入力してください [ja]: ja
-```
-
-**出力**:
-```
-✓ spec-kitプロジェクトを検出しました
-✓ 3つの機能を発見しました
-✓ ドキュメント構造: フラット (5機能以下)
-✓ Sphinxプロジェクトを初期化しました
-
-生成されたファイル:
-  - docs/conf.py
-  - docs/index.md
-  - docs/Makefile
-  - docs/make.bat
-
-次のステップ:
-  1. /speckit.doc-update を実行してドキュメントを生成
-  2. cd docs && make html でHTMLをビルド
-  3. docs/_build/html/index.html をブラウザで開く
-```
-
-**所要時間**: 1分（対話的入力時間を除く）
-
----
-
-### Step 2: ドキュメントの生成
-
-初期化後、実際のドキュメントを生成します:
-
-```
+# 2. ドキュメントを更新（spec.md最小限抽出が自動的に実行される）
 /speckit.doc-update
 ```
 
-**出力**:
-```
-✓ 3つの機能が変更されました:
-  - 001-user-auth
-  - 002-api-integration
-  - 003-payment-gateway
-
-✓ ドキュメントを生成しました:
-  - docs/user-auth.md (新規)
-  - docs/api-integration.md (新規)
-  - docs/payment-gateway.md (新規)
-
-✓ index.mdを更新しました
-
-✓ HTMLビルドを実行しました
-  - 警告: 0
-  - エラー: 0
-  - ビルド時間: 3.2秒
-  - 生成ファイル: 15個
-
-次のステップ:
-  1. docs/_build/html/index.html をブラウザで開く
-```
-
-**所要時間**: 10-45秒（機能数による、5機能の場合は約45秒、SC-006）
+**内部処理**:
+1. `/.claude/commands/speckit.doc-update.md`がLLM変換ワークフローを実行
+2. **コンテンツソース選択** (Phase 2機能):
+   - README.md のみ存在 → README.mdを使用（ターゲット読者判定実行）
+   - QUICKSTART.md のみ存在 → QUICKSTART.mdを使用（ターゲット読者判定実行）
+   - 両方存在 → セクション統合実行（不整合検出→セクション分類→優先順位判定）
+   - どちらもなし → spec.md最小限抽出を実行
+3. 抽出/統合されたコンテンツがLLM変換される（Claude API）
+4. 変換済みコンテンツがドキュメントページに出力される
+5. 統計情報が表示される（ターゲット読者判定、セクション分類、変換率）
 
 ---
 
-### Step 3: ドキュメントの確認
+## Phase 2機能: README/QUICKSTART統合 (Session 2025-10-17)
 
-生成されたHTMLをブラウザで確認します:
+### ターゲット読者判定
 
-**Linux/macOS**:
-```bash
-cd docs
-make html
-open _build/html/index.html  # macOS
-xdg-open _build/html/index.html  # Linux
-```
+各ドキュメントファイルのターゲット読者を自動判定します。
 
-**Windows**:
-```bash
-cd docs
-make.bat html
-start _build/html/index.html
-```
+**対象ファイル**:
+- README.md
+- QUICKSTART.md
 
-**所要時間**: 1分（対話的入力時間を除く）
+**判定カテゴリ**:
+- `end_user`: エンドユーザー向け（非技術者、プロダクトマネージャー）
+- `developer`: 開発者向け（エンジニア、技術者）
+- `both`: 両方向け
 
----
+**実装**: `utils/llm_transform.py::detect_target_audience()`
 
-## Quick Start: MkDocsでドキュメント生成
+### セクション分類
 
-MkDocsを使用する場合は、以下の手順で実行します:
+README.mdとQUICKSTART.mdの各セクションをターゲット読者別に分類します。
 
-### Step 1: ドキュメントプロジェクトの初期化
+**セクションタイプ**:
+- `end_user`: インストールガイド、クイックスタート
+- `developer`: API リファレンス、アーキテクチャ図
+- `both`: 概要、機能、トラブルシューティング
 
-```
-/speckit.doc-init --type mkdocs
-```
+**実装**: `utils/llm_transform.py::classify_section()`
 
-対話的プロンプトが表示されますので、必要な情報を入力します（Sphinxと同様）。
+### 不整合検出
 
-**出力**:
-```
-✓ spec-kitプロジェクトを検出しました
-✓ 3つの機能を発見しました
-✓ ドキュメント構造: フラット (5機能以下)
-✓ MkDocsプロジェクトを初期化しました
+README.mdとQUICKSTART.mdの内容を比較し、不整合を検出します。
 
-生成されたファイル:
-  - docs/mkdocs.yml
-  - docs/index.md
+**検出項目**:
+- 技術スタックの不整合（例: Python vs Rust）
+- 機能説明の矛盾
+- プロジェクト目的の相違
 
-次のステップ:
-  1. /speckit.doc-update を実行してドキュメントを生成
-  2. cd docs && mkdocs serve でプレビュー
-  3. ブラウザで http://127.0.0.1:8000 を開く
-```
+**動作**:
+- 重大な不整合が検出された場合、エラーで中断（フォールバック禁止）
+- 不整合の詳細と推奨アクションを表示
 
-### Step 2: ドキュメントの生成
+**実装**: `utils/llm_transform.py::detect_inconsistency()`
 
-```
-/speckit.doc-update
-```
+### セクション統合
 
-### Step 3: ライブプレビュー
+README.mdとQUICKSTART.mdのセクションを優先順位順に統合します。
 
-MkDocsの場合、ライブプレビュー機能が利用できます:
+**統合方法**:
+1. Claude APIでエンドユーザーにとっての重要度を判定
+2. 優先順位順にセクションを統合（10,000トークン以内）
+3. 除外されたセクションを警告表示
 
-```bash
-cd docs
-mkdocs serve
-```
+**トークン制限**: 10,000トークン（FR-038a）
 
-ブラウザで `http://127.0.0.1:8000` を開くと、ドキュメントが表示されます。
-
-**所要時間**: 3-5分
+**実装**: `utils/llm_transform.py::prioritize_sections()`
 
 ---
 
-## Common Use Cases
+## spec.mdの推奨構造
 
-### Use Case 1: 仕様変更後のドキュメント更新
+抽出機能が正しく動作するために、spec.mdは以下の構造に従うことを推奨します：
 
-spec.mdを編集した後、ドキュメントを更新します:
+```markdown
+# 機能仕様書: [Feature Name]
 
-```bash
-# 1. spec.mdを編集
-vim .specify/specs/001-user-auth/spec.md
+## Clarifications
+（このセクションは抽出されません）
 
-# 2. Gitコミット
-git add .
-git commit -m "Update user-auth spec"
+## ユーザーストーリー
 
-# 3. ドキュメント更新（インクリメンタル）
-/speckit.doc-update
-```
+### ユーザーストーリー1: [Title]
 
-**出力**:
-```
-✓ 1つの機能が変更されました:
-  - 001-user-auth
+**目的**: [Purpose description]  ← 抽出対象
 
-✓ ドキュメントを生成しました:
-  - docs/user-auth.md (更新)
+**この優先度の理由**: ...
 
-✓ index.mdを更新しました
+**独立テスト**: ...
 
-✓ HTMLビルドを実行しました
-  - 警告: 0
-  - エラー: 0
-  - ビルド時間: 1.8秒
-  - 生成ファイル: 15個
-```
+### ユーザーストーリー2: [Title]
 
-**所要時間**: 5秒以内（インクリメンタル更新）
+**目的**: [Purpose description]  ← 抽出対象
 
----
+...
 
-### Use Case 2: 全ドキュメントの再生成
+## 要件
 
-すべての機能を再生成する場合は、`--full`フラグを使用します:
+（このセクションは抽出されません）
 
-```
-/speckit.doc-update --full
-```
+## 前提条件  ← 抽出対象（セクション全体）
 
-**出力**:
-```
-✓ 全機能を再生成します (3機能)
+- **spec-kit プロジェクト**: ...
+- **仕様フォーマット**: ...
 
-✓ ドキュメントを生成しました:
-  - docs/user-auth.md
-  - docs/api-integration.md
-  - docs/payment-gateway.md
+## スコープ境界
 
-✓ index.mdを更新しました
+**スコープ外（フェーズ1 - MVP）**:  ← 抽出対象
 
-✓ HTMLビルドを実行しました
-  - 警告: 0
-  - エラー: 0
-  - ビルド時間: 3.5秒
-  - 生成ファイル: 15個
-```
+- アンインストールコマンド
+- 専用アップグレードコマンド
+...
 
-**所要時間**: 10-45秒（機能数による）
+## 成功基準
 
----
-
-### Use Case 3: Markdownのみ生成（ビルドスキップ）
-
-HTMLビルドをスキップして、Markdownファイルのみを生成する場合:
-
-```
-/speckit.doc-update --no-build
-```
-
-**出力**:
-```
-✓ 3つの機能が変更されました:
-  - 001-user-auth
-  - 002-api-integration
-  - 003-payment-gateway
-
-✓ ドキュメントを生成しました:
-  - docs/user-auth.md (更新)
-  - docs/api-integration.md (更新)
-  - docs/payment-gateway.md (更新)
-
-✓ index.mdを更新しました
-
-HTMLビルドはスキップされました。
-```
-
-**所要時間**: 3-5秒
-
----
-
-### Use Case 4: 非対話モードでの初期化
-
-CI/CD環境やスクリプトで使用する場合、対話モードを無効化できます:
-
-```
-/speckit.doc-init --type sphinx --no-interaction
-```
-
-デフォルト値が自動的に使用されます（プロジェクト名、著者名、バージョン等）。
-
-**所要時間**: 10-30秒
-
----
-
-## Generated File Structure
-
-### Flat Structure (5機能以下)
-
-```
-docs/
-├── conf.py                 # Sphinx設定ファイル（myst-parser設定を含む）
-├── index.md                # インデックスページ
-├── Makefile                # ビルド用Makefile（Linux/macOS）
-├── make.bat                # ビルド用バッチファイル（Windows）
-├── .gitignore              # Git除外設定
-├── user-auth.md            # 機能ドキュメント（spec.mdから生成）
-├── api-integration.md      # 機能ドキュメント
-└── payment-gateway.md      # 機能ドキュメント
-```
-
-### Comprehensive Structure (6機能以上)
-
-```
-docs/
-├── conf.py
-├── index.md
-├── Makefile
-├── make.bat
-├── .gitignore
-├── features/               # 機能ドキュメント
-│   ├── user-auth.md
-│   ├── api-integration.md
-│   ├── payment-gateway.md
-│   ├── notification-system.md
-│   ├── analytics-dashboard.md
-│   └── admin-panel.md
-├── guides/                 # ガイド（将来拡張）
-│   └── getting-started.md
-├── api/                    # API リファレンス（将来拡張）
-│   └── reference.md
-└── architecture/           # アーキテクチャ（将来拡張）
-    └── overview.md
-```
-
-**自動決定ロジック**:
-- 5機能以下: フラット構造
-- 6機能以上: 包括的構造
-
----
-
-## Troubleshooting
-
-### Problem 1: "spec-kitプロジェクトではありません"エラー
-
-**Symptom**:
-```
-✗ エラー: spec-kitプロジェクトではありません
-
-💡 提案: 最初に 'specify init' を実行してspec-kitプロジェクトを初期化してください。
-```
-
-**Solution**:
-```bash
-specify init  # spec-kitプロジェクトを初期化
+（このセクションは抽出されません）
 ```
 
 ---
 
-### Problem 2: "Gitリポジトリではありません"エラー
+## エラーハンドリング
 
-**Symptom**:
+### エラー1: 必須セクション欠如
+
+**エラーメッセージ**:
 ```
-✗ エラー: Gitリポジトリではありません
+✗ specs/001-draft-init-spec/spec.md does not contain expected sections: Missing '## 前提条件'.
 
-💡 提案: 'git init' を実行してGitリポジトリを初期化してください。
+💡 Check that spec.md follows the recommended structure (User Stories, Prerequisites, Scope).
 ```
 
-**Solution**:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
+**解決方法**:
+- spec.mdに`## 前提条件`または`## Prerequisites`セクションを追加
+- `### ユーザーストーリーN:`見出しと`**目的**:`部分を追加
+- `## スコープ境界`セクションと`**スコープ外**:`部分を追加
+
+### エラー2: トークン数超過
+
+**エラーメッセージ**:
+```
+✗ Extracted content exceeds 10,000 token limit: 12500 tokens.
+
+💡 Please reduce spec.md content in User Story Purpose, Prerequisites, or Scope sections.
+```
+
+**解決方法**:
+- ユーザーストーリーの「目的」部分を簡潔化
+- 前提条件セクションの項目を削減
+- スコープ境界の「スコープ外」リストを削減
+
+---
+
+## 開発者向け: プログラム的な使用
+
+### Pythonコードからの使用
+
+```python
+from pathlib import Path
+from speckit_docs.utils.spec_extractor import extract_spec_minimal
+from speckit_docs.exceptions import SpecKitDocsError
+
+try:
+    spec_file = Path("specs/001-draft-init-spec/spec.md")
+    result = extract_spec_minimal(spec_file)
+    
+    print(f"抽出成功: {result.total_token_count} トークン")
+    print(f"ユーザーストーリー: {len(result.user_story_purposes)} 件")
+    print(f"\n--- 抽出されたコンテンツ ---\n{result.to_markdown()}")
+    
+except SpecKitDocsError as e:
+    print(f"エラー: {e.message}")
+    print(f"推奨アクション: {e.suggestion}")
+```
+
+### 出力例
+
+```
+抽出成功: 4500 トークン
+ユーザーストーリー: 7 件
+
+--- 抽出されたコンテンツ ---
+### ユーザーストーリー1: ドキュメント初期化
+
+**目的**: spec-kitユーザーが、プロジェクト固有のニーズに合わせてカスタマイズ可能な、すぐに使える初期ドキュメント構造を生成できるようにします。
+
+### ユーザーストーリー2: ドキュメント更新
+
+**目的**: spec-kitユーザーが、機能仕様が進化するにつれてドキュメントを自動的に再生成できるようにします。
+
+...
+
+## 前提条件
+
+- **spec-kit プロジェクト**: ユーザーは有効な spec-kit プロジェクトを持っている
+- **仕様フォーマット**: ユーザーは標準 spec-kit テンプレートに従う
+
+...
+
+## スコープ境界
+
+**スコープ外（フェーズ1 - MVP）**:
+
+- アンインストールコマンド
+- 専用アップグレードコマンド
+- 他のドキュメントジェネレータのサポート
+...
 ```
 
 ---
 
-### Problem 3: "機能が見つかりませんでした"エラー
+## テスト
 
-**Symptom**:
-```
-✗ エラー: 機能が見つかりませんでした
-
-💡 提案: 'specify new' で機能を作成してください。
-```
-
-**Solution**:
-```bash
-specify new 001-my-first-feature
-```
-
----
-
-### Problem 4: "HTMLビルドに失敗しました"エラー
-
-**Symptom**:
-```
-✗ エラー: HTMLビルドに失敗しました
-  - ビルドエラー: WARNING: document isn't included in any toctree
-```
-
-**Solution 1**: `--no-build`フラグでMarkdownのみ生成し、手動でビルドして詳細を確認
-```
-/speckit.doc-update --no-build
-cd docs
-make html  # エラーログを確認
-```
-
-**Solution 2**: `--full`フラグで全ドキュメントを再生成
-```
-/speckit.doc-update --full
-```
-
----
-
-### Problem 5: "変更が検出されませんでした"メッセージ
-
-**Symptom**:
-```
-✓ 変更が検出されませんでした
-
-ドキュメントは最新です。
-```
-
-**Explanation**:
-- Git diffで変更がないため、ドキュメント更新をスキップしています
-- これは正常な動作です
-
-**Solution** (全ドキュメントを強制的に再生成したい場合):
-```
-/speckit.doc-update --full
-```
-
----
-
-## Best Practices
-
-### 1. 定期的なドキュメント更新
-
-spec.mdを編集するたびに、ドキュメントを更新することを推奨します:
+### 単体テスト
 
 ```bash
-# 編集後
-git add .
-git commit -m "Update spec"
-
-# ドキュメント更新
-/speckit.doc-update
+# spec抽出ロジックのテスト
+uv run pytest tests/unit/utils/test_spec_extractor.py -v
 ```
 
-### 2. CI/CDでの自動ドキュメント生成
-
-GitHub ActionsやGitLab CIで自動的にドキュメントを生成・デプロイできます:
-
-```yaml
-# .github/workflows/docs.yml
-name: Generate Docs
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install speckit-docs sphinx
-
-      - name: Generate docs
-        run: |
-          python .specify/scripts/docs/doc_update.py --full
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/_build/html
-```
-
-### 3. ドキュメントレビュー
-
-生成されたドキュメントを手動で確認し、必要に応じてspec.mdを修正します:
-
-1. `/speckit.doc-update`を実行
-2. ブラウザでドキュメントを確認
-3. 不備があればspec.mdを編集
-4. 再度`/speckit.doc-update`を実行
-
-### 4. 小規模プロジェクト向けのシンプルな構造
-
-5機能以下の小規模プロジェクトでは、フラット構造が自動的に選択されます。これにより、過剰な階層を避け、ナビゲーションをシンプルに保ちます。
-
-### 5. バージョン管理
-
-ドキュメント生成ファイル（`docs/`配下のMarkdown）をGitで管理することで、ドキュメントの変更履歴を追跡できます:
+### 統合テスト
 
 ```bash
-git add docs/
-git commit -m "Update documentation"
+# 実際のspec.mdを使用したエンドツーエンドテスト
+uv run pytest tests/integration/test_spec_extraction.py -v
 ```
 
-ビルド成果物（`_build/`, `site/`）は`.gitignore`で除外されます。
+---
+
+## トラブルシューティング
+
+### Q1: Clarificationsセクションがまだドキュメントに出力される
+
+**確認事項**:
+1. `.claude/commands/speckit.doc-update.md`がLLM変換ワークフローを実行しているか
+2. `extract_spec_minimal()`が正しく呼び出されているか
+3. `transformed_content_map`が正しく渡されているか
+
+**デバッグ**:
+```bash
+# doc_update.pyの実行ログを確認
+uv run python -m speckit_docs.scripts.doc_update --verbose --transformed-content /tmp/test.json
+```
+
+### Q2: 多言語のspec.mdに対応していない
+
+**解決策**:
+- 日本語と英語の見出しパターンに対応済み
+- 他の言語が必要な場合は`spec_extractor.py`の見出しパターンを追加
 
 ---
 
-## Next Steps
+## 関連ドキュメント
 
-このクイックスタートガイドを完了したら、以下のリソースを参照してください:
-
-1. **[spec.md](spec.md)**: 機能仕様の詳細
-2. **[data-model.md](data-model.md)**: データモデルとエンティティ定義
-3. **[contracts/cli-interface.md](contracts/cli-interface.md)**: CLIインターフェース仕様
-4. **[contracts/file-formats.md](contracts/file-formats.md)**: 生成ファイルの形式仕様
-5. **[research.md](research.md)**: 技術的決定の背景
-
-**Advanced Features** (Phase 2以降):
-- AI統合（`--ai`フラグ）: 要約生成、フローチャート生成
-- 複数バージョン管理
-- 国際化対応（i18n）
-
----
-
-## まとめ
-
-このクイックスタートガイドでは、以下の内容をカバーしました:
-
-- **前提条件の確認**: spec-kit、Git、Python 3.11+、uv
-- **インストール**: `uv tool install speckit-docs --from git+https://github.com/drillan/spec-kit-docs.git`、`speckit-docs install`
-- **Sphinx初期化**: `/speckit.doc-init --type sphinx`
-- **ドキュメント生成**: `/speckit.doc-update`
-- **一般的なユースケース**: インクリメンタル更新、全再生成、ビルドスキップ、非対話モード
-- **トラブルシューティング**: 5つの一般的な問題と解決方法
-- **ベストプラクティス**: 定期的な更新、CI/CD統合、ドキュメントレビュー
-
-**所要時間合計**: 10-15分
-
-spec-kit-docsを使用することで、spec-kit仕様から統一されたドキュメントサイトを簡単に生成できます。さらに詳しい情報は、[spec.md](./spec.md)と[plan.md](./plan.md)を参照してください。
+- **機能仕様**: [spec.md](spec.md) - FR-038
+- **実装計画**: [plan.md](plan.md)
+- **データモデル**: [data-model.md](data-model.md)
+- **研究レポート**: [research.md](research.md)

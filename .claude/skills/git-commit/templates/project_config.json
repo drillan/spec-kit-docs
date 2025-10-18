@@ -1,0 +1,139 @@
+{
+  "commit_types": {
+    "feat": {
+      "description": "新機能追加",
+      "emoji": "✨",
+      "examples": [
+        "add user authentication",
+        "implement dark mode",
+        "add CSV export functionality"
+      ]
+    },
+    "fix": {
+      "description": "バグ修正",
+      "emoji": "🐛",
+      "examples": [
+        "fix memory leak in cache",
+        "correct typo in error message",
+        "handle null pointer exception"
+      ]
+    },
+    "docs": {
+      "description": "ドキュメントのみの変更",
+      "emoji": "📝",
+      "examples": [
+        "update installation guide",
+        "add API documentation",
+        "fix typos in README"
+      ]
+    },
+    "style": {
+      "description": "コードの動作に影響しない変更（フォーマット、セミコロン等）",
+      "emoji": "💄",
+      "examples": [
+        "format code with prettier",
+        "fix linting errors",
+        "organize imports"
+      ]
+    },
+    "refactor": {
+      "description": "リファクタリング（機能追加でもバグ修正でもない）",
+      "emoji": "♻️",
+      "examples": [
+        "extract common utility functions",
+        "simplify conditional logic",
+        "rename variables for clarity"
+      ]
+    },
+    "perf": {
+      "description": "パフォーマンス改善",
+      "emoji": "⚡",
+      "examples": [
+        "optimize database queries",
+        "reduce bundle size",
+        "implement caching strategy"
+      ]
+    },
+    "test": {
+      "description": "テストの追加・修正",
+      "emoji": "✅",
+      "examples": [
+        "add unit tests for auth module",
+        "increase test coverage to 90%",
+        "fix flaky integration tests"
+      ]
+    },
+    "build": {
+      "description": "ビルドシステムや外部依存関係の変更",
+      "emoji": "📦",
+      "examples": [
+        "upgrade dependencies",
+        "add webpack configuration",
+        "update build scripts"
+      ]
+    },
+    "ci": {
+      "description": "CI設定ファイルの変更",
+      "emoji": "👷",
+      "examples": [
+        "add GitHub Actions workflow",
+        "update CI pipeline",
+        "configure test coverage reporting"
+      ]
+    },
+    "chore": {
+      "description": "その他の変更（ビルドプロセス、補助ツール等）",
+      "emoji": "🔧",
+      "examples": [
+        "update .gitignore",
+        "bump version to 1.2.0",
+        "clean up deprecated code"
+      ]
+    }
+  },
+  "scopes": {
+    "allowed": [
+      "api",
+      "ui",
+      "db",
+      "auth",
+      "core",
+      "cli",
+      "docs",
+      "tests"
+    ],
+    "required_for_paths": {
+      "src/api/*": "api",
+      "src/auth/*": "auth",
+      "src/ui/*": "ui",
+      "src/db/*": "db",
+      "src/core/*": "core",
+      "src/cli/*": "cli"
+    }
+  },
+  "rules": {
+    "subject_max_length": 72,
+    "require_scope": false,
+    "require_body_for_breaking": true,
+    "emoji_prefix": false,
+    "subject_case": "lowercase",
+    "subject_imperative": true,
+    "subject_no_period": true
+  },
+  "integrations": {
+    "jira_pattern": "[A-Z]+-\\d+",
+    "github_issue_pattern": "#\\d+",
+    "gitlab_issue_pattern": "!\\d+"
+  },
+  "custom_rules": {
+    "breaking_change_keywords": [
+      "BREAKING CHANGE:",
+      "BREAKING:"
+    ],
+    "auto_close_keywords": [
+      "Closes",
+      "Fixes",
+      "Resolves"
+    ]
+  }
+}

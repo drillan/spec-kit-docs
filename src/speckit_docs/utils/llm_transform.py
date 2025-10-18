@@ -16,21 +16,27 @@ Implementation tasks:
 import json
 import os
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
-try:
-    from anthropic import (  # type: ignore[import-not-found]
-        Anthropic,
-        APIError,
-        APITimeoutError,
-        RateLimitError,
-    )
-except ImportError:
-    # Anthropic is optional for non-LLM workflows
-    Anthropic = None
-    APIError = Exception
-    APITimeoutError = Exception
-    RateLimitError = Exception
+if TYPE_CHECKING:
+    from anthropic import Anthropic, APIError, APITimeoutError, RateLimitError
+    from anthropic.types import TextBlock
+else:
+    try:
+        from anthropic import (
+            Anthropic,
+            APIError,
+            APITimeoutError,
+            RateLimitError,
+        )
+        from anthropic.types import TextBlock
+    except ImportError:
+        # Anthropic is optional for non-LLM workflows
+        Anthropic = None  # type: ignore[assignment,misc]
+        APIError = Exception  # type: ignore[assignment,misc]
+        APITimeoutError = Exception  # type: ignore[assignment,misc]
+        RateLimitError = Exception  # type: ignore[assignment,misc]
+        TextBlock = Any  # type: ignore[assignment,misc]
 
 from markdown_it import MarkdownIt
 
@@ -41,7 +47,9 @@ from speckit_docs.llm_entities import (
     LLMSection,
     LLMTransformResult,
     PrioritizedSection,
+    SectionClassification,
     SectionPriorityResult,
+    TargetAudienceResult,
 )
 
 
@@ -219,6 +227,223 @@ You are a technical documentation analyzer. Your task is to detect inconsistenci
 """
 
 
+# T061: Target audience detection (FR-038-target)
+TARGET_AUDIENCE_PROMPT = """
+You are a technical documentation analyst. Your task is to determine the target audience of a document.
+
+**Document content:**
+{document_content}
+
+**Audience types:**
+- "end_user": Non-technical users (customers, product managers, sales teams)
+- "developer": Technical users (developers, engineers, DevOps)
+- "both": Mixed audience (both technical and non-technical)
+
+**Analysis criteria:**
+- Technical terminology density
+- Code examples presence
+- Assumed background knowledge
+- Tone and language complexity
+
+**Response format (JSON):**
+{{
+  "audience_type": "end_user" | "developer" | "both",
+  "confidence": 0.0-1.0,
+  "reasoning": "Brief explanation for the decision"
+}}
+"""
+
+
+def detect_target_audience(
+    file_path: Path,
+    timeout_seconds: int = 30,
+) -> TargetAudienceResult:
+    """Detect target audience of a document (FR-038-target).
+
+    Args:
+        file_path: Path to the document file
+        timeout_seconds: Timeout in seconds (default: 30)
+
+    Returns:
+        TargetAudienceResult
+
+    Raises:
+        SpecKitDocsError: If LLM API call fails or file cannot be read
+    """
+    if Anthropic is None:
+        raise SpecKitDocsError(
+            message="anthropic package is not installed.",
+            suggestion="Install it with: uv add anthropic",
+            file_path=file_path,
+            error_type="Missing Dependency",
+        )
+
+    # Read file content
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise SpecKitDocsError(
+            message=f"File not found: {file_path}",
+            suggestion="Check that the file path is correct.",
+            file_path=file_path,
+            error_type="File Not Found",
+        )
+
+    client = get_anthropic_client()
+
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": TARGET_AUDIENCE_PROMPT.format(document_content=content[:8000]),
+                }
+            ],
+            timeout=timeout_seconds,
+        )
+
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
+        return TargetAudienceResult(
+            file_path=file_path,
+            audience_type=result_json["audience_type"],
+            confidence=result_json.get("confidence"),
+            reasoning=result_json.get("reasoning"),
+        )
+
+    except RateLimitError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API rate limit exceeded: {e}.",
+            suggestion="Please wait a few minutes and retry later.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APITimeoutError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API timeout after {timeout_seconds} seconds: {e}.",
+            suggestion="Please check your network connection and retry.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APIError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API error: {e}.",
+            suggestion="Please check your API key and account status. Set ANTHROPIC_API_KEY environment variable.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+
+
+# T062: Section classification (FR-038-classify)
+SECTION_CLASSIFICATION_PROMPT = """
+You are a technical documentation analyst. Your task is to classify a documentation section.
+
+**Section heading:** {heading}
+
+**Section content:**
+{content}
+
+**Section types:**
+- "end_user": For non-technical users (installation guides, quick starts, FAQs)
+- "developer": For technical users (API references, architecture diagrams, code examples)
+- "both": Relevant to both audiences (overview, features, troubleshooting)
+
+**Analysis criteria:**
+- Technical depth
+- Code examples presence
+- Assumed background knowledge
+- Practical vs theoretical focus
+
+**Response format (JSON):**
+{{
+  "section_type": "end_user" | "developer" | "both",
+  "confidence": 0.0-1.0
+}}
+"""
+
+
+def classify_section(
+    file_path: Path,
+    heading: str,
+    content: str,
+    timeout_seconds: int = 30,
+) -> SectionClassification:
+    """Classify a documentation section (FR-038-classify).
+
+    Args:
+        file_path: Path to the file containing this section
+        heading: Section heading (e.g., "## Installation")
+        content: Section body content
+        timeout_seconds: Timeout in seconds (default: 30)
+
+    Returns:
+        SectionClassification
+
+    Raises:
+        SpecKitDocsError: If LLM API call fails
+    """
+    if Anthropic is None:
+        raise SpecKitDocsError(
+            message="anthropic package is not installed.",
+            suggestion="Install it with: uv add anthropic",
+            file_path=file_path,
+            error_type="Missing Dependency",
+        )
+
+    client = get_anthropic_client()
+
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=512,
+            messages=[
+                {
+                    "role": "user",
+                    "content": SECTION_CLASSIFICATION_PROMPT.format(
+                        heading=heading,
+                        content=content[:4000],
+                    ),
+                }
+            ],
+            timeout=timeout_seconds,
+        )
+
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
+        return SectionClassification(
+            file_path=file_path,
+            heading=heading,
+            section_type=result_json["section_type"],
+            confidence=result_json.get("confidence"),
+        )
+
+    except RateLimitError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API rate limit exceeded: {e}.",
+            suggestion="Please wait a few minutes and retry later.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APITimeoutError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API timeout after {timeout_seconds} seconds: {e}.",
+            suggestion="Please check your network connection and retry.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APIError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API error: {e}.",
+            suggestion="Please check your API key and account status. Set ANTHROPIC_API_KEY environment variable.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+
+
 def detect_inconsistency(
     readme_content: str,
     quickstart_content: str,
@@ -261,7 +486,9 @@ def detect_inconsistency(
             timeout=timeout_seconds,
         )
 
-        result_json = json.loads(response.content[0].text)
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
         return InconsistencyDetectionResult(
             is_consistent=result_json["is_consistent"],
             inconsistencies=[
@@ -361,11 +588,14 @@ def prioritize_sections(
             timeout=timeout_seconds,
         )
 
-        result_json = json.loads(response.content[0].text)
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
 
         # Map sections by (file, heading) for lookup
         section_map = {(s.file, s.heading): s for s in sections}
         prioritized = []
+        prioritized_keys = set()
 
         for item in result_json["prioritized_sections"]:
             key = (item["file"], item["heading"])
@@ -377,6 +607,7 @@ def prioritize_sections(
                         reason=item["reason"],
                     )
                 )
+                prioritized_keys.add(key)
 
         # Sort by priority
         prioritized.sort(key=lambda x: x.priority)
@@ -392,6 +623,12 @@ def prioritize_sections(
                 included_sections += 1
             else:
                 excluded_sections.append(ps.section)
+
+        # Add sections not included in prioritized list to excluded
+        for section in sections:
+            key = (section.file, section.heading)
+            if key not in prioritized_keys:
+                excluded_sections.append(section)
 
         return SectionPriorityResult(
             prioritized_sections=prioritized[:included_sections],
@@ -443,103 +680,9 @@ def get_anthropic_client() -> "Anthropic":
 
 
 # T063: spec.md minimal extraction
-def extract_spec_minimal(spec_file: Path) -> str:
-    """Extract minimal content from spec.md.
-
-    Extracts:
-    - User story "Purpose" sections
-    - Prerequisites
-    - Scope boundaries
-
-    Estimated token count: ~4,500 tokens
-
-    Args:
-        spec_file: spec.md file path
-
-    Returns:
-        Extracted minimal content (Markdown)
-
-    Raises:
-        SpecKitDocsError: If extraction fails or content exceeds token limit
-    """
-    try:
-        content = spec_file.read_text()
-        md = MarkdownIt()
-        tokens = md.parse(content)
-
-        extracted_sections = []
-        in_user_story = False
-        in_purpose = False
-        in_prerequisites = False
-        in_scope = False
-        current_section = []
-
-        for token in tokens:
-            # Detect user story sections
-            if token.type == "inline" and "ユーザーストーリー" in (token.content or ""):
-                in_user_story = True
-                current_section = [token.content or ""]
-            elif in_user_story and token.type == "inline" and "目的" in (token.content or ""):
-                in_purpose = True
-                current_section.append(token.content or "")
-            elif in_purpose and token.type == "heading_open":
-                # Save purpose section
-                extracted_sections.append("\n".join(current_section))
-                in_purpose = False
-                in_user_story = False
-                current_section = []
-            elif in_purpose:
-                current_section.append(token.content or "")
-
-            # Detect prerequisites
-            if token.type == "inline" and "前提条件" in (token.content or ""):
-                in_prerequisites = True
-                current_section = [token.content or ""]
-            elif in_prerequisites and token.type == "heading_open":
-                extracted_sections.append("\n".join(current_section))
-                in_prerequisites = False
-                current_section = []
-            elif in_prerequisites:
-                current_section.append(token.content or "")
-
-            # Detect scope boundaries
-            if token.type == "inline" and "スコープ" in (token.content or ""):
-                in_scope = True
-                current_section = [token.content or ""]
-            elif in_scope and token.type == "heading_open":
-                extracted_sections.append("\n".join(current_section))
-                in_scope = False
-                current_section = []
-            elif in_scope:
-                current_section.append(token.content or "")
-
-        # Save last section if any
-        if current_section:
-            extracted_sections.append("\n".join(current_section))
-
-        extracted_content = "\n\n".join(extracted_sections)
-
-        # T064: Check token count (should be ~4,500 tokens)
-        token_count = estimate_token_count(extracted_content)
-        if token_count > 10000:
-            raise SpecKitDocsError(
-                message=f"Extracted content exceeds 10,000 token limit: {token_count} tokens.",
-                suggestion="Please reduce spec.md content in User Story Purpose, Prerequisites, or Scope sections.",
-                file_path=spec_file,
-                error_type="Token Limit Exceeded"
-            )
-
-        return extracted_content
-
-    except SpecKitDocsError:
-        raise  # Re-raise SpecKitDocsError without wrapping
-    except Exception as e:
-        raise SpecKitDocsError(
-            message=f"Failed to extract minimal content from {spec_file}: {e}",
-            suggestion=f"Check that {spec_file} is valid Markdown and contains expected sections.",
-            file_path=spec_file,
-            error_type="Content Extraction Error"
-        )
+# T030: 古い低レベルトークン処理によるextract_spec_minimal()を削除
+# 新しい実装はsrc/speckit_docs/utils/spec_extractor.pyに移動済み
+# この関数は spec_extractor.extract_spec_minimal() を使用してください
 
 
 # T069: LLM transformation quality check
