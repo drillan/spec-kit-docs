@@ -30,9 +30,72 @@
 
 **内部処理**:
 1. `/.claude/commands/speckit.doc-update.md`がLLM変換ワークフローを実行
-2. spec.md最小限抽出が実行される（`utils/spec_extractor.py`）
-3. 抽出されたコンテンツがLLM変換される（Claude API）
+2. **コンテンツソース選択** (Phase 2機能):
+   - README.md のみ存在 → README.mdを使用（ターゲット読者判定実行）
+   - QUICKSTART.md のみ存在 → QUICKSTART.mdを使用（ターゲット読者判定実行）
+   - 両方存在 → セクション統合実行（不整合検出→セクション分類→優先順位判定）
+   - どちらもなし → spec.md最小限抽出を実行
+3. 抽出/統合されたコンテンツがLLM変換される（Claude API）
 4. 変換済みコンテンツがドキュメントページに出力される
+5. 統計情報が表示される（ターゲット読者判定、セクション分類、変換率）
+
+---
+
+## Phase 2機能: README/QUICKSTART統合 (Session 2025-10-17)
+
+### ターゲット読者判定
+
+各ドキュメントファイルのターゲット読者を自動判定します。
+
+**対象ファイル**:
+- README.md
+- QUICKSTART.md
+
+**判定カテゴリ**:
+- `end_user`: エンドユーザー向け（非技術者、プロダクトマネージャー）
+- `developer`: 開発者向け（エンジニア、技術者）
+- `both`: 両方向け
+
+**実装**: `utils/llm_transform.py::detect_target_audience()`
+
+### セクション分類
+
+README.mdとQUICKSTART.mdの各セクションをターゲット読者別に分類します。
+
+**セクションタイプ**:
+- `end_user`: インストールガイド、クイックスタート
+- `developer`: API リファレンス、アーキテクチャ図
+- `both`: 概要、機能、トラブルシューティング
+
+**実装**: `utils/llm_transform.py::classify_section()`
+
+### 不整合検出
+
+README.mdとQUICKSTART.mdの内容を比較し、不整合を検出します。
+
+**検出項目**:
+- 技術スタックの不整合（例: Python vs Rust）
+- 機能説明の矛盾
+- プロジェクト目的の相違
+
+**動作**:
+- 重大な不整合が検出された場合、エラーで中断（フォールバック禁止）
+- 不整合の詳細と推奨アクションを表示
+
+**実装**: `utils/llm_transform.py::detect_inconsistency()`
+
+### セクション統合
+
+README.mdとQUICKSTART.mdのセクションを優先順位順に統合します。
+
+**統合方法**:
+1. Claude APIでエンドユーザーにとっての重要度を判定
+2. 優先順位順にセクションを統合（10,000トークン以内）
+3. 除外されたセクションを警告表示
+
+**トークン制限**: 10,000トークン（FR-038a）
+
+**実装**: `utils/llm_transform.py::prioritize_sections()`
 
 ---
 
@@ -196,7 +259,7 @@ uv run pytest tests/integration/test_spec_extraction.py -v
 
 ## トラブルシューティング
 
-### Q1: ClarificationsセクションがまだドキュメントI出力される
+### Q1: Clarificationsセクションがまだドキュメントに出力される
 
 **確認事項**:
 1. `.claude/commands/speckit.doc-update.md`がLLM変換ワークフローを実行しているか

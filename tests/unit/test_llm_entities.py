@@ -1,17 +1,24 @@
-"""Unit tests for LLM entities (T053, T054).
+"""Unit tests for LLM entities (T040-T043, T053, T054).
 
 Session 2025-10-17: Tests for README/QUICKSTART integration entities.
+Session 2025-10-18: Tests for Phase 2 entities (TargetAudienceResult, etc).
 """
+
+from pathlib import Path
 
 import pytest
 
 from speckit_docs.llm_entities import (
     Inconsistency,
     InconsistencyDetectionResult,
+    InconsistencyDetectionResultV2,
     LLMSection,
     LLMTransformResult,
     PrioritizedSection,
+    SectionClassification,
+    SectionPriority,
     SectionPriorityResult,
+    TargetAudienceResult,
 )
 
 
@@ -360,3 +367,283 @@ class TestLLMTransformResult:
                 token_count=100,
                 # Missing section_priority_result
             )
+
+
+# ============================================================================
+# Phase 2 Entity Tests (Session 2025-10-18): T040-T043
+# ============================================================================
+
+
+class TestTargetAudienceResult:
+    """Tests for TargetAudienceResult entity (T040)."""
+
+    def test_target_audience_result_basic_creation(self):
+        """T040: Test TargetAudienceResult basic creation."""
+        result = TargetAudienceResult(
+            file_path=Path("specs/001-draft-init-spec/README.md"),
+            audience_type="developer",
+            confidence=0.85,
+            reasoning="Technical terminology and code examples indicate developer audience",
+        )
+
+        assert result.file_path == Path("specs/001-draft-init-spec/README.md")
+        assert result.audience_type == "developer"
+        assert result.confidence == 0.85
+        assert "Technical terminology" in result.reasoning
+
+    def test_audience_type_validation(self):
+        """T040: Test audience_type constraint (end_user, developer, both)."""
+        # Valid types
+        for valid_type in ["end_user", "developer", "both"]:
+            result = TargetAudienceResult(
+                file_path=Path("test.md"),
+                audience_type=valid_type,
+            )
+            assert result.audience_type == valid_type
+
+        # Invalid type should raise ValueError
+        with pytest.raises(ValueError, match="audience_type must be one of"):
+            TargetAudienceResult(
+                file_path=Path("test.md"),
+                audience_type="invalid",
+            )
+
+    def test_confidence_range_validation(self):
+        """T040: Test confidence range (0.0-1.0)."""
+        # Valid confidence values
+        for confidence in [0.0, 0.5, 1.0]:
+            result = TargetAudienceResult(
+                file_path=Path("test.md"),
+                audience_type="developer",
+                confidence=confidence,
+            )
+            assert result.confidence == confidence
+
+        # Invalid confidence (< 0.0)
+        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
+            TargetAudienceResult(
+                file_path=Path("test.md"),
+                audience_type="developer",
+                confidence=-0.1,
+            )
+
+        # Invalid confidence (> 1.0)
+        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
+            TargetAudienceResult(
+                file_path=Path("test.md"),
+                audience_type="developer",
+                confidence=1.1,
+            )
+
+    def test_optional_fields(self):
+        """T040: Test optional confidence and reasoning fields."""
+        result = TargetAudienceResult(
+            file_path=Path("test.md"),
+            audience_type="end_user",
+        )
+        assert result.confidence is None
+        assert result.reasoning is None
+
+
+class TestSectionClassification:
+    """Tests for SectionClassification entity (T041)."""
+
+    def test_section_classification_basic_creation(self):
+        """T041: Test SectionClassification basic creation."""
+        classification = SectionClassification(
+            file_path=Path("specs/001-draft-init-spec/README.md"),
+            heading="## Developer Setup",
+            section_type="developer",
+            confidence=0.95,
+        )
+
+        assert classification.file_path == Path("specs/001-draft-init-spec/README.md")
+        assert classification.heading == "## Developer Setup"
+        assert classification.section_type == "developer"
+        assert classification.confidence == 0.95
+
+    def test_section_type_validation(self):
+        """T041: Test section_type constraint (end_user, developer, both)."""
+        # Valid types
+        for valid_type in ["end_user", "developer", "both"]:
+            classification = SectionClassification(
+                file_path=Path("test.md"),
+                heading="## Test",
+                section_type=valid_type,
+            )
+            assert classification.section_type == valid_type
+
+        # Invalid type should raise ValueError
+        with pytest.raises(ValueError, match="section_type must be one of"):
+            SectionClassification(
+                file_path=Path("test.md"),
+                heading="## Test",
+                section_type="invalid",
+            )
+
+    def test_confidence_range_validation(self):
+        """T041: Test confidence range (0.0-1.0)."""
+        # Valid confidence
+        classification = SectionClassification(
+            file_path=Path("test.md"),
+            heading="## Test",
+            section_type="both",
+            confidence=0.7,
+        )
+        assert classification.confidence == 0.7
+
+        # Invalid confidence
+        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
+            SectionClassification(
+                file_path=Path("test.md"),
+                heading="## Test",
+                section_type="both",
+                confidence=1.5,
+            )
+
+
+class TestInconsistencyDetectionResultV2:
+    """Tests for InconsistencyDetectionResultV2 entity (T042)."""
+
+    def test_inconsistency_detection_result_consistent(self):
+        """T042: Test InconsistencyDetectionResultV2 for consistent docs."""
+        result = InconsistencyDetectionResultV2(
+            readme_path=Path("specs/001-draft-init-spec/README.md"),
+            quickstart_path=Path("specs/001-draft-init-spec/QUICKSTART.md"),
+            is_consistent=True,
+            inconsistencies=[],
+            reasoning="Both files describe the same Python documentation tool",
+        )
+
+        assert result.readme_path == Path("specs/001-draft-init-spec/README.md")
+        assert result.quickstart_path == Path("specs/001-draft-init-spec/QUICKSTART.md")
+        assert result.is_consistent is True
+        assert result.inconsistencies == []
+        assert "Both files" in result.reasoning
+
+    def test_inconsistency_detection_result_inconsistent(self):
+        """T042: Test InconsistencyDetectionResultV2 for inconsistent docs."""
+        result = InconsistencyDetectionResultV2(
+            readme_path=Path("specs/001-draft-init-spec/README.md"),
+            quickstart_path=Path("specs/001-draft-init-spec/QUICKSTART.md"),
+            is_consistent=False,
+            inconsistencies=[
+                "README.md describes Python project, QUICKSTART.md describes Rust project",
+                "Different main features listed",
+            ],
+            reasoning="Major technology stack mismatch detected",
+        )
+
+        assert result.is_consistent is False
+        assert len(result.inconsistencies) == 2
+        assert "Python project" in result.inconsistencies[0]
+        assert "Rust project" in result.inconsistencies[0]
+
+    def test_inconsistencies_required_when_not_consistent(self):
+        """T042: Test that inconsistencies list is required when is_consistent=False."""
+        # Should raise ValueError if inconsistencies is empty when is_consistent=False
+        with pytest.raises(
+            ValueError, match="inconsistencies list must not be empty when is_consistent is False"
+        ):
+            InconsistencyDetectionResultV2(
+                readme_path=Path("test1.md"),
+                quickstart_path=Path("test2.md"),
+                is_consistent=False,
+                inconsistencies=[],
+            )
+
+
+class TestSectionPriority:
+    """Tests for SectionPriority entity (T043)."""
+
+    def test_section_priority_basic_creation(self):
+        """T043: Test SectionPriority basic creation."""
+        section = SectionPriority(
+            file_path=Path("specs/001-draft-init-spec/README.md"),
+            heading="## Quick Start",
+            priority=1,
+            content="To get started with spec-kit-docs...",
+            token_count=450,
+        )
+
+        assert section.file_path == Path("specs/001-draft-init-spec/README.md")
+        assert section.heading == "## Quick Start"
+        assert section.priority == 1
+        assert section.content == "To get started with spec-kit-docs..."
+        assert section.token_count == 450
+
+    def test_priority_validation(self):
+        """T043: Test priority must be >= 1."""
+        # Valid priority
+        section = SectionPriority(
+            file_path=Path("test.md"),
+            heading="## Test",
+            priority=1,
+            content="Test content",
+            token_count=100,
+        )
+        assert section.priority == 1
+
+        # Invalid priority (< 1)
+        with pytest.raises(ValueError, match="priority must be >= 1"):
+            SectionPriority(
+                file_path=Path("test.md"),
+                heading="## Test",
+                priority=0,
+                content="Test content",
+                token_count=100,
+            )
+
+    def test_token_count_validation(self):
+        """T043: Test token_count must be >= 1."""
+        # Valid token_count
+        section = SectionPriority(
+            file_path=Path("test.md"),
+            heading="## Test",
+            priority=1,
+            content="Test content",
+            token_count=1,
+        )
+        assert section.token_count == 1
+
+        # Invalid token_count (< 1)
+        with pytest.raises(ValueError, match="token_count must be >= 1"):
+            SectionPriority(
+                file_path=Path("test.md"),
+                heading="## Test",
+                priority=1,
+                content="Test content",
+                token_count=0,
+            )
+
+    def test_sorting_by_priority(self):
+        """T043: Test that sections can be sorted by priority."""
+        sections = [
+            SectionPriority(
+                file_path=Path("test.md"),
+                heading="## Low Priority",
+                priority=3,
+                content="Low",
+                token_count=10,
+            ),
+            SectionPriority(
+                file_path=Path("test.md"),
+                heading="## High Priority",
+                priority=1,
+                content="High",
+                token_count=10,
+            ),
+            SectionPriority(
+                file_path=Path("test.md"),
+                heading="## Medium Priority",
+                priority=2,
+                content="Medium",
+                token_count=10,
+            ),
+        ]
+
+        sorted_sections = sorted(sections, key=lambda s: s.priority)
+
+        assert sorted_sections[0].priority == 1
+        assert sorted_sections[1].priority == 2
+        assert sorted_sections[2].priority == 3

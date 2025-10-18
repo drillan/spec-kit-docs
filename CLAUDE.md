@@ -106,10 +106,10 @@ speckit-docs install
 
 ## Recent Changes
 - 001-draft-init-spec: Added Python 3.11+（既存プロジェクトと同じ）
+- 001-draft-init-spec: Added Python 3.11+（spec-kit前提条件との互換性）
+- 001-draft-init-spec: Added Python 3.11+（既存プロジェクトと同じ）
 
 **Session 2025-10-17 (Updated)**:
-- ✅ **FR-022b**: LLM変換ワークフローをコマンドテンプレートに実装（/speckit.doc-update）
-- ✅ **FR-038e**: transformed_contentパラメータを必須化（doc_update.py:54 - `typer.Option(...)`完了）
   - test_feature_page.py: 全6テスト（transformed_content_map追加）
   - test_doc_update_command.py: 全5テスト（transformed_content_map追加）
   - test_doc_update.py: 全9テスト（transformed_content必須パラメータ）

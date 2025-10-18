@@ -254,7 +254,8 @@ class TestSpecMinimalExtraction:
 
     def test_extract_spec_minimal_within_token_limit(self, tmp_path: Path):
         """Test spec.md extraction stays within token limit (~4,500 tokens)."""
-        from speckit_docs.utils.llm_transform import estimate_token_count, extract_spec_minimal
+        from speckit_docs.utils.llm_transform import estimate_token_count
+        from speckit_docs.utils.spec_extractor import extract_spec_minimal
 
         # Given: spec.md with Japanese content (implementation expects Japanese keywords)
         spec_file = tmp_path / "spec.md"
@@ -298,7 +299,8 @@ class TestSpecMinimalExtraction:
     def test_extract_spec_minimal_large_spec(self, tmp_path: Path):
         """Test spec.md extraction raises error when extracted content exceeds 10,000 tokens."""
         from speckit_docs.exceptions import SpecKitDocsError
-        from speckit_docs.utils.llm_transform import estimate_token_count, extract_spec_minimal
+        from speckit_docs.utils.llm_transform import estimate_token_count
+        from speckit_docs.utils.spec_extractor import extract_spec_minimal
 
         # Given: Large spec.md with Japanese content (extracted sections > 10,000 tokens)
         spec_file = tmp_path / "spec.md"

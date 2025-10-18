@@ -16,21 +16,27 @@ Implementation tasks:
 import json
 import os
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
-try:
-    from anthropic import (  # type: ignore[import-not-found]
-        Anthropic,
-        APIError,
-        APITimeoutError,
-        RateLimitError,
-    )
-except ImportError:
-    # Anthropic is optional for non-LLM workflows
-    Anthropic = None
-    APIError = Exception
-    APITimeoutError = Exception
-    RateLimitError = Exception
+if TYPE_CHECKING:
+    from anthropic import Anthropic, APIError, APITimeoutError, RateLimitError
+    from anthropic.types import TextBlock
+else:
+    try:
+        from anthropic import (
+            Anthropic,
+            APIError,
+            APITimeoutError,
+            RateLimitError,
+        )
+        from anthropic.types import TextBlock
+    except ImportError:
+        # Anthropic is optional for non-LLM workflows
+        Anthropic = None  # type: ignore[assignment,misc]
+        APIError = Exception  # type: ignore[assignment,misc]
+        APITimeoutError = Exception  # type: ignore[assignment,misc]
+        RateLimitError = Exception  # type: ignore[assignment,misc]
+        TextBlock = Any  # type: ignore[assignment,misc]
 
 from markdown_it import MarkdownIt
 
@@ -41,7 +47,9 @@ from speckit_docs.llm_entities import (
     LLMSection,
     LLMTransformResult,
     PrioritizedSection,
+    SectionClassification,
     SectionPriorityResult,
+    TargetAudienceResult,
 )
 
 
@@ -219,6 +227,223 @@ You are a technical documentation analyzer. Your task is to detect inconsistenci
 """
 
 
+# T061: Target audience detection (FR-038-target)
+TARGET_AUDIENCE_PROMPT = """
+You are a technical documentation analyst. Your task is to determine the target audience of a document.
+
+**Document content:**
+{document_content}
+
+**Audience types:**
+- "end_user": Non-technical users (customers, product managers, sales teams)
+- "developer": Technical users (developers, engineers, DevOps)
+- "both": Mixed audience (both technical and non-technical)
+
+**Analysis criteria:**
+- Technical terminology density
+- Code examples presence
+- Assumed background knowledge
+- Tone and language complexity
+
+**Response format (JSON):**
+{{
+  "audience_type": "end_user" | "developer" | "both",
+  "confidence": 0.0-1.0,
+  "reasoning": "Brief explanation for the decision"
+}}
+"""
+
+
+def detect_target_audience(
+    file_path: Path,
+    timeout_seconds: int = 30,
+) -> TargetAudienceResult:
+    """Detect target audience of a document (FR-038-target).
+
+    Args:
+        file_path: Path to the document file
+        timeout_seconds: Timeout in seconds (default: 30)
+
+    Returns:
+        TargetAudienceResult
+
+    Raises:
+        SpecKitDocsError: If LLM API call fails or file cannot be read
+    """
+    if Anthropic is None:
+        raise SpecKitDocsError(
+            message="anthropic package is not installed.",
+            suggestion="Install it with: uv add anthropic",
+            file_path=file_path,
+            error_type="Missing Dependency",
+        )
+
+    # Read file content
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise SpecKitDocsError(
+            message=f"File not found: {file_path}",
+            suggestion="Check that the file path is correct.",
+            file_path=file_path,
+            error_type="File Not Found",
+        )
+
+    client = get_anthropic_client()
+
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": TARGET_AUDIENCE_PROMPT.format(document_content=content[:8000]),
+                }
+            ],
+            timeout=timeout_seconds,
+        )
+
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
+        return TargetAudienceResult(
+            file_path=file_path,
+            audience_type=result_json["audience_type"],
+            confidence=result_json.get("confidence"),
+            reasoning=result_json.get("reasoning"),
+        )
+
+    except RateLimitError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API rate limit exceeded: {e}.",
+            suggestion="Please wait a few minutes and retry later.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APITimeoutError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API timeout after {timeout_seconds} seconds: {e}.",
+            suggestion="Please check your network connection and retry.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APIError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API error: {e}.",
+            suggestion="Please check your API key and account status. Set ANTHROPIC_API_KEY environment variable.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+
+
+# T062: Section classification (FR-038-classify)
+SECTION_CLASSIFICATION_PROMPT = """
+You are a technical documentation analyst. Your task is to classify a documentation section.
+
+**Section heading:** {heading}
+
+**Section content:**
+{content}
+
+**Section types:**
+- "end_user": For non-technical users (installation guides, quick starts, FAQs)
+- "developer": For technical users (API references, architecture diagrams, code examples)
+- "both": Relevant to both audiences (overview, features, troubleshooting)
+
+**Analysis criteria:**
+- Technical depth
+- Code examples presence
+- Assumed background knowledge
+- Practical vs theoretical focus
+
+**Response format (JSON):**
+{{
+  "section_type": "end_user" | "developer" | "both",
+  "confidence": 0.0-1.0
+}}
+"""
+
+
+def classify_section(
+    file_path: Path,
+    heading: str,
+    content: str,
+    timeout_seconds: int = 30,
+) -> SectionClassification:
+    """Classify a documentation section (FR-038-classify).
+
+    Args:
+        file_path: Path to the file containing this section
+        heading: Section heading (e.g., "## Installation")
+        content: Section body content
+        timeout_seconds: Timeout in seconds (default: 30)
+
+    Returns:
+        SectionClassification
+
+    Raises:
+        SpecKitDocsError: If LLM API call fails
+    """
+    if Anthropic is None:
+        raise SpecKitDocsError(
+            message="anthropic package is not installed.",
+            suggestion="Install it with: uv add anthropic",
+            file_path=file_path,
+            error_type="Missing Dependency",
+        )
+
+    client = get_anthropic_client()
+
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=512,
+            messages=[
+                {
+                    "role": "user",
+                    "content": SECTION_CLASSIFICATION_PROMPT.format(
+                        heading=heading,
+                        content=content[:4000],
+                    ),
+                }
+            ],
+            timeout=timeout_seconds,
+        )
+
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
+        return SectionClassification(
+            file_path=file_path,
+            heading=heading,
+            section_type=result_json["section_type"],
+            confidence=result_json.get("confidence"),
+        )
+
+    except RateLimitError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API rate limit exceeded: {e}.",
+            suggestion="Please wait a few minutes and retry later.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APITimeoutError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API timeout after {timeout_seconds} seconds: {e}.",
+            suggestion="Please check your network connection and retry.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+    except APIError as e:
+        raise SpecKitDocsError(
+            message=f"Anthropic API error: {e}.",
+            suggestion="Please check your API key and account status. Set ANTHROPIC_API_KEY environment variable.",
+            file_path=file_path,
+            error_type="LLM API call failed",
+        )
+
+
 def detect_inconsistency(
     readme_content: str,
     quickstart_content: str,
@@ -261,7 +486,9 @@ def detect_inconsistency(
             timeout=timeout_seconds,
         )
 
-        result_json = json.loads(response.content[0].text)
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
         return InconsistencyDetectionResult(
             is_consistent=result_json["is_consistent"],
             inconsistencies=[
@@ -361,11 +588,14 @@ def prioritize_sections(
             timeout=timeout_seconds,
         )
 
-        result_json = json.loads(response.content[0].text)
+        # Extract text from first content block (always TextBlock for our prompts)
+        text_block = cast("TextBlock", response.content[0])
+        result_json = json.loads(text_block.text)
 
         # Map sections by (file, heading) for lookup
         section_map = {(s.file, s.heading): s for s in sections}
         prioritized = []
+        prioritized_keys = set()
 
         for item in result_json["prioritized_sections"]:
             key = (item["file"], item["heading"])
@@ -377,6 +607,7 @@ def prioritize_sections(
                         reason=item["reason"],
                     )
                 )
+                prioritized_keys.add(key)
 
         # Sort by priority
         prioritized.sort(key=lambda x: x.priority)
@@ -392,6 +623,12 @@ def prioritize_sections(
                 included_sections += 1
             else:
                 excluded_sections.append(ps.section)
+
+        # Add sections not included in prioritized list to excluded
+        for section in sections:
+            key = (section.file, section.heading)
+            if key not in prioritized_keys:
+                excluded_sections.append(section)
 
         return SectionPriorityResult(
             prioritized_sections=prioritized[:included_sections],
