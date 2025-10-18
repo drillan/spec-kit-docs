@@ -26,6 +26,7 @@ dependencies = [
     "ruamel.yaml>=0.18",
     "PyYAML>=6.0",
     "specify-cli",
+    "anthropic>=0.28",
 ]
 
 [project.optional-dependencies]

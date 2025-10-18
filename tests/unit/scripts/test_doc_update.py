@@ -40,7 +40,7 @@ class TestDocUpdate:
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
         # Run doc_update (full mode to avoid git dependency)
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -92,7 +92,7 @@ nav:
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
         # Run doc_update (full mode)
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -129,7 +129,7 @@ nav:
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
         # Run doc_update (full mode)
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -166,7 +166,7 @@ nav:
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
         # Run doc_update (full mode)
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -190,7 +190,7 @@ nav:
         transformed_content_file.write_text(json.dumps({}))
 
         # Run doc_update
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Should return error code
         assert result != 0
@@ -215,7 +215,7 @@ nav:
         transformed_content_file.write_text(json.dumps({}))
 
         # Run doc_update
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Should return error code
         assert result != 0
@@ -248,7 +248,7 @@ nav:
         transformed_content_file.write_text(json.dumps(transformed_content_map))
 
         # Run doc_update in full mode
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Verify success
         assert result == 0
@@ -270,7 +270,7 @@ nav:
         transformed_content_file.write_text(json.dumps({}))
 
         # Run without docs/ directory
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Should return error
         assert result != 0
@@ -290,7 +290,7 @@ nav:
         transformed_content_file.write_text(json.dumps({}))
 
         # Run doc_update (should fail to detect tool)
-        result = main(incremental=False, transformed_content=transformed_content_file)
+        result = main(quick=False, transformed_content=transformed_content_file)
 
         # Should return error
         assert result != 0

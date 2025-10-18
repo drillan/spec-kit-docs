@@ -48,8 +48,8 @@ console = Console()
 
 @app.command()
 def main(
-    incremental: bool = typer.Option(
-        True, "--incremental/--full", help="Incremental or full update"
+    quick: bool = typer.Option(
+        False, "--quick/--no-quick", help="Quick mode: only update changed features"
     ),
     transformed_content: Path = typer.Option(
         ..., "--transformed-content", help="Path to JSON file with LLM-transformed content"
@@ -58,7 +58,7 @@ def main(
     """Update documentation from spec-kit specifications.
 
     Args:
-        incremental: Enable incremental update using Git diff
+        quick: Enable quick mode (only update changed features using Git diff)
         transformed_content: Path to JSON file containing LLM-transformed content per feature (FR-038e: REQUIRED)
 
     Note:
@@ -93,8 +93,8 @@ def main(
         all_features = discoverer.discover_features()
         total_features_count = len(all_features)
 
-        if incremental:
-            # FR-019: Incremental update using Git diff
+        if quick:
+            # FR-019: Quick mode using Git diff
             try:
                 change_detector = ChangeDetector()
                 changed_features = change_detector.get_changed_features()
@@ -103,7 +103,7 @@ def main(
                     features = changed_features
                     skipped_count = total_features_count - len(features)
                     console.print(
-                        f"[green]✓[/green] {len(features)} 個の変更された機能を検出しました（インクリメンタル更新）"
+                        f"[green]✓[/green] {len(features)} 個の変更された機能を検出しました（クイックモード）"
                     )
                     console.print(
                         f"[dim]  {skipped_count} 個の機能をスキップしました（変更なし）[/dim]"
@@ -121,7 +121,7 @@ def main(
                 features = all_features
                 skipped_count = 0
         else:
-            # Full update
+            # Full update (default mode)
             features = all_features
             skipped_count = 0
             console.print(f"[green]✓[/green] {len(features)} 個の機能を検出しました（フル更新）")
@@ -171,25 +171,23 @@ def main(
 
         console.print("[green]✓[/green] ナビゲーションを更新しました")
 
-        # FR-020: Display update summary with LLM transform statistics (T074)
+        # FR-020: Display update summary
         console.print("\n[bold green]✓ ドキュメント更新が完了しました！[/bold green]")
         console.print("\n[bold]サマリー:[/bold]")
         console.print(f"  • 更新された機能: {len(features)}")
         console.print(f"  • 生成されたページ: {len(feature_pages)}")
 
-        # T075: Display skip statistics (incremental mode only)
-        if incremental and 'skipped_count' in locals():
-            console.print(f"  • スキップ（変更なし）: {skipped_count}")
+        # FR-038f: Display LLM transform statistics (mode-specific format)
+        successful_count = len(transformed_content_map)
+        failed_count = 0  # Always 0 because process is interrupted on error (Session 2025-10-17 Q2)
 
-        # T074: Display LLM transform statistics
-        if transformed_content_map:
-            console.print("\n[bold]LLM変換統計:[/bold]")
-            console.print(f"  • 合計機能数: {llm_stats['total_features']}")
-            console.print(f"  • LLM変換済み: {llm_stats['transformed_features']}")
-            console.print(f"  • 元のコンテンツ: {llm_stats['original_features']}")
-            if llm_stats["transformed_features"] > 0:
-                percentage = (llm_stats["transformed_features"] / llm_stats["total_features"]) * 100
-                console.print(f"  • 変換率: {percentage:.1f}%")
+        if quick:
+            # Quick mode: show success, skip, and failure counts
+            skip_count = skipped_count if 'skipped_count' in locals() else 0
+            console.print(f"\n[bold]LLM変換:[/bold] 成功{successful_count}件、スキップ（変更なし）{skip_count}件、失敗{failed_count}件")
+        else:
+            # Default mode: show success and failure counts
+            console.print(f"\n[bold]LLM変換:[/bold] 成功{successful_count}件、失敗{failed_count}件")
 
         return 0
 
